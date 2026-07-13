@@ -86,13 +86,15 @@ export function addLevel(): void {
   const room = remainingCm() - thickness;
   const support = Math.max(2, Math.min(preset, room));
   if (room <= 0) return; // no space
+  const id = newId();
   planner.levels.unshift({
-    id: newId(),
+    id,
     supportHeightCm: support,
     shelfThicknessCm: thickness,
     division: 1,
     segments: [null],
   });
+  ui.selectedShelfId = id;
 }
 
 export function removeLevel(id: string): void {
@@ -111,6 +113,7 @@ export function seedDemo(): void {
     { id: newId(), supportHeightCm: 8.5, shelfThicknessCm: 1.5, division: 2, segments: [{ contactName: "Studio Work", complexity: "simple" }, null] },
     { id: newId(), supportHeightCm: 10.5, shelfThicknessCm: 1.5, division: 1, segments: [{ contactName: "Guest", complexity: "simple" }] },
   ];
+  ["Luis", "Anna", "Studio Work", "Guest"].forEach(addContact);
 }
 
 export function setDivision(id: string, division: number): void {
@@ -210,6 +213,136 @@ export async function loadPlanner(): Promise<void> {
 
 export function savePlanner(): void {
   void storage.write(STORAGE_KEY, $state.snapshot(planner));
+}
+
+// ---- UI / workflow state (transient, not part of the firing doc) ----------
+
+export type Mode = "structure" | "assign";
+
+export const ui = $state<{
+  mode: Mode;
+  selectedShelfId: string | null;
+  activeClient: string | null;
+  activeComplexity: ComplexityKey;
+  sameComplexity: boolean;
+}>({
+  mode: "structure",
+  selectedShelfId: null,
+  activeClient: null,
+  activeComplexity: "simple",
+  sameComplexity: true,
+});
+
+// ---- Contacts book (minimal; full cartilla + CSV is T4) -------------------
+
+export const contacts = $state<{ names: string[] }>({ names: [] });
+
+export async function loadContacts(): Promise<void> {
+  const s = await storage.read<{ names: string[] }>("contacts");
+  if (s && Array.isArray(s.names)) contacts.names = s.names;
+}
+function saveContacts(): void {
+  void storage.write("contacts", $state.snapshot(contacts));
+}
+export function addContact(name: string): void {
+  const n = name.trim();
+  if (n && !contacts.names.includes(n)) {
+    contacts.names.push(n);
+    saveContacts();
+  }
+}
+
+// ---- Structure-mode helpers -----------------------------------------------
+
+export function selectShelf(id: string | null): void {
+  ui.selectedShelfId = id;
+}
+
+/** Physical fraction of a shelf's area that is occupied (0..1). */
+export function occupiedFraction(level: PlannerLevel): number {
+  if (level.division === 0) return 0;
+  return level.segments.filter((s) => s !== null).length / level.division;
+}
+
+/** Physical fill of the whole kiln by occupied volume (0..1). */
+export function occupiedVolumeFraction(): number {
+  const uH = currentKiln().usableHeightCm;
+  if (uH <= 0) return 0;
+  let occ = 0;
+  for (const l of planner.levels) {
+    occ += (l.supportHeightCm + l.shelfThicknessCm) * occupiedFraction(l);
+  }
+  return occ / uH;
+}
+
+/** Structure fill: how much usable height is shelved (0..1). */
+export function structureFillFraction(): number {
+  const uH = currentKiln().usableHeightCm;
+  return uH > 0 ? totalConsumedCm() / uH : 0;
+}
+
+export function occupancyBand(frac: number): "low" | "balanced" | "high" {
+  if (frac <= 0.3) return "low";
+  if (frac <= 0.7) return "balanced";
+  return "high";
+}
+
+// ---- Assign-mode helpers (client-first zone painting) ---------------------
+
+export function setActiveClient(name: string | null): void {
+  ui.activeClient = name ? name.trim() : null;
+  if (!ui.activeClient) return;
+  addContact(ui.activeClient);
+  // Reflect the client's current complexity, if they already occupy zones.
+  for (const l of planner.levels) {
+    const seg = l.segments.find((s) => s?.contactName === ui.activeClient);
+    if (seg) {
+      ui.activeComplexity = seg.complexity;
+      break;
+    }
+  }
+}
+
+export function zoneOwner(levelId: string, segIdx: number): string | null {
+  return planner.levels.find((l) => l.id === levelId)?.segments[segIdx]?.contactName ?? null;
+}
+
+/** Toggle a zone for the active client: assign if free, unassign if already theirs. */
+export function toggleZone(levelId: string, segIdx: number): void {
+  if (!ui.activeClient) return;
+  const lvl = planner.levels.find((l) => l.id === levelId);
+  if (!lvl || segIdx < 0 || segIdx >= lvl.segments.length) return;
+  const seg = lvl.segments[segIdx];
+  if (seg && seg.contactName === ui.activeClient) {
+    lvl.segments[segIdx] = null;
+  } else if (!seg) {
+    lvl.segments[segIdx] = { contactName: ui.activeClient, complexity: ui.activeComplexity };
+  }
+  // occupied by another client → ignored
+}
+
+export function setActiveComplexity(cx: ComplexityKey): void {
+  ui.activeComplexity = cx;
+  if (ui.sameComplexity && ui.activeClient) {
+    for (const l of planner.levels) {
+      l.segments.forEach((s, i) => {
+        if (s && s.contactName === ui.activeClient) l.segments[i] = { ...s, complexity: cx };
+      });
+    }
+  }
+}
+
+export function zoneCountForClient(name: string): number {
+  return planner.levels.reduce(
+    (a, l) => a + l.segments.filter((s) => s?.contactName === name).length,
+    0,
+  );
+}
+
+export function clearClient(name: string): void {
+  for (const l of planner.levels) {
+    l.segments = l.segments.map((s) => (s && s.contactName === name ? null : s));
+  }
 }
 
 // Re-export for convenience in components.
