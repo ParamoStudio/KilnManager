@@ -1,62 +1,61 @@
 <script lang="ts">
   import {
     planner,
-    ui,
     currentKiln,
-    selectShelf,
-    toggleZone,
+    toggleSelection,
+    isSelected,
     zoneOwner,
     occupiedFraction,
     occupancyBand,
     clientNames,
+    openShelfEditor,
+    roomForNewShelf,
+    remainingCm,
   } from "../lib/firing.svelte";
   import { colorForName } from "../lib/colors";
 
   const kiln = $derived(currentKiln());
   const names = $derived(clientNames());
 
-  // viewBox geometry
-  const Y0 = 64;
-  const Y1 = 504;
-  const H = Y1 - Y0;
-  const X0 = 170;
-  const X1 = 580;
+  // Geometry (viewBox units)
+  const TOPY = 96;
+  const BOTY = 548;
+  const RY = 26;
+  const X0 = 210;
+  const X1 = 650;
   const CX = (X0 + X1) / 2;
   const RX = (X1 - X0) / 2;
-  const RY = 24;
+  const yTopInner = TOPY;
+  const yBotInner = BOTY;
+  const Hpx = yBotInner - yTopInner;
 
-  const pxPerCm = $derived(H / kiln.usableHeightCm);
+  const pxPerCm = $derived(Hpx / kiln.usableHeightCm);
+  const yOfCm = (cm: number): number => yBotInner - cm * pxPerCm;
 
-  // Stack shelves from the top; remaining height sits at the bottom (mockup style).
+  // Shelves stack from the floor up; remaining is at the top.
   const rows = $derived.by(() => {
-    let accTop = 0;
-    return planner.levels.map((l) => {
+    const arr = planner.levels;
+    const res: { id: string; consumed: number; yPlate: number; ySpaceTop: number; div: number }[] =
+      new Array(arr.length);
+    let acc = 0;
+    for (let i = arr.length - 1; i >= 0; i--) {
+      const l = arr[i]!;
       const consumed = l.supportHeightCm + l.shelfThicknessCm;
-      const yTop = Y0 + accTop * pxPerCm;
-      accTop += consumed;
-      return { level: l, consumed, yTop, yBottom: Y0 + accTop * pxPerCm };
-    });
+      const yPlate = yBotInner - acc * pxPerCm;
+      acc += consumed;
+      res[i] = { id: l.id, consumed, yPlate, ySpaceTop: yBotInner - acc * pxPerCm, div: l.division };
+    }
+    return res;
   });
+
   const usedCm = $derived(rows.reduce((a, r) => a + r.consumed, 0));
-  const remainingCm = $derived(Math.max(0, kiln.usableHeightCm - usedCm));
-  const yUsedBottom = $derived(Y0 + usedCm * pxPerCm);
+  const remaining = $derived(Math.max(0, kiln.usableHeightCm - usedCm));
+  const yRemBottom = $derived(yOfCm(usedCm));
+  const canAdd = $derived(roomForNewShelf() > 0);
 
   const ticks = $derived(
     Array.from({ length: Math.floor(kiln.usableHeightCm / 10) + 1 }, (_, i) => i * 10),
   );
-  const yOfCm = (cm: number): number => Y1 - cm * pxPerCm;
-
-  function zoneClick(levelId: string, segIdx: number): void {
-    if (ui.mode === "structure") selectShelf(levelId);
-    else toggleZone(levelId, segIdx);
-  }
-
-  function fillOpacity(levelId: string, segIdx: number): number {
-    const owner = zoneOwner(levelId, segIdx);
-    if (!owner) return 0;
-    if (ui.mode === "assign" && owner === ui.activeClient) return 0.3;
-    return 0.14;
-  }
 
   const bandColor: Record<string, string> = {
     low: "var(--blue)",
@@ -65,145 +64,136 @@
   };
 
   function truncate(name: string, division: number): string {
-    const maxChars = Math.max(3, Math.floor(28 / division));
-    return name.length > maxChars ? name.slice(0, maxChars - 1) + "…" : name;
+    const max = Math.max(4, Math.floor(30 / division));
+    return name.length > max ? name.slice(0, max - 1) + "…" : name;
   }
 </script>
 
-<svg viewBox="0 0 780 560" class="kiln-svg" preserveAspectRatio="xMidYMid meet">
+<svg viewBox="0 0 880 600" class="kiln-svg" preserveAspectRatio="xMidYMid meet">
   <defs>
-    <pattern id="hatch" width="8" height="8" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
-      <line x1="0" y1="0" x2="0" y2="8" stroke="var(--line-soft)" stroke-width="1" />
+    <marker id="arrow" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto">
+      <path d="M1,1 L6,3.5 L1,6" fill="none" stroke="var(--line)" stroke-width="1" />
+    </marker>
+    <pattern id="rem-hatch" width="9" height="9" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="0" y2="9" stroke="var(--line-soft)" stroke-width="0.75" />
     </pattern>
   </defs>
 
   <!-- Diameter dimension -->
-  <g class="dim" text-anchor="middle">
-    <text x={CX} y="20" class="lbl">USABLE DIAMETER</text>
-    <line x1={X0} y1="34" x2={X1} y2="34" class="dim-line" />
-    <line x1={X0} y1="30" x2={X0} y2="38" class="dim-line" />
-    <line x1={X1} y1="30" x2={X1} y2="38" class="dim-line" />
-    <text x={CX} y="49" class="val">
-      {kiln.shape === "cylinder" ? `${kiln.diameterCm} cm Ø` : `${kiln.widthCm} × ${kiln.depthCm} cm`}
-    </text>
-  </g>
+  <text x={CX} y="30" text-anchor="middle" class="lbl">USABLE DIAMETER</text>
+  <line x1={X0} y1="44" x2={X1} y2="44" class="dim" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+  <text x={CX} y="62" text-anchor="middle" class="val">
+    {kiln.shape === "cylinder" ? `${kiln.diameterCm} cm Ø` : `${kiln.widthCm} × ${kiln.depthCm} cm`}
+  </text>
 
-  <!-- Ruler -->
-  <g class="ruler" text-anchor="end">
-    <text x="104" y={Y0 - 14} class="lbl">USABLE H.</text>
-    <text x="104" y={Y0 - 1} class="val">{kiln.usableHeightCm} cm</text>
-    {#each ticks as t (t)}
-      <g>
-        <line x1="112" y1={yOfCm(t)} x2="124" y2={yOfCm(t)} class="tick" />
-        <text x="104" y={yOfCm(t) + 4} class="tick-lbl">{t}</text>
-      </g>
-    {/each}
-  </g>
+  <!-- Height ruler -->
+  <text x="118" y={yTopInner - 26} text-anchor="end" class="lbl">USABLE H.</text>
+  <text x="118" y={yTopInner - 12} text-anchor="end" class="val">{kiln.usableHeightCm} cm</text>
+  <line x1="120" y1={yTopInner} x2="120" y2={yBotInner} class="dim-soft" />
+  {#each ticks as t (t)}
+    <line x1="115" y1={yOfCm(t)} x2="125" y2={yOfCm(t)} class="tick" />
+    <text x="108" y={yOfCm(t) + 3.5} text-anchor="end" class="tick-lbl">{t}</text>
+  {/each}
 
   <!-- Kiln body -->
   {#if kiln.shape === "cylinder"}
-    <ellipse cx={CX} cy={Y0} rx={RX} ry={RY} class="rim" />
-    <ellipse cx={CX} cy={Y1} rx={RX} ry={RY} class="rim rim-bottom" />
-    <line x1={X0} y1={Y0} x2={X0} y2={Y1} class="side" />
-    <line x1={X1} y1={Y0} x2={X1} y2={Y1} class="side" />
+    <ellipse cx={CX} cy={TOPY} rx={RX} ry={RY} class="rim" />
+    <path d="M {X0} {TOPY} L {X0} {BOTY}" class="side" />
+    <path d="M {X1} {TOPY} L {X1} {BOTY}" class="side" />
+    <path d="M {X0} {BOTY} A {RX} {RY} 0 0 0 {X1} {BOTY}" class="rim rim-bottom" />
+    <path d="M {X0} {BOTY} A {RX} {RY} 0 0 1 {X1} {BOTY}" class="rim-back" />
   {:else}
-    <rect x={X0} y={Y0} width={X1 - X0} height={H} rx="6" class="side" fill="none" />
+    <rect x={X0} y={TOPY} width={X1 - X0} height={BOTY - TOPY} rx="4" class="side" fill="none" />
   {/if}
 
-  <!-- Remaining space (bottom) -->
-  {#if remainingCm > 0.5}
-    <rect x={X0 + 2} y={yUsedBottom} width={X1 - X0 - 4} height={Y1 - yUsedBottom} fill="url(#hatch)" class="remaining-fill" />
-    <text x={CX} y={(yUsedBottom + Y1) / 2 + 4} text-anchor="middle" class="remaining-lbl">
-      {Math.round(remainingCm)} cm remaining
-    </text>
+  <!-- Remaining space + Add shelf (top) -->
+  {#if remaining > 0.5}
+    <rect x={X0 + 3} y={yTopInner + 2} width={X1 - X0 - 6} height={yRemBottom - yTopInner - 2} fill="url(#rem-hatch)" opacity="0.5" />
+    <text x={X1 - 8} y={yTopInner + 16} text-anchor="end" class="rem-lbl">{Math.round(remaining)} cm remaining</text>
+    {#if canAdd}
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <g class="add" role="button" tabindex="-1" onclick={() => openShelfEditor("new")}>
+        <rect
+          x={CX - 78}
+          y={Math.max(yTopInner + 8, (yTopInner + yRemBottom) / 2 - 18)}
+          width="156"
+          height="36"
+          rx="8"
+          class="add-rect"
+        />
+        <text x={CX} y={Math.max(yTopInner + 31, (yTopInner + yRemBottom) / 2 + 5)} text-anchor="middle" class="add-lbl">
+          + Add shelf
+        </text>
+      </g>
+    {/if}
   {/if}
 
-  <!-- Levels -->
-  {#each rows as row, i (row.level.id)}
-    {@const lvl = row.level}
-    {@const selected = ui.mode === "structure" && ui.selectedShelfId === lvl.id}
+  <!-- Shelves -->
+  {#each rows as row, i (row.id)}
+    {@const lvl = planner.levels[i]!}
+    {@const colW = (X1 - X0) / row.div}
     {@const occ = occupiedFraction(lvl)}
-    {@const colW = (X1 - X0 - 16) / lvl.division}
-    {@const bandH = row.yBottom - row.yTop}
 
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <g
-      class="band"
-      class:selected
-      class:clickable={ui.mode === "structure"}
-      role="button"
-      tabindex="-1"
-      onclick={() => ui.mode === "structure" && selectShelf(lvl.id)}
-    >
-      <!-- band frame -->
-      <rect x={X0 + 6} y={row.yTop + 2} width={X1 - X0 - 12} height={Math.max(2, bandH - 4)} class="band-rect" class:selected rx="4" />
-
-      <!-- zones -->
-      {#each lvl.segments as seg, k (k)}
-        {@const zx = X0 + 8 + k * colW}
-        {@const owner = seg?.contactName ?? null}
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <g
-          class="zone"
-          class:assignable={ui.mode === "assign"}
-          role="button"
-          tabindex="-1"
-          onclick={(e) => {
-            e.stopPropagation();
-            zoneClick(lvl.id, k);
-          }}
-        >
-          <rect
-            x={zx}
-            y={row.yTop + 4}
-            width={colW - 2}
-            height={Math.max(2, bandH - 8)}
-            rx="3"
-            fill={owner ? colorForName(owner, names) : "transparent"}
-            fill-opacity={fillOpacity(lvl.id, k)}
-            class="zone-rect"
-            class:free={!owner}
-            style={owner ? `--z: ${colorForName(owner, names)}` : ""}
-          />
-          {#if bandH > 22}
-            {#if owner}
-              <text x={zx + colW / 2} y={(row.yTop + row.yBottom) / 2 + 4} text-anchor="middle" class="zone-name">
-                {truncate(owner, lvl.division)}
-              </text>
-            {:else if ui.mode === "structure"}
-              <text x={zx + colW / 2} y={(row.yTop + row.yBottom) / 2 + 4} text-anchor="middle" class="zone-frac">
-                {lvl.division === 1 ? "FULL" : `1/${lvl.division}`}
-              </text>
-            {:else}
-              <text x={zx + colW / 2} y={(row.yTop + row.yBottom) / 2 + 4} text-anchor="middle" class="zone-free">free</text>
-            {/if}
+    <!-- zones (space above the plate) -->
+    {#each lvl.segments as seg, k (k)}
+      {@const zx = X0 + k * colW}
+      {@const owner = seg?.contactName ?? null}
+      {@const sel = isSelected(row.id, k)}
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <g class="zone" role="button" tabindex="-1" onclick={() => toggleSelection(row.id, k)}>
+        <rect
+          x={zx + 2}
+          y={row.ySpaceTop + 2}
+          width={colW - 4}
+          height={row.yPlate - row.ySpaceTop - 3}
+          rx="3"
+          fill={owner ? colorForName(owner, names) : "transparent"}
+          fill-opacity={owner ? 0.13 : 0}
+          class="zone-rect"
+          class:sel
+          class:free={!owner}
+          style={owner ? `--z:${colorForName(owner, names)}` : ""}
+        />
+        {#if row.yPlate - row.ySpaceTop > 20}
+          {#if owner}
+            <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2 + 4} text-anchor="middle" class="zname">
+              {truncate(owner, row.div)}
+            </text>
+          {:else}
+            <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2 + 4} text-anchor="middle" class="zfrac">
+              {row.div === 1 ? "FULL" : `1/${row.div}`}
+            </text>
           {/if}
-        </g>
-        {#if k > 0}
-          <line x1={zx - 1} y1={row.yTop + 6} x2={zx - 1} y2={row.yBottom - 4} class="divider" />
         {/if}
-      {/each}
-
-      <!-- shelf slab -->
-      {#if kiln.shape === "cylinder"}
-        <ellipse cx={CX} cy={row.yBottom} rx={RX - 8} ry="7" class="slab" />
-      {:else}
-        <line x1={X0 + 6} y1={row.yBottom} x2={X1 - 6} y2={row.yBottom} class="slab-line" />
+      </g>
+      {#if k > 0}
+        <line x1={zx} y1={row.ySpaceTop + 3} x2={zx} y2={row.yPlate - 2} class="divider" />
       {/if}
+    {/each}
 
-      <!-- index + height -->
-      <text x={X0 + 16} y={row.yTop + 20} class="idx">{String(rows.length - i).padStart(2, "0")}</text>
-      <text x={X0 + 16} y={row.yTop + 34} class="idx-h">{Math.round(row.consumed)} cm</text>
+    <!-- shelf plate (perspective) -->
+    {#if kiln.shape === "cylinder"}
+      <ellipse cx={CX} cy={row.yPlate} rx={RX - 6} ry="9" class="plate" />
+      <path d="M {X0 + 6} {row.yPlate} A {RX - 6} 9 0 0 0 {X1 - 6} {row.yPlate}" class="plate-front" />
+    {:else}
+      <line x1={X0 + 4} y1={row.yPlate} x2={X1 - 4} y2={row.yPlate} class="plate-line" />
+    {/if}
 
-      <!-- occupancy -->
-      <text x={X1 + 34} y={(row.yTop + row.yBottom) / 2 - 2} text-anchor="start" class="occ" style="fill: {bandColor[occupancyBand(occ)]}">
-        {Math.round(occ * 100)}%
-      </text>
+    <!-- index + height (click to edit the shelf) -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <g class="idx-btn" role="button" tabindex="-1" onclick={() => openShelfEditor(row.id)}>
+      <text x={X0 + 12} y={row.ySpaceTop + 20} class="idx">{String(rows.length - i).padStart(2, "0")}</text>
+      <text x={X0 + 12} y={row.ySpaceTop + 34} class="idx-h">{Math.round(row.consumed)} cm</text>
     </g>
+
+    <!-- occupancy -->
+    <text x={X1 + 30} y={(row.ySpaceTop + row.yPlate) / 2 + 4} class="occ" style="fill:{bandColor[occupancyBand(occ)]}">
+      {Math.round(occ * 100)}%
+    </text>
   {/each}
 
-  {#if rows.length === 0}
-    <text x={CX} y={(Y0 + Y1) / 2} text-anchor="middle" class="empty">Add a shelf to start</text>
+  {#if rows.length > 0}
+    <text x={X1 + 30} y={yTopInner - 12} class="lbl">OCCUPANCY</text>
   {/if}
 </svg>
 
@@ -215,15 +205,19 @@
   }
   .lbl {
     font-size: 10px;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     fill: var(--text-faint);
   }
   .val {
-    font-size: 13px;
+    font-size: 12px;
     fill: var(--text-dim);
   }
-  .dim-line {
+  .dim {
     stroke: var(--line);
+    stroke-width: 1;
+  }
+  .dim-soft {
+    stroke: var(--line-soft);
     stroke-width: 1;
   }
   .tick {
@@ -231,7 +225,7 @@
     stroke-width: 1;
   }
   .tick-lbl {
-    font-size: 10px;
+    font-size: 9px;
     fill: var(--text-faint);
   }
   .rim {
@@ -240,93 +234,112 @@
     stroke-width: 1.25;
   }
   .rim-bottom {
-    stroke: var(--line-soft);
-  }
-  .side {
+    fill: none;
     stroke: var(--line);
     stroke-width: 1.25;
   }
-  .band-rect {
-    fill: transparent;
+  .rim-back {
+    fill: none;
     stroke: var(--line-soft);
     stroke-width: 1;
+    stroke-dasharray: 3 4;
   }
-  .band-rect.selected {
-    stroke: var(--accent);
-    stroke-width: 1.5;
+  .side {
+    fill: none;
+    stroke: var(--line);
+    stroke-width: 1.25;
   }
-  .band.clickable {
+  .rem-lbl {
+    font-size: 10px;
+    fill: var(--text-faint);
+    letter-spacing: 0.04em;
+  }
+  .add {
     cursor: pointer;
   }
-  .zone.assignable {
+  .add-rect {
+    fill: var(--panel-2);
+    stroke: color-mix(in srgb, var(--accent) 45%, var(--line));
+    stroke-width: 1;
+    stroke-dasharray: 5 4;
+  }
+  .add:hover .add-rect {
+    stroke: var(--accent);
+    fill: color-mix(in srgb, var(--accent) 8%, var(--panel-2));
+  }
+  .add-lbl {
+    font-size: 13px;
+    fill: var(--text);
+  }
+  .zone {
     cursor: pointer;
   }
   .zone-rect {
-    stroke: var(--z, transparent);
-    stroke-opacity: 0.55;
+    stroke: var(--z, var(--line-soft));
+    stroke-opacity: 0.6;
     stroke-width: 1;
-    transition:
-      fill-opacity 0.18s ease,
-      stroke-opacity 0.18s ease;
+    transition: fill-opacity 0.15s ease, stroke-opacity 0.15s ease;
   }
   .zone-rect.free {
     stroke: var(--line-soft);
-    stroke-dasharray: 3 3;
+    stroke-dasharray: 3 4;
   }
-  .zone.assignable:hover .zone-rect {
-    stroke: var(--text-faint);
+  .zone-rect.sel {
+    stroke: var(--accent);
+    stroke-width: 1.75;
     stroke-dasharray: none;
+    fill: var(--accent);
+    fill-opacity: 0.1;
+  }
+  .zone:hover .zone-rect {
+    stroke-opacity: 1;
+    stroke: var(--text-faint);
   }
   .divider {
     stroke: var(--line-soft);
     stroke-width: 1;
     stroke-dasharray: 2 3;
   }
-  .slab {
-    fill: rgba(255, 255, 255, 0.02);
+  .plate {
+    fill: rgba(255, 255, 255, 0.015);
     stroke: var(--line);
     stroke-width: 1;
   }
-  .slab-line {
+  .plate-front {
+    fill: none;
+    stroke: var(--line);
+    stroke-width: 1.25;
+  }
+  .plate-line {
     stroke: var(--line);
     stroke-width: 1.5;
+  }
+  .idx-btn {
+    cursor: pointer;
   }
   .idx {
     font-size: 13px;
     font-weight: 600;
     fill: var(--text);
   }
+  .idx-btn:hover .idx {
+    fill: var(--accent);
+  }
   .idx-h {
     font-size: 10px;
     fill: var(--text-faint);
   }
-  .zone-name {
+  .zname {
     font-size: 12px;
     fill: var(--text);
   }
-  .zone-frac {
+  .zfrac {
     font-size: 11px;
     letter-spacing: 0.08em;
     fill: var(--text-faint);
   }
-  .zone-free {
-    font-size: 10px;
-    fill: var(--text-faint);
-    opacity: 0.5;
-  }
   .occ {
     font-size: 12px;
     font-variant-numeric: tabular-nums;
-  }
-  .remaining-fill {
-    opacity: 0.5;
-  }
-  .remaining-lbl {
-    font-size: 11px;
-    fill: var(--text-faint);
-  }
-  .empty {
-    font-size: 14px;
-    fill: var(--text-faint);
   }
 </style>

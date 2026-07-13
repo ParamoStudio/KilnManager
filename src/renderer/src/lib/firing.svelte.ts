@@ -78,23 +78,28 @@ export function remainingCm(): number {
 let seq = 0;
 const newId = (): string => `l${Date.now().toString(36)}${seq++}`;
 
-export function addLevel(): void {
+/** Add a shelf with a chosen support height + division (from the creation popup). */
+export function addShelf(supportHeightCm: number, division: number): string | null {
   const kiln = currentKiln();
-  const preset = kiln.standardPostHeightsCm[1] ?? kiln.standardPostHeightsCm[0] ?? 10;
   const thickness = kiln.defaultShelfThicknessCm;
-  // Shrink the requested height to whatever room is left, if needed.
   const room = remainingCm() - thickness;
-  const support = Math.max(2, Math.min(preset, room));
-  if (room <= 0) return; // no space
+  if (room <= 0) return null; // no space
+  const support = Math.max(2, Math.min(supportHeightCm, room));
+  const div = Math.max(1, Math.min(4, Math.round(division)));
   const id = newId();
   planner.levels.unshift({
     id,
     supportHeightCm: support,
     shelfThicknessCm: thickness,
-    division: 1,
-    segments: [null],
+    division: div,
+    segments: Array.from({ length: div }, () => null),
   });
-  ui.selectedShelfId = id;
+  return id;
+}
+
+/** Room (cm) available for a new shelf's support posts. */
+export function roomForNewShelf(): number {
+  return remainingCm() - currentKiln().defaultShelfThicknessCm;
 }
 
 export function removeLevel(id: string): void {
@@ -217,20 +222,22 @@ export function savePlanner(): void {
 
 // ---- UI / workflow state (transient, not part of the firing doc) ----------
 
-export type Mode = "structure" | "assign";
+export interface ZoneRef {
+  levelId: string;
+  segIdx: number;
+}
 
 export const ui = $state<{
-  mode: Mode;
-  selectedShelfId: string | null;
-  activeClient: string | null;
-  activeComplexity: ComplexityKey;
-  sameComplexity: boolean;
+  /** Zones currently selected in the kiln (the Assign rail acts on these). */
+  selection: ZoneRef[];
+  /** Complexity applied when assigning the selection. */
+  complexity: ComplexityKey;
+  /** Shelf editor popup target: a level id, "new", or null (closed). */
+  shelfEditor: string | "new" | null;
 }>({
-  mode: "structure",
-  selectedShelfId: null,
-  activeClient: null,
-  activeComplexity: "simple",
-  sameComplexity: true,
+  selection: [],
+  complexity: "simple",
+  shelfEditor: null,
 });
 
 // ---- Contacts book (minimal; full cartilla + CSV is T4) -------------------
@@ -252,10 +259,13 @@ export function addContact(name: string): void {
   }
 }
 
-// ---- Structure-mode helpers -----------------------------------------------
+// ---- Shelf editor popup ---------------------------------------------------
 
-export function selectShelf(id: string | null): void {
-  ui.selectedShelfId = id;
+export function openShelfEditor(target: string | "new"): void {
+  ui.shelfEditor = target;
+}
+export function closeShelfEditor(): void {
+  ui.shelfEditor = null;
 }
 
 /** Physical fraction of a shelf's area that is occupied (0..1). */
@@ -287,62 +297,81 @@ export function occupancyBand(frac: number): "low" | "balanced" | "high" {
   return "high";
 }
 
-// ---- Assign-mode helpers (client-first zone painting) ---------------------
-
-export function setActiveClient(name: string | null): void {
-  ui.activeClient = name ? name.trim() : null;
-  if (!ui.activeClient) return;
-  addContact(ui.activeClient);
-  // Reflect the client's current complexity, if they already occupy zones.
-  for (const l of planner.levels) {
-    const seg = l.segments.find((s) => s?.contactName === ui.activeClient);
-    if (seg) {
-      ui.activeComplexity = seg.complexity;
-      break;
-    }
-  }
-}
+// ---- Zone selection + assignment ------------------------------------------
 
 export function zoneOwner(levelId: string, segIdx: number): string | null {
   return planner.levels.find((l) => l.id === levelId)?.segments[segIdx]?.contactName ?? null;
 }
 
-/** Toggle a zone for the active client: assign if free, unassign if already theirs. */
-export function toggleZone(levelId: string, segIdx: number): void {
-  if (!ui.activeClient) return;
-  const lvl = planner.levels.find((l) => l.id === levelId);
-  if (!lvl || segIdx < 0 || segIdx >= lvl.segments.length) return;
-  const seg = lvl.segments[segIdx];
-  if (seg && seg.contactName === ui.activeClient) {
-    lvl.segments[segIdx] = null;
-  } else if (!seg) {
-    lvl.segments[segIdx] = { contactName: ui.activeClient, complexity: ui.activeComplexity };
-  }
-  // occupied by another client → ignored
+export function isSelected(levelId: string, segIdx: number): boolean {
+  return ui.selection.some((z) => z.levelId === levelId && z.segIdx === segIdx);
 }
 
-export function setActiveComplexity(cx: ComplexityKey): void {
-  ui.activeComplexity = cx;
-  if (ui.sameComplexity && ui.activeClient) {
-    for (const l of planner.levels) {
-      l.segments.forEach((s, i) => {
-        if (s && s.contactName === ui.activeClient) l.segments[i] = { ...s, complexity: cx };
-      });
-    }
+/** Click a zone: toggle it in/out of the working selection. */
+export function toggleSelection(levelId: string, segIdx: number): void {
+  const i = ui.selection.findIndex((z) => z.levelId === levelId && z.segIdx === segIdx);
+  if (i >= 0) ui.selection.splice(i, 1);
+  else ui.selection.push({ levelId, segIdx });
+  // Adopt the complexity of the last-touched assigned zone, for convenience.
+  const seg = planner.levels.find((l) => l.id === levelId)?.segments[segIdx];
+  if (seg) ui.complexity = seg.complexity;
+}
+
+export function clearSelection(): void {
+  ui.selection = [];
+}
+
+export function selectionOwners(): string[] {
+  const set = new Set<string>();
+  for (const z of ui.selection) {
+    const o = zoneOwner(z.levelId, z.segIdx);
+    if (o) set.add(o);
+  }
+  return [...set];
+}
+
+/** Assign every selected zone to a client, with the current complexity. */
+export function assignSelectionTo(name: string): void {
+  const n = name.trim();
+  if (!n) return;
+  addContact(n);
+  for (const z of ui.selection) {
+    setSegment(z.levelId, z.segIdx, { contactName: n, complexity: ui.complexity });
+  }
+  clearSelection();
+}
+
+/** Apply the current complexity to the selected zones that are already assigned. */
+export function applyComplexityToSelection(cx: ComplexityKey): void {
+  ui.complexity = cx;
+  for (const z of ui.selection) {
+    const lvl = planner.levels.find((l) => l.id === z.levelId);
+    const seg = lvl?.segments[z.segIdx];
+    if (lvl && seg) lvl.segments[z.segIdx] = { ...seg, complexity: cx };
   }
 }
 
-export function zoneCountForClient(name: string): number {
-  return planner.levels.reduce(
-    (a, l) => a + l.segments.filter((s) => s?.contactName === name).length,
-    0,
-  );
+/** Empty the selected zones. */
+export function clearSelectedZones(): void {
+  for (const z of ui.selection) setSegment(z.levelId, z.segIdx, null);
+  clearSelection();
 }
 
 export function clearClient(name: string): void {
   for (const l of planner.levels) {
     l.segments = l.segments.map((s) => (s && s.contactName === name ? null : s));
   }
+}
+
+/** Select all zones belonging to a client (e.g. clicking their breakdown chip). */
+export function selectClientZones(name: string): void {
+  const sel: ZoneRef[] = [];
+  for (const l of planner.levels) {
+    l.segments.forEach((s, i) => {
+      if (s?.contactName === name) sel.push({ levelId: l.id, segIdx: i });
+    });
+  }
+  ui.selection = sel;
 }
 
 // Re-export for convenience in components.
