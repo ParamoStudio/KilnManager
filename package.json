@@ -1,0 +1,16 @@
+{
+  "name": "kiln-manager",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Páramo Kiln Manager — visual kiln load planner & fair cost distribution (internal studio tool).",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

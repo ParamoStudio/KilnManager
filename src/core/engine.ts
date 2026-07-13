@@ -1,0 +1,119 @@
+import type {
+  Allocation,
+  ShelfLevel,
+  Firing,
+  FiringResult,
+  ClientResult,
+  AccountingResult,
+} from "./types.js";
+import { footprintAreaCm2, usableVolumeLiters, consumedHeightCm } from "./geometry.js";
+import { splitAmount, roundCents } from "./rounding.js";
+
+/** Raw occupied volume of one allocation, in litres. */
+export function allocationLiters(
+  level: ShelfLevel,
+  allocation: Allocation,
+  footprintCm2: number,
+): number {
+  return (consumedHeightCm(level) * footprintCm2 * allocation.fraction) / 1000;
+}
+
+/** Effective load units (KLU) of one allocation = litres × complexity. */
+export function allocationKLU(
+  level: ShelfLevel,
+  allocation: Allocation,
+  footprintCm2: number,
+): number {
+  return allocationLiters(level, allocation, footprintCm2) * allocation.complexity;
+}
+
+function accountingKey(a: Allocation): string {
+  return a.contactId ?? `name:${a.contactName}`;
+}
+
+/**
+ * The core computation. Turns a visual kiln layout into:
+ *  - the fair per-client split of the base price (by KLU),
+ *  - the internal accounting (costs → gross → partner cuts → net).
+ *
+ * Pure function: no I/O, no rounding drift (client prices sum exactly to revenue).
+ */
+export function computeFiring(firing: Firing): FiringResult {
+  const footprint = footprintAreaCm2(firing.kiln);
+  const usableKilnLiters = usableVolumeLiters(firing.kiln);
+
+  // 1. Aggregate KLU + litres per client (a client may span several levels).
+  const order: string[] = [];
+  const byClient = new Map<string, ClientResult>();
+
+  for (const level of firing.levels) {
+    for (const alloc of level.allocations) {
+      const key = accountingKey(alloc);
+      const liters = allocationLiters(level, alloc, footprint);
+      const klu = allocationKLU(level, alloc, footprint);
+
+      let entry = byClient.get(key);
+      if (!entry) {
+        entry = {
+          contactId: alloc.contactId,
+          contactName: alloc.contactName,
+          liters: 0,
+          klu: 0,
+          sharePct: 0,
+          price: 0,
+        };
+        byClient.set(key, entry);
+        order.push(key);
+      }
+      entry.liters += liters;
+      entry.klu += klu;
+    }
+  }
+
+  const clients = order.map((k) => byClient.get(k)!);
+  const totalKLU = clients.reduce((a, c) => a + c.klu, 0);
+  const totalOccupiedLiters = clients.reduce((a, c) => a + c.liters, 0);
+
+  // 2. Revenue = base service price ± modifiers.
+  const modifierTotal = firing.modifiers.reduce((a, m) => a + m.amount, 0);
+  const revenue = roundCents(firing.serviceBasePrice + modifierTotal);
+
+  // 3. Split revenue by KLU share, rounded so parts sum exactly to revenue.
+  const prices = splitAmount(revenue, clients.map((c) => c.klu));
+  clients.forEach((c, i) => {
+    c.sharePct = totalKLU > 0 ? c.klu / totalKLU : 0;
+    c.price = prices[i]!;
+  });
+
+  // 4. Accounting.
+  const accounting = computeAccounting(revenue, firing);
+
+  return {
+    totalKLU,
+    totalOccupiedLiters,
+    usableKilnLiters,
+    fillFraction: usableKilnLiters > 0 ? totalOccupiedLiters / usableKilnLiters : 0,
+    clients,
+    accounting,
+  };
+}
+
+export function computeAccounting(revenue: number, firing: Firing): AccountingResult {
+  const kilnCosts = roundCents(firing.costItems.reduce((a, c) => a + c.amount, 0));
+  const grossProfit = roundCents(revenue - kilnCosts);
+
+  const partnerCuts = firing.partners.map((p) => ({
+    name: p.name,
+    pct: p.pct,
+    amount: roundCents(grossProfit * p.pct),
+  }));
+  const partnerTotal = partnerCuts.reduce((a, p) => a + p.amount, 0);
+
+  return {
+    revenue,
+    kilnCosts,
+    grossProfit,
+    partnerCuts,
+    netToYou: roundCents(grossProfit - partnerTotal),
+  };
+}
