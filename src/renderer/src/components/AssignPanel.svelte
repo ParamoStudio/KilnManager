@@ -44,10 +44,16 @@
   );
   const note = $derived(owner ? clientNote(owner) : "");
 
-  // reset transient UI when the selection changes
+  // Signature of WHICH zones are selected (not their complexity/notes) — so
+  // editing complexity or notes never collapses the reassign panel.
+  const selKey = $derived(
+    ui.selection
+      .map((z) => `${z.levelId}:${z.segIdx}`)
+      .sort()
+      .join(","),
+  );
   $effect(() => {
-    void count;
-    void owner;
+    void selKey;
     reassignOpen = false;
     pending = null;
     query = "";
@@ -455,8 +461,12 @@
     color: var(--text-dim);
     font-size: 12px;
   }
+  .ghost.danger {
+    border-color: color-mix(in srgb, var(--amber) 40%, var(--line));
+  }
   .ghost.danger:hover {
-    color: #e88;
-    border-color: #e88;
+    color: var(--amber);
+    border-color: var(--amber);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--amber) 30%, transparent);
   }
 </style>

@@ -32,7 +32,7 @@
   const RX = (X1 - X0) / 2;
   // Fixed headroom band below the rim holds the "+ Add shelf" button, so the
   // top shelf never collides with the rim regardless of how full the kiln is.
-  const HEADROOM = 80;
+  const HEADROOM = 96;
   const yTopInner = TOPY + HEADROOM;
   const yBotInner = BOTY;
   const Hpx = yBotInner - yTopInner;
@@ -119,16 +119,21 @@
   <!-- Empty height (below the fixed add-shelf band, above the top shelf) -->
   {#if remaining > 0.5}
     <rect x={X0 + 3} y={yTopInner} width={X1 - X0 - 6} height={Math.max(0, yRemBottom - yTopInner)} fill="url(#rem-hatch)" opacity="0.5" />
-    <text x={X1 - 6} y={TOPY + 24} text-anchor="end" class="rem-lbl">{Math.round(remaining)} cm remaining</text>
   {/if}
 
-  <!-- Add shelf: fixed band below the rim, always clear of shelves + lid -->
+  <!-- Add shelf: fixed band below the rim, always clear of shelves + lid;
+       remaining space shown right under it. -->
   {#if canAdd}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <g class="add" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); openShelfEditor("new", { x: e.clientX, y: e.clientY }); }}>
-      <rect x={CX - 80} y={TOPY + 34} width="160" height="36" rx="8" class="add-rect" />
-      <text x={CX} y={TOPY + 57} text-anchor="middle" class="add-lbl">+ Add shelf</text>
+      <rect x={CX - 86} y={TOPY + 26} width="172" height="40" rx="9" class="add-rect" />
+      <text x={CX} y={TOPY + 51} text-anchor="middle" class="add-lbl">+ Add shelf</text>
     </g>
+    {#if remaining > 0.5}
+      <text x={CX} y={TOPY + 84} text-anchor="middle" class="rem-lbl">({Math.round(remaining)} cm remaining)</text>
+    {/if}
+  {:else if remaining > 0.5}
+    <text x={CX} y={TOPY + 52} text-anchor="middle" class="rem-lbl">{Math.round(remaining)} cm remaining</text>
   {/if}
 
   <!-- Shelves -->
@@ -203,27 +208,27 @@
       <line x1={X0 + 4} y1={row.yPlate} x2={X1 - 4} y2={row.yPlate} class="plate-line" />
     {/if}
 
-    <!-- shelf controls: edit + delete -->
+    <!-- shelf controls + occupancy, grouped in a soft bordered card -->
     {@const midY = (row.ySpaceTop + row.yPlate) / 2}
+    <rect x={X1 + 16} y={midY - 18} width="156" height="36" rx="9" class="occ-card" />
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <g class="ctrl" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); openShelfEditor(row.id, { x: e.clientX, y: e.clientY }); }}>
-      <circle cx={X1 + 27} cy={midY} r="12" class="ctrl-c" />
-      <text x={X1 + 27} y={midY + 4} text-anchor="middle" class="ctrl-i">✎</text>
+      <circle cx={X1 + 38} cy={midY} r="13" class="ctrl-c" />
+      <text x={X1 + 38} y={midY + 4} text-anchor="middle" class="ctrl-i">✎</text>
     </g>
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <g class="ctrl del" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); removeLevel(row.id); }}>
-      <circle cx={X1 + 57} cy={midY} r="12" class="ctrl-c" />
-      <text x={X1 + 57} y={midY + 5} text-anchor="middle" class="ctrl-i">×</text>
+      <circle cx={X1 + 70} cy={midY} r="13" class="ctrl-c" />
+      <text x={X1 + 70} y={midY + 5} text-anchor="middle" class="ctrl-i">×</text>
     </g>
-
-    <!-- occupancy -->
-    <text x={X1 + 86} y={midY + 4} class="occ" style="fill:{bandColor[occupancyBand(occ)]}">
+    <line x1={X1 + 94} y1={midY - 12} x2={X1 + 94} y2={midY + 12} class="occ-sep" />
+    <text x={X1 + 134} y={midY + 5} text-anchor="middle" class="occ" style="fill:{bandColor[occupancyBand(occ)]}">
       {Math.round(occ * 100)}%
     </text>
   {/each}
 
   {#if rows.length > 0}
-    <text x={X1 + 86} y={yTopInner - 12} class="lbl">OCCUPANCY</text>
+    <text x={X1 + 134} y={yTopInner - 12} text-anchor="middle" class="lbl">OCCUPANCY</text>
   {/if}
 </svg>
 
@@ -298,7 +303,7 @@
     fill: color-mix(in srgb, var(--accent) 8%, var(--panel-2));
   }
   .add-lbl {
-    font-size: 13px;
+    font-size: 15px;
     fill: var(--text);
   }
   .zone {
@@ -315,17 +320,19 @@
     stroke-dasharray: 3 4;
   }
   .zone-rect.sel {
-    stroke: var(--accent);
-    stroke-width: 2.5;
+    stroke: var(--amber);
+    stroke-width: 2;
+    stroke-opacity: 0.85;
     stroke-dasharray: none;
     fill: #ffffff;
-    fill-opacity: 0.16;
+    fill-opacity: 0.14;
   }
   .zone-rect.hovered {
-    stroke: var(--accent);
+    stroke: var(--amber);
     stroke-width: 2.5;
     stroke-opacity: 1;
     stroke-dasharray: none;
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--amber) 60%, transparent));
   }
   .zone:hover .zone-rect {
     stroke-opacity: 1;
@@ -405,5 +412,14 @@
   .occ {
     font-size: 14px;
     font-variant-numeric: tabular-nums;
+  }
+  .occ-card {
+    fill: rgba(255, 255, 255, 0.015);
+    stroke: var(--line-soft);
+    stroke-width: 1;
+  }
+  .occ-sep {
+    stroke: var(--line-soft);
+    stroke-width: 1;
   }
 </style>

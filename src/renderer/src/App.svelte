@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { isDesktop } from "./lib/storage";
   import { app, go, loadApp } from "./lib/firing.svelte";
   import Home from "./routes/Home.svelte";
   import FiringPlanner from "./routes/FiringPlanner.svelte";
@@ -21,24 +20,43 @@
     { id: "kilnProfiles", label: "Kiln Profiles" },
     { id: "appSettings", label: "App Settings" },
   ];
+
+  function onKey(e: KeyboardEvent): void {
+    const t = e.target as HTMLElement | null;
+    const typing = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+    if (e.key === "Escape") {
+      if (app.agendaOpen) {
+        app.agendaOpen = false;
+        app.agendaAddFor = null;
+      } else if (!app.exportOpen) {
+        go("home");
+      }
+      return;
+    }
+    if (!typing && (e.key === "a" || e.key === "A")) {
+      e.preventDefault();
+      app.agendaOpen = true;
+    }
+  }
 </script>
+
+<svelte:window onkeydown={onKey} />
 
 <div class="app">
   <header class="topbar">
-    <div class="brand">
-      <span class="wordmark">PÁRAMO</span>
-      <div class="titles">
-        <h1>KILN MANAGER</h1>
-        <p class="muted">Plan, price and document shared kiln firings.</p>
-      </div>
-    </div>
+    <h1 class="brand">
+      <span class="wordmark">PÁRAMO</span> <span class="title">KILN MANAGER</span>
+    </h1>
 
-    <div class="actions">
-      <button class="agenda-btn" onclick={() => (app.agendaOpen = true)} title="Client agenda">
-        <span class="ic">☰</span> Agenda
-      </button>
-      <span class="env-pill" class:desktop={isDesktop}>{isDesktop ? "Local · offline" : "Web preview"}</span>
-    </div>
+    <button class="agenda-tab" onclick={() => (app.agendaOpen = true)} title="Client agenda (A)">
+      <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" class="ag-ic">
+        <rect x="4" y="3.5" width="15" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.4" />
+        <line x1="8" y1="3.5" x2="8" y2="20.5" stroke="currentColor" stroke-width="1.4" />
+        <line x1="11" y1="8.5" x2="16" y2="8.5" stroke="currentColor" stroke-width="1.4" />
+        <line x1="11" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="1.4" />
+      </svg>
+      Agenda
+    </button>
   </header>
 
   <nav class="tabs">
@@ -88,34 +106,52 @@
     overflow: hidden;
   }
   .topbar {
+    position: relative;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     flex-shrink: 0;
+    min-height: 40px;
   }
   .brand {
-    display: flex;
-    align-items: center;
-    gap: 22px;
+    margin: 0;
+    text-align: center;
+    font-weight: 400;
   }
   .wordmark {
-    font-size: 15px;
-    letter-spacing: 0.28em;
+    font-size: 21px;
+    letter-spacing: 0.26em;
     font-weight: 300;
+    color: var(--text);
   }
-  .titles h1 {
-    font-size: 18px;
+  .title {
+    font-size: 21px;
     letter-spacing: 0.13em;
     font-weight: 600;
+    margin-left: 6px;
   }
-  .titles p {
-    margin: 2px 0 0;
-    font-size: 12px;
-  }
-  .actions {
+  .agenda-tab {
+    position: absolute;
+    right: 0;
+    top: -4px;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px 6px 12px 12px;
+    border-top-width: 2px;
+    border-top-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    padding: 9px 16px;
+    color: var(--text);
+    font-size: 13px;
+  }
+  .agenda-tab:hover {
+    border-color: var(--text-faint);
+    border-top-color: var(--accent);
+  }
+  .ag-ic {
+    color: var(--text-dim);
   }
   .tabs {
     display: flex;
@@ -149,37 +185,6 @@
   }
   .back:hover {
     color: var(--text);
-  }
-  .agenda-btn {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 7px 14px;
-    color: var(--text);
-    font-size: 13px;
-  }
-  .agenda-btn:hover {
-    border-color: var(--text-faint);
-  }
-  .ic {
-    font-size: 12px;
-    color: var(--text-dim);
-  }
-  .env-pill {
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-faint);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 5px 11px;
-  }
-  .env-pill.desktop {
-    color: var(--green);
-    border-color: color-mix(in srgb, var(--green) 40%, var(--line));
   }
   .content {
     flex: 1;

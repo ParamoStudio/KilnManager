@@ -122,8 +122,9 @@
   {/if}
 
   <div class="faint reserved">
-    {#if posts.length > 1}{posts.join(" + ")} = {support} cm · {/if}{reserved} cm reserved (posts {support} + shelf {thickness})
+    {#if posts.length > 1}{posts.join(" + ")} = {support} cm · {/if}posts {support} + shelf {thickness}
   </div>
+  <div class="total-box">{reserved} cm total</div>
 
   <span class="label mt">Split shelf</span>
   <div class="splits">
@@ -158,6 +159,18 @@
     border-radius: 12px;
     padding: 16px;
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+    text-align: center;
+  }
+  .total-box {
+    display: inline-block;
+    margin: 4px auto 0;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 16px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
   }
   .arrow {
     position: absolute;
@@ -188,6 +201,7 @@
   .hrow {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
   }
   .pill {
@@ -223,6 +237,7 @@
   .presets {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: 5px;
     margin: 9px 0 8px;
   }
@@ -245,6 +260,7 @@
   .custom {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     margin-bottom: 8px;
   }
@@ -262,7 +278,6 @@
     font-size: 12px;
   }
   .mini {
-    margin-left: auto;
     background: var(--accent);
     color: #111;
     border: none;
@@ -305,7 +320,7 @@
   }
   .actions {
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
     margin-top: 16px;
   }
   .doneb {
