@@ -586,10 +586,20 @@ export function applyComplexityToSelection(cx: ComplexityKey): void {
   }
 }
 
-/** Empty the selected zones. */
+/** Empty ALL selected zones (a whole client's set). */
 export function clearSelectedZones(): void {
   for (const z of ui.selection) setSegment(z.levelId, z.segIdx, null);
   clearSelection();
+}
+
+/** Empty ONLY the primary cubicle (the one originally clicked). */
+export function clearPrimaryZone(): void {
+  const p = ui.primaryZone;
+  if (!p) return;
+  setSegment(p.levelId, p.segIdx, null);
+  ui.selection = ui.selection.filter((z) => !(z.levelId === p.levelId && z.segIdx === p.segIdx));
+  ui.primaryZone = ui.selection[0] ?? null;
+  if (ui.selection.length === 0) clearSelection();
 }
 
 export function clearClient(name: string): void {

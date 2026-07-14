@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { slide } from "svelte/transition";
   import {
     planner,
     ui,
@@ -47,17 +48,20 @@
 
   function addPost(v: number): void {
     if (summing) {
+      if (posts.length >= 4) return; // never stack more than 4 posts
       const room = maxSupport - support;
       if (v <= room + 1e-6) posts = [...posts, v];
     } else {
       posts = [Math.min(v, maxSupport)];
     }
   }
-  function clearPosts(): void {
-    posts = [];
+  // The "×" in stack mode: first clears the extra posts, then collapses. Never
+  // leaves the shelf with zero posts (that would be physically impossible).
+  function clearSum(): void {
+    if (posts.length > 1) posts = [posts[0]!];
+    else summing = false;
   }
   function fillKiln(): void {
-    // Last shelf, tall piece: reserve all the remaining space.
     posts = [Math.max(2, Math.round(maxSupport))];
     summing = false;
   }
@@ -103,17 +107,34 @@
     <button class="x" onclick={closeShelfEditor} aria-label="Close">×</button>
   </div>
 
-  <div class="hrow">
-    <span class="label">Shelf height</span>
-    <button class="pill" class:active={summing} onclick={() => (summing = !summing)} title="Stack several posts (e.g. 8 + 5)">+</button>
-    <button class="pill" onclick={clearPosts} disabled={!summing} title="Clear the stack">×</button>
-    {#if summing}<span class="faint summing-h">stacking posts</span>{/if}
-  </div>
-
+  <span class="label center">Shelf height</span>
   <div class="presets">
     {#each kiln.standardPostHeightsCm as p (p)}
-      <button class="chip" class:active={!summing && support === p} onclick={() => addPost(p)} disabled={!summing && p > maxSupport}>{p}</button>
+      <button class="chip" class:active={!summing && posts.length === 1 && posts[0] === p} onclick={() => addPost(p)} disabled={!summing && p > maxSupport}>{p}</button>
     {/each}
+  </div>
+
+  {#if !summing}
+    <div class="sum-strip">
+      <button class="pluspill" onclick={() => (summing = true)} title="Stack several posts (e.g. 8 + 5)">+</button>
+    </div>
+  {:else}
+    <div class="sum-strip" transition:slide={{ duration: 170 }}>
+      <div class="slots">
+        {#each posts as p, i (i)}
+          <span class="slot">{p}</span>
+          {#if i < posts.length - 1}<span class="op">+</span>{/if}
+        {/each}
+        <button class="xpill" onclick={clearSum} title="Clear / collapse">×</button>
+      </div>
+    </div>
+  {/if}
+
+  <div class="faint reserved">
+    {#if posts.length > 1}{posts.join(" + ")} = {support} cm · {/if}posts {support} + shelf {thickness}
+  </div>
+
+  <div class="cf-row">
     <button class="chip" class:active={customOpen} onclick={() => (customOpen = !customOpen)}>Custom</button>
     <button class="chip fill" onclick={fillKiln} title="Reserve all remaining height (last shelf / tall piece)">Fill kiln</button>
   </div>
@@ -126,12 +147,7 @@
     </div>
   {/if}
 
-  <div class="faint reserved">
-    {#if posts.length > 1}{posts.join(" + ")} = {support} cm · {/if}posts {support} + shelf {thickness}
-  </div>
-  <div class="total-box">{reserved} cm total</div>
-
-  <span class="label mt">Split shelf</span>
+  <span class="label center mt">Split shelf</span>
   <div class="splits">
     {#each splits as s (s.n)}
       <button class="split" class:active={division === s.n} onclick={() => (division = s.n)}>{s.label}</button>
@@ -144,6 +160,7 @@
 
   <div class="actions">
     <button class="doneb" onclick={done} disabled={isNew && roomForNewShelf() <= 0}>Done</button>
+    <div class="total-box">{reserved} cm total</div>
   </div>
 </div>
 
@@ -167,11 +184,9 @@
     text-align: center;
   }
   .total-box {
-    display: inline-block;
-    margin: 4px auto 0;
-    border: 1px solid var(--line);
+    border: 1px solid color-mix(in srgb, var(--amber) 45%, var(--line));
     border-radius: 8px;
-    padding: 6px 16px;
+    padding: 9px 16px;
     font-size: 15px;
     font-weight: 600;
     color: var(--text);
@@ -211,37 +226,9 @@
     color: var(--text-faint);
     font-size: 19px;
   }
-  .hrow {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-  .pill {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 1px solid var(--line);
-    background: var(--panel-2);
-    color: var(--text-dim);
-    font-size: 15px;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-  }
-  .pill.active {
-    color: #111;
-    background: var(--amber);
-    border-color: var(--amber);
-  }
-  .pill:disabled {
-    opacity: 0.35;
-  }
-  .summing-h {
-    font-size: 11px;
-    color: var(--amber);
+  .center {
+    display: block;
+    text-align: center;
   }
   .fill {
     border-style: dashed;
@@ -252,16 +239,21 @@
     flex-wrap: wrap;
     justify-content: center;
     gap: 5px;
-    margin: 9px 0 8px;
+    margin: 8px 0 6px;
   }
   .chip {
     background: var(--panel-2);
     border: 1px solid var(--line-soft);
     border-radius: 7px;
     padding: 6px 11px;
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-dim);
     font-variant-numeric: tabular-nums;
+    transition: border-color 0.12s ease, color 0.12s ease;
+  }
+  .chip:hover {
+    border-color: var(--amber);
+    color: var(--text);
   }
   .chip.active {
     color: var(--text);
@@ -269,6 +261,76 @@
   }
   .chip:disabled {
     opacity: 0.3;
+  }
+  .sum-strip {
+    display: flex;
+    justify-content: center;
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    padding: 7px;
+    margin-bottom: 6px;
+    overflow: hidden;
+  }
+  .pluspill {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid var(--amber);
+    background: color-mix(in srgb, var(--amber) 12%, var(--panel-2));
+    color: var(--amber);
+    font-size: 17px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  .pluspill:hover {
+    background: var(--amber);
+    color: #1a1200;
+  }
+  .slots {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .slot {
+    background: var(--panel);
+    border: 1px solid var(--line-soft);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 13px;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .op {
+    color: var(--text-faint);
+  }
+  .xpill {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin-left: 2px;
+  }
+  .xpill:hover {
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+  .cf-row {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 10px 0;
   }
   .custom {
     display: flex;
@@ -334,16 +396,18 @@
   .actions {
     display: flex;
     justify-content: center;
-    margin-top: 16px;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
   }
   .doneb {
     background: var(--accent);
     color: #111;
-    border: none;
+    border: 1px solid color-mix(in srgb, var(--amber) 45%, var(--accent));
     border-radius: 8px;
     padding: 9px 22px;
     font-weight: 600;
-    font-size: 13px;
+    font-size: 14px;
   }
   .doneb:disabled {
     opacity: 0.4;

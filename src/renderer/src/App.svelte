@@ -49,7 +49,7 @@
     </h1>
 
     <button class="agenda-tab" onclick={() => (app.agendaOpen = true)} title="Client agenda (A)">
-      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" class="ag-ic">
+      <svg viewBox="0 0 24 24" width="23" height="23" aria-hidden="true" class="ag-ic">
         <rect x="4" y="3.5" width="15" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.4" />
         <line x1="8" y1="3.5" x2="8" y2="20.5" stroke="currentColor" stroke-width="1.4" />
         <line x1="11" y1="8.5" x2="16" y2="8.5" stroke="currentColor" stroke-width="1.4" />
@@ -139,12 +139,12 @@
     gap: 10px;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 7px 7px 14px 14px;
+    border-radius: 8px 8px 16px 16px;
     border-top-width: 2px;
     border-top-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-    padding: 11px 20px;
+    padding: 14px 26px;
     color: var(--text);
-    font-size: 15px;
+    font-size: 17px;
   }
   .agenda-tab:hover {
     border-color: var(--text-faint);
@@ -162,8 +162,8 @@
   .tab {
     background: none;
     border: none;
-    padding: 9px 15px;
-    font-size: 13px;
+    padding: 10px 16px;
+    font-size: 15px;
     color: var(--text-faint);
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
@@ -179,9 +179,9 @@
   .back {
     background: none;
     border: none;
-    padding: 9px 4px 9px 0;
+    padding: 10px 4px 10px 0;
     color: var(--text-dim);
-    font-size: 13px;
+    font-size: 15px;
   }
   .back:hover {
     color: var(--text);

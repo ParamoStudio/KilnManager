@@ -10,6 +10,7 @@
     setZoneComplexity,
     applyComplexityToSelection,
     clearSelectedZones,
+    clearPrimaryZone,
     recentContacts,
     newClientForAssign,
     clientNote,
@@ -149,8 +150,11 @@
       {/if}
     </div>
 
-    <div class="actions">
-      <button class="ghost danger" onclick={clearSelectedZones}>Empty selected</button>
+    <div class="actions col">
+      <button class="ghost danger" onclick={clearPrimaryZone} disabled={!ui.primaryZone}>
+        Empty selection ({primaryLabel})
+      </button>
+      <button class="ghost danger" onclick={clearSelectedZones}>Empty all of {owner}</button>
     </div>
 
   {:else}
@@ -451,6 +455,13 @@
   .actions {
     display: flex;
     margin-top: auto;
+  }
+  .actions.col {
+    flex-direction: column;
+    gap: 7px;
+  }
+  .ghost:disabled {
+    opacity: 0.4;
   }
   .ghost {
     flex: 1;

@@ -96,8 +96,8 @@
   </text>
 
   <!-- Height ruler -->
-  <text x="118" y={yTopInner - 26} text-anchor="end" class="lbl">USABLE H.</text>
-  <text x="118" y={yTopInner - 12} text-anchor="end" class="val">{kiln.usableHeightCm} cm</text>
+  <text x="118" y={yTopInner - 34} text-anchor="end" class="lbl">USABLE H.</text>
+  <text x="118" y={yTopInner - 14} text-anchor="end" class="val">{kiln.usableHeightCm} cm</text>
   <line x1="120" y1={yTopInner} x2="120" y2={yBotInner} class="dim-soft" />
   {#each ticks as t (t)}
     <line x1="115" y1={yOfCm(t)} x2="125" y2={yOfCm(t)} class="tick" />
@@ -141,6 +141,14 @@
     {@const colW = (X1 - X0) / row.div}
     {@const occ = occupiedFraction(lvl)}
 
+    <!-- architectural height dimension on the left of the shelf -->
+    {#if row.yPlate - row.ySpaceTop > 12}
+      <line x1={X0 - 30} y1={row.ySpaceTop + 3} x2={X0 - 30} y2={row.yPlate - 3} class="dim-br" />
+      <line x1={X0 - 34} y1={row.ySpaceTop + 3} x2={X0 - 26} y2={row.ySpaceTop + 3} class="dim-br" />
+      <line x1={X0 - 34} y1={row.yPlate - 3} x2={X0 - 26} y2={row.yPlate - 3} class="dim-br" />
+      <text x={X0 - 40} y={(row.ySpaceTop + row.yPlate) / 2 + 4} text-anchor="end" class="dim-cm">{fmtCm(row.consumed)} cm</text>
+    {/if}
+
     <!-- zones (space above the plate) -->
     {#each lvl.segments as seg, k (k)}
       {@const zx = X0 + k * colW}
@@ -171,9 +179,6 @@
           style={owner ? `--z:${colorOf(owner)}` : ""}
         />
         <text x={zx + 8} y={row.ySpaceTop + 17} class="zid">{zoneLabel(row.id, k)}</text>
-        {#if k === 0 && bandH > 30}
-          <text x={zx + 8} y={row.ySpaceTop + 32} class="zh">{fmtCm(row.consumed)} cm</text>
-        {/if}
         {#if owner && seg}
           {#if bandH > 40}
             <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2} text-anchor="middle" class="zname">
@@ -226,9 +231,6 @@
     </text>
   {/each}
 
-  {#if rows.length > 0}
-    <text x={X1 + 134} y={yTopInner - 12} text-anchor="middle" class="lbl occ-h">OCCUPANCY</text>
-  {/if}
 </svg>
 
 <style>
@@ -315,8 +317,11 @@
     transition: fill-opacity 0.15s ease, stroke-opacity 0.15s ease;
   }
   .zone-rect.free {
-    stroke: var(--line-soft);
-    stroke-dasharray: 3 4;
+    stroke: rgba(255, 255, 255, 0.32);
+    stroke-dasharray: 4 4;
+  }
+  .zone:hover .zone-rect.free {
+    stroke: rgba(255, 255, 255, 0.8);
   }
   .zone-rect.sel {
     stroke: var(--amber);
@@ -375,9 +380,15 @@
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
-  .zh {
+  .dim-br {
+    stroke: var(--line);
+    stroke-width: 1;
+    stroke-dasharray: 2 3;
+  }
+  .dim-cm {
     font-size: 12px;
     fill: var(--text-dim);
+    font-variant-numeric: tabular-nums;
   }
   .ctrl {
     cursor: pointer;
@@ -411,11 +422,6 @@
   .occ {
     font-size: 14px;
     font-variant-numeric: tabular-nums;
-  }
-  .occ-h {
-    fill: var(--text-dim);
-    text-decoration: underline;
-    text-underline-offset: 3px;
   }
   .occ-card {
     fill: rgba(255, 255, 255, 0.015);
