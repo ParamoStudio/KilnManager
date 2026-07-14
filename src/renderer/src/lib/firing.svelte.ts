@@ -224,11 +224,24 @@ export function clientNames(): string[] {
 
 export type Screen = "home" | "firing" | "kilnProfiles" | "appSettings";
 
-export const app = $state<{ screen: Screen; agendaOpen: boolean; exportOpen: boolean }>({
+export const app = $state<{
+  screen: Screen;
+  agendaOpen: boolean;
+  exportOpen: boolean;
+  /** When set, the agenda opens in add-mode and assigns the new client on save. */
+  agendaAddFor: "assign" | null;
+}>({
   screen: "home",
   agendaOpen: false,
   exportOpen: false,
+  agendaAddFor: null,
 });
+
+/** Open the agenda to create a client and assign the current selection to them. */
+export function newClientForAssign(): void {
+  app.agendaAddFor = "assign";
+  app.agendaOpen = true;
+}
 
 export function go(screen: Screen): void {
   // Sync working edits into the active record when leaving the firing screen.

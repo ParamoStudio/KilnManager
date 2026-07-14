@@ -4,6 +4,7 @@
     planner,
     app,
     currentKiln,
+    currentService,
     setService,
     toggleModifier,
     activeFiring,
@@ -15,8 +16,10 @@
 
   let { result }: { result: FiringResult } = $props();
   const kiln = $derived(currentKiln());
+  const svc = $derived(currentService());
   const title = $derived(activeFiring()?.title ?? "");
 
+  let svcOpen = $state(false);
   let confirming = $state(false);
   let timer: ReturnType<typeof setTimeout> | undefined;
   function closeClick(): void {
@@ -35,12 +38,7 @@
 <div class="rail">
   <div class="block">
     <span class="label">Firing</span>
-    <input
-      class="title"
-      value={title}
-      placeholder="Untitled firing"
-      oninput={(e) => setActiveTitle(e.currentTarget.value)}
-    />
+    <input class="title" value={title} placeholder="Untitled firing" oninput={(e) => setActiveTitle(e.currentTarget.value)} />
     <span class="faint sub">
       {kiln.name} · {kiln.shape === "cylinder" ? `${kiln.diameterCm} cm Ø` : `${kiln.widthCm}×${kiln.depthCm} cm`} · {kiln.usableHeightCm} cm
     </span>
@@ -48,19 +46,33 @@
 
   <div class="block">
     <span class="label">Firing service</span>
-    <select value={planner.serviceId} onchange={(e) => setService(e.currentTarget.value)}>
-      {#each kiln.services as s (s.id)}<option value={s.id}>{s.name} — {eur(s.basePrice)}</option>{/each}
-    </select>
+    <div class="acc">
+      <button class="acc-head" onclick={() => (svcOpen = !svcOpen)}>
+        <span class="svc-name">{svc.name}</span>
+        <span class="svc-price">{eur(svc.basePrice)}</span>
+        <span class="chev" class:open={svcOpen}>⌄</span>
+      </button>
+      {#if svcOpen}
+        <div class="acc-list">
+          {#each kiln.services as s (s.id)}
+            <button class="acc-item" class:active={s.id === planner.serviceId} onclick={() => { setService(s.id); svcOpen = false; }}>
+              <span>{s.name}</span>
+              <span class="svc-price">{eur(s.basePrice)}</span>
+            </button>
+          {/each}
+        </div>
+      {/if}
+    </div>
   </div>
 
   <div class="block">
     <span class="label">Modifiers</span>
     {#each planner.modifiers as m (m.id)}
-      <label class="mod">
-        <input type="checkbox" checked={m.on} onchange={() => toggleModifier(m.id)} />
-        <span>{m.label}</span>
+      <button class="mod" onclick={() => toggleModifier(m.id)}>
+        <span class="box" class:checked={m.on}></span>
+        <span class="ml">{m.label}</span>
         <span class="amt" class:neg={m.amount < 0}>{m.amount < 0 ? "−" : "+"}{eur(Math.abs(m.amount))}</span>
-      </label>
+      </button>
     {/each}
   </div>
 
@@ -101,32 +113,114 @@
   .sub {
     font-size: 11px;
   }
-  select {
-    background: var(--panel-2);
+
+  .acc {
     border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 8px 10px;
-    color: var(--text);
-    font: inherit;
+    border-radius: 9px;
+    overflow: hidden;
+    background: var(--panel-2);
   }
+  .acc-head {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: none;
+    border: none;
+    color: var(--text);
+  }
+  .svc-name {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .svc-price {
+    margin-left: auto;
+    color: var(--green);
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+  }
+  .chev {
+    color: var(--text-faint);
+    transition: transform 0.18s ease;
+    margin-left: 8px;
+  }
+  .chev.open {
+    transform: rotate(180deg);
+  }
+  .acc-list {
+    border-top: 1px solid var(--line-soft);
+    display: flex;
+    flex-direction: column;
+  }
+  .acc-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .acc-item:hover {
+    background: var(--panel);
+    color: var(--text);
+  }
+  .acc-item.active {
+    color: var(--text);
+  }
+  .acc-item .svc-price {
+    color: var(--green);
+  }
+
   .mod {
     display: flex;
     align-items: center;
-    gap: 9px;
+    gap: 10px;
+    padding: 5px 0;
+    background: none;
+    border: none;
+    color: var(--text);
     font-size: 13px;
-    padding: 3px 0;
+    text-align: left;
   }
-  .mod input {
-    accent-color: var(--accent);
+  .box {
+    width: 16px;
+    height: 16px;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    flex-shrink: 0;
+    position: relative;
+    transition: all 0.15s ease;
+  }
+  .box.checked {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .box.checked::after {
+    content: "";
+    position: absolute;
+    left: 5px;
+    top: 2px;
+    width: 4px;
+    height: 8px;
+    border: solid #111;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  .ml {
+    flex: 1;
   }
   .amt {
-    margin-left: auto;
     color: var(--text-dim);
     font-variant-numeric: tabular-nums;
   }
   .amt.neg {
     color: var(--green);
   }
+
   .foot {
     margin-top: auto;
     display: flex;

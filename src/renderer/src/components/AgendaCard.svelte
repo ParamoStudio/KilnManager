@@ -1,9 +1,18 @@
 <script lang="ts">
-  import { contacts, addContactFull, updateContact, deleteContact, type Contact } from "../lib/firing.svelte";
+  import {
+    app,
+    contacts,
+    addContactFull,
+    updateContact,
+    deleteContact,
+    assignSelectionTo,
+    type Contact,
+  } from "../lib/firing.svelte";
 
   let { onclose }: { onclose: () => void } = $props();
 
-  let sel = $state<string | "new" | null>(contacts.list[0]?.id ?? "new");
+  const forAssign = app.agendaAddFor === "assign";
+  let sel = $state<string | "new" | null>(forAssign ? "new" : (contacts.list[0]?.id ?? "new"));
   let confirmDel = $state(false);
 
   const editing = $derived(sel && sel !== "new" ? contacts.list.find((c) => c.id === sel) : null);
@@ -36,6 +45,11 @@
       updateContact(editing.id, { name: n, surname: surname.trim(), phone: phone.trim(), notes: notes.trim() });
     } else {
       const c = addContactFull({ name: n, surname: surname.trim(), phone: phone.trim(), notes: notes.trim() });
+      if (app.agendaAddFor === "assign") {
+        assignSelectionTo(c.name);
+        onclose();
+        return;
+      }
       sel = c.id;
     }
   }

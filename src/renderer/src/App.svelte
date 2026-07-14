@@ -15,36 +15,41 @@
     ready = true;
   });
 
-  const atHome = $derived(app.screen === "home");
+  const inFiring = $derived(app.screen === "firing");
+  const tabs: { id: "home" | "kilnProfiles" | "appSettings"; label: string }[] = [
+    { id: "home", label: "Home" },
+    { id: "kilnProfiles", label: "Kiln Profiles" },
+    { id: "appSettings", label: "App Settings" },
+  ];
 </script>
 
 <div class="app">
   <header class="topbar">
     <div class="brand">
       <span class="wordmark">PÁRAMO</span>
-      {#if atHome}
-        <div class="titles">
-          <h1>KILN MANAGER</h1>
-          <p class="muted">Plan, price and document shared kiln firings.</p>
-        </div>
-      {:else}
-        <button class="back" onclick={() => go("home")}>← Home</button>
-      {/if}
+      <div class="titles">
+        <h1>KILN MANAGER</h1>
+        <p class="muted">Plan, price and document shared kiln firings.</p>
+      </div>
     </div>
 
     <div class="actions">
-      {#if atHome}
-        <nav class="config">
-          <button class:active={app.screen === "kilnProfiles"} onclick={() => go("kilnProfiles")}>Kiln Profiles</button>
-          <button class:active={app.screen === "appSettings"} onclick={() => go("appSettings")}>App Settings</button>
-        </nav>
-      {/if}
       <button class="agenda-btn" onclick={() => (app.agendaOpen = true)} title="Client agenda">
         <span class="ic">☰</span> Agenda
       </button>
       <span class="env-pill" class:desktop={isDesktop}>{isDesktop ? "Local · offline" : "Web preview"}</span>
     </div>
   </header>
+
+  <nav class="tabs">
+    {#if inFiring}
+      <button class="back" onclick={() => go("home")}>← Home</button>
+    {:else}
+      {#each tabs as tab (tab.id)}
+        <button class="tab" class:active={app.screen === tab.id} onclick={() => go(tab.id)}>{tab.label}</button>
+      {/each}
+    {/if}
+  </nav>
 
   <main class="content">
     {#if ready}
@@ -62,7 +67,12 @@
 </div>
 
 {#if app.agendaOpen}
-  <AgendaCard onclose={() => (app.agendaOpen = false)} />
+  <AgendaCard
+    onclose={() => {
+      app.agendaOpen = false;
+      app.agendaAddFor = null;
+    }}
+  />
 {/if}
 {#if app.exportOpen}
   <ExportCard />
@@ -102,39 +112,43 @@
     margin: 2px 0 0;
     font-size: 12px;
   }
-  .back {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 7px 14px;
-    color: var(--text-dim);
-    font-size: 13px;
-  }
-  .back:hover {
-    color: var(--text);
-    border-color: var(--text-faint);
-  }
   .actions {
     display: flex;
     align-items: center;
     gap: 12px;
   }
-  .config {
+  .tabs {
     display: flex;
-    gap: 2px;
+    gap: 4px;
+    border-bottom: 1px solid var(--line-soft);
+    flex-shrink: 0;
   }
-  .config button {
+  .tab {
     background: none;
     border: none;
-    padding: 7px 12px;
+    padding: 9px 15px;
     font-size: 13px;
     color: var(--text-faint);
-    border-radius: 7px;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.18s ease, border-color 0.18s ease;
   }
-  .config button:hover,
-  .config button.active {
+  .tab:hover {
+    color: var(--text-dim);
+  }
+  .tab.active {
     color: var(--text);
-    background: var(--panel);
+    border-bottom-color: var(--accent);
+  }
+  .back {
+    background: none;
+    border: none;
+    padding: 9px 4px 9px 0;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .back:hover {
+    color: var(--text);
   }
   .agenda-btn {
     display: flex;

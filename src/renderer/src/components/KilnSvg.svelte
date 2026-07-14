@@ -7,15 +7,16 @@
     zoneOwner,
     occupiedFraction,
     occupancyBand,
-    clientNames,
     openShelfEditor,
     roomForNewShelf,
     remainingCm,
+    clientNames,
   } from "../lib/firing.svelte";
-  import { colorForName } from "../lib/colors";
+  import { colorForIndex } from "../lib/colors";
 
   const kiln = $derived(currentKiln());
   const names = $derived(clientNames());
+  const colorOf = (owner: string): string => colorForIndex(names.indexOf(owner));
 
   // Geometry (viewBox units)
   const TOPY = 96;
@@ -112,7 +113,7 @@
     <text x={X1 - 8} y={yTopInner + 16} text-anchor="end" class="rem-lbl">{Math.round(remaining)} cm remaining</text>
     {#if canAdd}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <g class="add" role="button" tabindex="-1" onclick={() => openShelfEditor("new")}>
+      <g class="add" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); openShelfEditor("new"); }}>
         <rect
           x={CX - 78}
           y={Math.max(yTopInner + 8, (yTopInner + yRemBottom) / 2 - 18)}
@@ -140,19 +141,19 @@
       {@const owner = seg?.contactName ?? null}
       {@const sel = isSelected(row.id, k)}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <g class="zone" role="button" tabindex="-1" onclick={() => toggleSelection(row.id, k)}>
+      <g class="zone" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); toggleSelection(row.id, k); }}>
         <rect
           x={zx + 2}
           y={row.ySpaceTop + 2}
           width={colW - 4}
           height={row.yPlate - row.ySpaceTop - 3}
           rx="3"
-          fill={owner ? colorForName(owner, names) : "transparent"}
+          fill={owner ? colorOf(owner) : "transparent"}
           fill-opacity={owner ? 0.13 : 0}
           class="zone-rect"
           class:sel
           class:free={!owner}
-          style={owner ? `--z:${colorForName(owner, names)}` : ""}
+          style={owner ? `--z:${colorOf(owner)}` : ""}
         />
         {#if row.yPlate - row.ySpaceTop > 20}
           {#if owner}
@@ -181,7 +182,7 @@
 
     <!-- index + height (click to edit the shelf) -->
     <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <g class="idx-btn" role="button" tabindex="-1" onclick={() => openShelfEditor(row.id)}>
+    <g class="idx-btn" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); openShelfEditor(row.id); }}>
       <text x={X0 + 12} y={row.ySpaceTop + 20} class="idx">{String(rows.length - i).padStart(2, "0")}</text>
       <text x={X0 + 12} y={row.ySpaceTop + 34} class="idx-h">{Math.round(row.consumed)} cm</text>
     </g>

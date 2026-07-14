@@ -1,11 +1,10 @@
 <script lang="ts">
   import type { FiringResult } from "@core";
-  import { occupiedVolumeFraction, remainingCm, clientNames, selectClientZones } from "../lib/firing.svelte";
-  import { colorForName } from "../lib/colors";
+  import { occupiedVolumeFraction, remainingCm, selectClientZones } from "../lib/firing.svelte";
+  import { colorForIndex } from "../lib/colors";
   import { eur, pct } from "../lib/format";
 
   let { result }: { result: FiringResult } = $props();
-  const names = $derived(clientNames());
   const occFill = $derived(occupiedVolumeFraction());
 </script>
 
@@ -21,9 +20,9 @@
     <span class="faint empty">No clients assigned yet — select zones and assign them.</span>
   {:else}
     <div class="clients">
-      {#each result.clients as c (c.contactName)}
+      {#each result.clients as c, i (c.contactName)}
         <button class="chip" onclick={() => selectClientZones(c.contactName)} title="Select this client's zones">
-          <span class="dot" style="--z:{colorForName(c.contactName, names)}"></span>
+          <span class="dot" style="--z:{colorForIndex(i)}"></span>
           <span class="cn">{c.contactName}</span>
           <span class="sh faint">{pct(c.sharePct)}</span>
           <span class="pr">{eur(c.price)}</span>

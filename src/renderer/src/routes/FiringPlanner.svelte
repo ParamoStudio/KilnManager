@@ -1,6 +1,6 @@
 <script lang="ts">
   import { computeFiring } from "@core";
-  import { ui, toCoreFiring } from "../lib/firing.svelte";
+  import { ui, toCoreFiring, clearSelection } from "../lib/firing.svelte";
   import KilnSvg from "../components/KilnSvg.svelte";
   import StructurePanel from "../components/StructurePanel.svelte";
   import AssignPanel from "../components/AssignPanel.svelte";
@@ -15,7 +15,8 @@
 <div class="dash">
   <div class="main">
     <aside class="rail"><StructurePanel {result} /></aside>
-    <section class="stage"><KilnSvg /></section>
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <section class="stage" role="presentation" onclick={clearSelection}><KilnSvg /></section>
     <aside class="rail"><AssignPanel /></aside>
   </div>
   <footer class="bottom"><CapacityStrip {result} /></footer>

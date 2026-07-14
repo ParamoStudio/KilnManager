@@ -2,7 +2,7 @@
   import { computeFiring } from "@core";
   import { firings, coreFiringFrom } from "../lib/firing.svelte";
   import { demoKilns } from "../lib/kilns";
-  import { colorForName } from "../lib/colors";
+  import { colorForIndex } from "../lib/colors";
   import { eur, pct } from "../lib/format";
 
   let { id, onclose }: { id: string; onclose: () => void } = $props();
@@ -10,9 +10,6 @@
   const rec = $derived(firings.list.find((f) => f.id === id));
   const result = $derived(rec ? computeFiring(coreFiringFrom(rec.planner)) : null);
   const kiln = $derived(rec ? (demoKilns.find((k) => k.id === rec.planner.kilnId) ?? demoKilns[0]!) : null);
-  const names = $derived(
-    rec ? Array.from(new Set(rec.planner.levels.flatMap((l) => l.segments.filter(Boolean).map((s) => s!.contactName)))) : [],
-  );
   const fmt = (ts?: number): string => (ts ? new Date(ts).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }) : "");
 </script>
 
@@ -30,9 +27,9 @@
     <table>
       <thead><tr><th>Client</th><th class="r">KLU</th><th class="r">%</th><th class="r">Amount</th></tr></thead>
       <tbody>
-        {#each result.clients as c (c.contactName)}
+        {#each result.clients as c, i (c.contactName)}
           <tr>
-            <td><span class="dot" style="--z:{colorForName(c.contactName, names)}"></span>{c.contactName}</td>
+            <td><span class="dot" style="--z:{colorForIndex(i)}"></span>{c.contactName}</td>
             <td class="r">{c.klu.toFixed(1)}</td>
             <td class="r">{pct(c.sharePct)}</td>
             <td class="r">{eur(c.price)}</td>
