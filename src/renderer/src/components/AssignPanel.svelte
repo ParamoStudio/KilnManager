@@ -104,7 +104,9 @@
       {#if !reassignOpen}
         <button class="collapsed" onclick={() => (reassignOpen = true)}>Assign to another client ▾</button>
       {:else}
-        <span class="label">Assign to another client</span>
+        <button class="collapsed open" onclick={() => { reassignOpen = false; pending = null; }}>
+          Assign to another client ▴
+        </button>
         {#if pending}
           <div class="choice">
             <span class="faint">Move to <b>{pending}</b>:</span>
@@ -290,7 +292,8 @@
     color: var(--text-dim);
     font-size: 13px;
   }
-  .collapsed:hover {
+  .collapsed:hover,
+  .collapsed.open {
     color: var(--text);
     border-color: var(--text-faint);
   }

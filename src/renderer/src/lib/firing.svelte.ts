@@ -612,8 +612,8 @@ export function reassignTo(name: string, scope: "primary" | "all"): void {
 export function zoneLabel(levelId: string, segIdx: number): string {
   const idx = planner.levels.findIndex((l) => l.id === levelId);
   if (idx < 0) return "";
-  const shelfNum = planner.levels.length - idx; // bottom = 01
-  return `${String(shelfNum).padStart(2, "0")}/${segIdx + 1}`;
+  const shelfNum = planner.levels.length - idx; // bottom = 1
+  return `${shelfNum}/${segIdx + 1}`;
 }
 
 // Re-export for convenience in components.

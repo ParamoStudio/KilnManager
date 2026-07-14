@@ -8,6 +8,7 @@
     occupiedFraction,
     occupancyBand,
     openShelfEditor,
+    removeLevel,
     roomForNewShelf,
     remainingCm,
     clientNames,
@@ -28,7 +29,7 @@
   const X1 = 650;
   const CX = (X0 + X1) / 2;
   const RX = (X1 - X0) / 2;
-  const yTopInner = TOPY;
+  const yTopInner = TOPY + 22; // headroom: shelves never touch the top rim
   const yBotInner = BOTY;
   const Hpx = yBotInner - yTopInner;
 
@@ -157,7 +158,10 @@
           class:free={!owner}
           style={owner ? `--z:${colorOf(owner)}` : ""}
         />
-        <text x={zx + 6} y={row.ySpaceTop + 14} class="zid">{zoneLabel(row.id, k)}</text>
+        <text x={zx + 8} y={row.ySpaceTop + 17} class="zid">{zoneLabel(row.id, k)}</text>
+        {#if k === 0}
+          <text x={zx + 8} y={row.ySpaceTop + 31} class="zh">{Math.round(row.consumed)} cm</text>
+        {/if}
         {#if row.yPlate - row.ySpaceTop > 30}
           {#if owner && seg}
             <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2} text-anchor="middle" class="zname">
@@ -186,21 +190,27 @@
       <line x1={X0 + 4} y1={row.yPlate} x2={X1 - 4} y2={row.yPlate} class="plate-line" />
     {/if}
 
-    <!-- index + height (click to edit the shelf) -->
+    <!-- shelf controls: edit + delete -->
+    {@const midY = (row.ySpaceTop + row.yPlate) / 2}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <g class="idx-btn" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); openShelfEditor(row.id); }}>
-      <text x={X0 + 12} y={row.ySpaceTop + 20} class="idx">{String(rows.length - i).padStart(2, "0")}</text>
-      <text x={X0 + 12} y={row.ySpaceTop + 34} class="idx-h">{Math.round(row.consumed)} cm</text>
+    <g class="ctrl" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); openShelfEditor(row.id); }}>
+      <circle cx={X1 + 24} cy={midY} r="10" class="ctrl-c" />
+      <text x={X1 + 24} y={midY + 3.5} text-anchor="middle" class="ctrl-i">✎</text>
+    </g>
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <g class="ctrl del" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); removeLevel(row.id); }}>
+      <circle cx={X1 + 50} cy={midY} r="10" class="ctrl-c" />
+      <text x={X1 + 50} y={midY + 4.5} text-anchor="middle" class="ctrl-i">×</text>
     </g>
 
     <!-- occupancy -->
-    <text x={X1 + 30} y={(row.ySpaceTop + row.yPlate) / 2 + 4} class="occ" style="fill:{bandColor[occupancyBand(occ)]}">
+    <text x={X1 + 74} y={midY + 4} class="occ" style="fill:{bandColor[occupancyBand(occ)]}">
       {Math.round(occ * 100)}%
     </text>
   {/each}
 
   {#if rows.length > 0}
-    <text x={X1 + 30} y={yTopInner - 12} class="lbl">OCCUPANCY</text>
+    <text x={X1 + 74} y={yTopInner - 12} class="lbl">OCCUPANCY</text>
   {/if}
 </svg>
 
@@ -321,21 +331,6 @@
     stroke: var(--line);
     stroke-width: 1.5;
   }
-  .idx-btn {
-    cursor: pointer;
-  }
-  .idx {
-    font-size: 13px;
-    font-weight: 600;
-    fill: var(--text);
-  }
-  .idx-btn:hover .idx {
-    fill: var(--accent);
-  }
-  .idx-h {
-    font-size: 10px;
-    fill: var(--text-faint);
-  }
   .zname {
     font-size: 12px;
     fill: var(--text);
@@ -346,10 +341,38 @@
     fill: var(--text-faint);
   }
   .zid {
-    font-size: 9px;
-    fill: var(--text-faint);
+    font-size: 11px;
+    fill: var(--text);
+    font-weight: 500;
     font-variant-numeric: tabular-nums;
-    letter-spacing: 0.04em;
+  }
+  .zh {
+    font-size: 10px;
+    fill: var(--text-faint);
+  }
+  .ctrl {
+    cursor: pointer;
+  }
+  .ctrl-c {
+    fill: var(--panel-2);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+  .ctrl:hover .ctrl-c {
+    stroke: var(--text-faint);
+  }
+  .ctrl.del:hover .ctrl-c {
+    stroke: #e88;
+  }
+  .ctrl-i {
+    font-size: 12px;
+    fill: var(--text-dim);
+  }
+  .ctrl:hover .ctrl-i {
+    fill: var(--text);
+  }
+  .ctrl.del:hover .ctrl-i {
+    fill: #e88;
   }
   .zcx {
     font-size: 9px;

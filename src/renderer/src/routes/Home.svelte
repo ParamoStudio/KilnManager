@@ -27,6 +27,8 @@
     return { clients: r.clients.length, total: r.accounting.revenue };
   }
   const fmt = (ts: number): string => new Date(ts).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  const fmtFull = (ts: number): string =>
+    new Date(ts).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
 
   function startNew(): void {
     if (demoKilns.length === 1) newFiring(demoKilns[0]!.id);
@@ -45,16 +47,19 @@
       {#each current as rec (rec.id)}
         {@const k = kilnOf(rec)}
         {@const s = summary(rec)}
+        {@const titled = rec.title.trim()}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <div class="card" role="button" tabindex="0" onclick={() => openFiring(rec.id)}>
           <div class="thumb"><KilnThumb shape={k.shape} /></div>
           <div class="info">
             <div class="row1">
-              <span class="kiln">{k.name}</span>
+              <span class="kiln">{titled || fmtFull(rec.createdAt)}</span>
               <span class="pending">pending</span>
             </div>
-            <div class="title">{rec.title || "Untitled firing"}</div>
-            <div class="faint meta">{fmt(rec.createdAt)} · {s.clients} client{s.clients === 1 ? "" : "s"} · {eur(s.total)}</div>
+            <div class="title">{k.name}</div>
+            <div class="faint meta">
+              {#if titled}{fmtFull(rec.createdAt)} · {/if}{s.clients} client{s.clients === 1 ? "" : "s"} · {eur(s.total)}
+            </div>
           </div>
           {#if confirmDelete === rec.id}
             <button class="del confirm" onclick={(e) => { e.stopPropagation(); deleteFiring(rec.id); confirmDelete = null; }}>Delete?</button>
