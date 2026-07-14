@@ -1,55 +1,145 @@
 <script lang="ts">
   import {
     ui,
+    planner,
     contacts,
     selectionOwners,
     assignSelectionTo,
+    reassignTo,
+    setZoneComplexity,
     applyComplexityToSelection,
     clearSelectedZones,
-    clearSelection,
     recentContacts,
     newClientForAssign,
     clientNote,
     setClientNote,
     clientNames,
+    zoneLabel,
+    type ZoneRef,
   } from "../lib/firing.svelte";
-  import { COMPLEXITY, complexityKeys } from "../lib/complexity";
+  import { COMPLEXITY, complexityKeys, type ComplexityKey } from "../lib/complexity";
   import { colorForIndex } from "../lib/colors";
 
   const count = $derived(ui.selection.length);
   const owners = $derived(selectionOwners());
-  const singleOwner = $derived(owners.length === 1 ? owners[0]! : null);
+  const owner = $derived(owners.length === 1 ? owners[0]! : null); // client-edit mode
 
   let query = $state("");
+  let reassignOpen = $state(false);
+  let pending = $state<string | null>(null);
+
   const results = $derived(
     query.trim()
-      ? contacts.list.filter((c) =>
-          `${c.name} ${c.surname ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()),
-        )
+      ? contacts.list.filter((c) => `${c.name} ${c.surname ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()))
       : recentContacts(4),
   );
 
-  const note = $derived(singleOwner ? clientNote(singleOwner) : "");
+  const segOf = (z: ZoneRef): { contactName: string; complexity: ComplexityKey } | null =>
+    planner.levels.find((l) => l.id === z.levelId)?.segments[z.segIdx] ?? null;
+
+  const primaryLabel = $derived(
+    ui.primaryZone ? zoneLabel(ui.primaryZone.levelId, ui.primaryZone.segIdx) : "",
+  );
+  const note = $derived(owner ? clientNote(owner) : "");
+
+  // reset transient UI when the selection changes
+  $effect(() => {
+    void count;
+    void owner;
+    reassignOpen = false;
+    pending = null;
+    query = "";
+  });
 </script>
 
 <div class="rail">
   <span class="rail-title">Assign</span>
 
   {#if count === 0}
-    <p class="faint hint">Click zones in the kiln to select them (click several for one client), then choose who they belong to.</p>
-  {:else}
-    <div class="sel">
-      <span class="sel-n">{count} zone{count === 1 ? "" : "s"} selected</span>
-      {#if owners.length}
-        <span class="faint">Currently: {owners.join(", ")}</span>
-      {:else}
-        <span class="faint">Currently free</span>
-      {/if}
+    <p class="faint hint">Click cubicles in the kiln to select them. Click a client's cubicle to edit all of theirs.</p>
+
+  {:else if owner}
+    <!-- Client-edit mode -->
+    <div class="pill">
+      <span class="dot" style="--z:{colorForIndex(clientNames().indexOf(owner))}"></span>
+      <span class="pn">{owner}</span>
+      <span class="faint">{count} cubicle{count === 1 ? "" : "s"}</span>
     </div>
 
     <div class="block">
+      <span class="label">Complexity per cubicle</span>
+      <div class="boxes">
+        {#each ui.selection as z (z.levelId + ":" + z.segIdx)}
+          {@const s = segOf(z)}
+          <div class="boxrow">
+            <span class="bid">{zoneLabel(z.levelId, z.segIdx)}</span>
+            <div class="cx">
+              {#each complexityKeys as key (key)}
+                <button
+                  class="cx-btn"
+                  class:active={s?.complexity === key}
+                  onclick={() => setZoneComplexity(z.levelId, z.segIdx, key)}
+                >{COMPLEXITY[key].label[0]}</button>
+              {/each}
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+
+    <div class="block">
+      <span class="label">Note · {owner}</span>
+      <textarea
+        class="note"
+        maxlength="240"
+        rows="2"
+        placeholder="Optional note for this firing"
+        value={note}
+        oninput={(e) => setClientNote(owner!, e.currentTarget.value)}
+      ></textarea>
+    </div>
+
+    <!-- Collapsed reassign -->
+    <div class="block">
+      {#if !reassignOpen}
+        <button class="collapsed" onclick={() => (reassignOpen = true)}>Assign to another client ▾</button>
+      {:else}
+        <span class="label">Assign to another client</span>
+        {#if pending}
+          <div class="choice">
+            <span class="faint">Move to <b>{pending}</b>:</span>
+            <button class="mini" onclick={() => reassignTo(pending!, "primary")}>Only {primaryLabel}</button>
+            <button class="mini" onclick={() => reassignTo(pending!, "all")}>All of {owner}</button>
+            <button class="linkish" onclick={() => (pending = null)}>back</button>
+          </div>
+        {:else}
+          <input class="search" bind:value={query} placeholder="Search clients…" />
+          <div class="results">
+            {#each results as c (c.id)}
+              {#if c.name !== owner}
+                <button class="client" onclick={() => (pending = c.name)}>
+                  <span class="dot" style="--z:{colorForIndex(clientNames().indexOf(c.name))}"></span>
+                  <span class="cn">{c.name}{c.surname ? ` ${c.surname}` : ""}</span>
+                </button>
+              {/if}
+            {/each}
+          </div>
+          <button class="new" onclick={newClientForAssign}>+ New client</button>
+        {/if}
+      {/if}
+    </div>
+
+    <div class="actions">
+      <button class="ghost danger" onclick={clearSelectedZones}>Empty cubicle{count === 1 ? "" : "s"}</button>
+    </div>
+
+  {:else}
+    <!-- Free cubicles → assign directly -->
+    <div class="sel"><span class="sel-n">{count} cubicle{count === 1 ? "" : "s"} selected</span><span class="faint">Currently free</span></div>
+
+    <div class="block">
       <span class="label">Complexity</span>
-      <div class="cx">
+      <div class="cx wide">
         {#each complexityKeys as key (key)}
           <button class="cx-btn" class:active={ui.complexity === key} onclick={() => applyComplexityToSelection(key)}>
             {COMPLEXITY[key].label}<span class="f">×{COMPLEXITY[key].factor.toFixed(2)}</span>
@@ -68,30 +158,9 @@
             <span class="cn">{c.name}{c.surname ? ` ${c.surname}` : ""}</span>
           </button>
         {/each}
-        {#if results.length === 0}
-          <p class="faint none">No match.</p>
-        {/if}
+        {#if results.length === 0}<p class="faint none">No match.</p>{/if}
       </div>
       <button class="new" onclick={newClientForAssign}>+ New client</button>
-    </div>
-
-    {#if singleOwner}
-      <div class="block">
-        <span class="label">Note · {singleOwner}</span>
-        <textarea
-          class="note"
-          maxlength="240"
-          rows="2"
-          placeholder="Optional note for this firing"
-          value={note}
-          oninput={(e) => setClientNote(singleOwner, e.currentTarget.value)}
-        ></textarea>
-      </div>
-    {/if}
-
-    <div class="actions">
-      <button class="ghost" onclick={clearSelection}>Deselect</button>
-      <button class="ghost danger" onclick={clearSelectedZones}>Empty zones</button>
     </div>
   {/if}
 </div>
@@ -111,6 +180,23 @@
     font-size: 12px;
     line-height: 1.55;
     margin: 0;
+  }
+  .pill {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 12px;
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 9px;
+  }
+  .pn {
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .pill .faint {
+    margin-left: auto;
+    font-size: 11px;
   }
   .sel {
     display: flex;
@@ -133,32 +219,104 @@
     flex-direction: column;
     gap: 7px;
   }
+  .boxes {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .boxrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .bid {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    width: 40px;
+    flex-shrink: 0;
+  }
   .cx {
     display: flex;
-    gap: 5px;
+    gap: 4px;
+    flex: 1;
   }
   .cx-btn {
     flex: 1;
     background: var(--panel-2);
     border: 1px solid var(--line-soft);
-    border-radius: 7px;
-    padding: 7px 2px;
+    border-radius: 6px;
+    padding: 6px 0;
     color: var(--text-dim);
     font-size: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    align-items: center;
   }
   .cx-btn.active {
     color: var(--text);
     border-color: var(--text-faint);
     background: var(--panel);
   }
+  .cx.wide .cx-btn {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    align-items: center;
+    padding: 7px 2px;
+  }
   .f {
     font-size: 9px;
     color: var(--text-faint);
     font-variant-numeric: tabular-nums;
+  }
+  .note {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 11px;
+    color: var(--text);
+    font: inherit;
+    resize: none;
+  }
+  .note:focus {
+    outline: none;
+    border-color: var(--text-faint);
+  }
+  .collapsed {
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .collapsed:hover {
+    color: var(--text);
+    border-color: var(--text-faint);
+  }
+  .choice {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .choice .faint {
+    font-size: 12px;
+  }
+  .mini {
+    background: var(--accent);
+    color: #111;
+    border: none;
+    border-radius: 8px;
+    padding: 9px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .linkish {
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-size: 12px;
+    align-self: flex-start;
   }
   .search {
     background: var(--panel-2);
@@ -176,7 +334,7 @@
     display: flex;
     flex-direction: column;
     gap: 3px;
-    max-height: 168px;
+    max-height: 150px;
     overflow-y: auto;
   }
   .client {
@@ -206,8 +364,8 @@
   }
   .none {
     font-size: 12px;
-    padding: 4px 2px;
     margin: 0;
+    padding: 2px;
   }
   .new {
     background: none;
@@ -220,22 +378,8 @@
   .new:hover {
     border-color: var(--accent);
   }
-  .note {
-    background: var(--panel-2);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 8px 11px;
-    color: var(--text);
-    font: inherit;
-    resize: none;
-  }
-  .note:focus {
-    outline: none;
-    border-color: var(--text-faint);
-  }
   .actions {
     display: flex;
-    gap: 8px;
     margin-top: auto;
   }
   .ghost {

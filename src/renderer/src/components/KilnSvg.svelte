@@ -11,7 +11,9 @@
     roomForNewShelf,
     remainingCm,
     clientNames,
+    zoneLabel,
   } from "../lib/firing.svelte";
+  import { COMPLEXITY } from "../lib/complexity";
   import { colorForIndex } from "../lib/colors";
 
   const kiln = $derived(currentKiln());
@@ -155,10 +157,14 @@
           class:free={!owner}
           style={owner ? `--z:${colorOf(owner)}` : ""}
         />
-        {#if row.yPlate - row.ySpaceTop > 20}
-          {#if owner}
-            <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2 + 4} text-anchor="middle" class="zname">
+        <text x={zx + 6} y={row.ySpaceTop + 14} class="zid">{zoneLabel(row.id, k)}</text>
+        {#if row.yPlate - row.ySpaceTop > 30}
+          {#if owner && seg}
+            <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2} text-anchor="middle" class="zname">
               {truncate(owner, row.div)}
+            </text>
+            <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2 + 14} text-anchor="middle" class="zcx">
+              {COMPLEXITY[seg.complexity].label}
             </text>
           {:else}
             <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2 + 4} text-anchor="middle" class="zfrac">
@@ -338,6 +344,17 @@
     font-size: 11px;
     letter-spacing: 0.08em;
     fill: var(--text-faint);
+  }
+  .zid {
+    font-size: 9px;
+    fill: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+  }
+  .zcx {
+    font-size: 9px;
+    fill: var(--text-faint);
+    letter-spacing: 0.06em;
   }
   .occ {
     font-size: 12px;

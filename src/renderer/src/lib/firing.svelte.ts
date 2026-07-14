@@ -381,12 +381,15 @@ export interface ZoneRef {
 export const ui = $state<{
   /** Zones currently selected in the kiln (the Assign rail acts on these). */
   selection: ZoneRef[];
-  /** Complexity applied when assigning the selection. */
+  /** The cubicle originally clicked (for "assign only this one" on reassign). */
+  primaryZone: ZoneRef | null;
+  /** Complexity applied when assigning a fresh (free) selection. */
   complexity: ComplexityKey;
   /** Shelf editor popup target: a level id, "new", or null (closed). */
   shelfEditor: string | "new" | null;
 }>({
   selection: [],
+  primaryZone: null,
   complexity: "simple",
   shelfEditor: null,
 });
@@ -503,14 +506,27 @@ export function isSelected(levelId: string, segIdx: number): boolean {
   return ui.selection.some((z) => z.levelId === levelId && z.segIdx === segIdx);
 }
 
-/** Click a zone: toggle it in/out of the working selection. */
+/**
+ * Click a cubicle. A free cubicle toggles in/out of a multi-selection; an
+ * assigned cubicle selects ALL of that client's cubicles (client-edit mode) and
+ * remembers the clicked one as the primary (for "assign only this" on reassign).
+ */
 export function toggleSelection(levelId: string, segIdx: number): void {
-  const i = ui.selection.findIndex((z) => z.levelId === levelId && z.segIdx === segIdx);
-  if (i >= 0) ui.selection.splice(i, 1);
-  else ui.selection.push({ levelId, segIdx });
-  // Adopt the complexity of the last-touched assigned zone, for convenience.
-  const seg = planner.levels.find((l) => l.id === levelId)?.segments[segIdx];
-  if (seg) ui.complexity = seg.complexity;
+  const owner = zoneOwner(levelId, segIdx);
+  if (owner) {
+    selectClientZones(owner);
+    ui.primaryZone = { levelId, segIdx };
+    return;
+  }
+  // Free cubicle: if we were editing a client, restart with just this one.
+  if (selectionOwners().length > 0) {
+    ui.selection = [{ levelId, segIdx }];
+  } else {
+    const i = ui.selection.findIndex((z) => z.levelId === levelId && z.segIdx === segIdx);
+    if (i >= 0) ui.selection.splice(i, 1);
+    else ui.selection.push({ levelId, segIdx });
+  }
+  ui.primaryZone = null;
 }
 
 export function clearSelection(): void {
@@ -568,6 +584,36 @@ export function selectClientZones(name: string): void {
     });
   }
   ui.selection = sel;
+  ui.primaryZone = sel[0] ?? null;
+}
+
+/** Set the complexity of a single cubicle (per-box editing in client mode). */
+export function setZoneComplexity(levelId: string, segIdx: number, cx: ComplexityKey): void {
+  const lvl = planner.levels.find((l) => l.id === levelId);
+  const seg = lvl?.segments[segIdx];
+  if (lvl && seg) lvl.segments[segIdx] = { ...seg, complexity: cx };
+}
+
+/** Reassign to another client, either the primary cubicle only or all selected. */
+export function reassignTo(name: string, scope: "primary" | "all"): void {
+  const n = name.trim();
+  if (!n) return;
+  addContact(n);
+  const zones = scope === "primary" && ui.primaryZone ? [ui.primaryZone] : ui.selection;
+  for (const z of zones) {
+    const lvl = planner.levels.find((l) => l.id === z.levelId);
+    const seg = lvl?.segments[z.segIdx];
+    if (lvl && seg) lvl.segments[z.segIdx] = { contactName: n, complexity: seg.complexity };
+  }
+  clearSelection();
+}
+
+/** Human label for a cubicle: shelf number (bottom-up) / position. */
+export function zoneLabel(levelId: string, segIdx: number): string {
+  const idx = planner.levels.findIndex((l) => l.id === levelId);
+  if (idx < 0) return "";
+  const shelfNum = planner.levels.length - idx; // bottom = 01
+  return `${String(shelfNum).padStart(2, "0")}/${segIdx + 1}`;
 }
 
 // Re-export for convenience in components.
