@@ -22,17 +22,18 @@
   const names = $derived(clientNames());
   const colorOf = (owner: string): string => colorForIndex(names.indexOf(owner));
 
-  // Geometry (viewBox units). Tall kiln + padding below the rim so content
-  // (shelves, the add-shelf button, labels) never collides with the top rim.
-  const TOPY = 88;
-  const BOTY = 588;
+  // Geometry (viewBox units). A FIXED headroom band below the rim always holds
+  // the add-shelf button + remaining label, so it never collides with the rim
+  // OR the top shelf, however full the kiln is. Shelves map below that band.
+  const TOPY = 80;
+  const BOTY = 660;
   const RY = 26;
   const X0 = 210;
   const X1 = 650;
   const CX = (X0 + X1) / 2;
   const RX = (X1 - X0) / 2;
-  const PADDING = 22; // clear space between the rim and any content
-  const yTopInner = TOPY + PADDING;
+  const HEADROOM = 108;
+  const yTopInner = TOPY + HEADROOM;
   const yBotInner = BOTY;
   const Hpx = yBotInner - yTopInner;
 
@@ -77,7 +78,7 @@
   }
 </script>
 
-<svg viewBox="0 0 880 640" class="kiln-svg" preserveAspectRatio="xMidYMid meet">
+<svg viewBox="0 0 880 700" class="kiln-svg" preserveAspectRatio="xMidYMid meet">
   <defs>
     <marker id="arrow" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto">
       <path d="M1,1 L6,3.5 L1,6" fill="none" stroke="var(--line)" stroke-width="1" />
@@ -115,24 +116,25 @@
     <rect x={X0} y={TOPY} width={X1 - X0} height={BOTY - TOPY} rx="4" class="side" fill="none" />
   {/if}
 
-  <!-- Empty (remaining) space is the hatched zone above the top shelf. The
-       "+ Add shelf" button lives INSIDE that empty space, centred, never near
-       the rim (there is always PADDING below the rim). -->
+  <!-- The "+ Add shelf" button sits in the FIXED headroom band between the rim
+       and the top shelf (yTopInner). It never moves and never collides with the
+       rim or the shelves, however full the kiln is. The hatched remaining zone
+       is separate, below the band, above the top shelf. -->
   {#if remaining > 0.5}
     <rect x={X0 + 3} y={yTopInner} width={X1 - X0 - 6} height={Math.max(0, yRemBottom - yTopInner)} fill="url(#rem-hatch)" opacity="0.5" />
   {/if}
   {#if canAdd}
-    {@const cy = Math.max(yTopInner + 26, (yTopInner + yRemBottom) / 2 - 6)}
+    {@const cy = TOPY + 62}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <g class="add" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); openShelfEditor("new", { x: e.clientX, y: e.clientY }); }}>
       <rect x={CX - 86} y={cy - 20} width="172" height="40" rx="9" class="add-rect" />
       <text x={CX} y={cy + 5} text-anchor="middle" class="add-lbl">+ Add shelf</text>
     </g>
     {#if remaining > 0.5}
-      <text x={CX} y={cy + 38} text-anchor="middle" class="rem-lbl">({fmtCm(remaining)} cm remaining)</text>
+      <text x={CX} y={cy + 36} text-anchor="middle" class="rem-lbl">({fmtCm(remaining)} cm remaining)</text>
     {/if}
   {:else if remaining > 0.5}
-    <text x={CX} y={(yTopInner + yRemBottom) / 2} text-anchor="middle" class="rem-lbl">{fmtCm(remaining)} cm remaining</text>
+    <text x={CX} y={TOPY + 62} text-anchor="middle" class="rem-lbl">{fmtCm(remaining)} cm remaining</text>
   {/if}
 
   <!-- Shelves -->

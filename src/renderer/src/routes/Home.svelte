@@ -38,7 +38,7 @@
 
 <div class="home">
   <!-- Current firings -->
-  <section class="col">
+  <section class="col panel">
     <span class="col-title">Current firings</span>
     <div class="list">
       {#if current.length === 0}
@@ -72,7 +72,7 @@
   </section>
 
   <!-- New firing -->
-  <section class="col center">
+  <section class="col center panel">
     {#if !picking}
       <button class="new-firing" onclick={startNew}>
         <span class="plus">+</span>
@@ -96,7 +96,7 @@
   </section>
 
   <!-- Firing log -->
-  <section class="col">
+  <section class="col panel">
     <span class="col-title">Firing log</span>
     <div class="list">
       {#if closed.length === 0}
@@ -135,6 +135,13 @@
     flex-direction: column;
     gap: 12px;
     min-height: 0;
+  }
+  /* Each section compartmentalised in its own bordered card. */
+  .panel {
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.014);
+    padding: 18px 16px;
   }
   .col-title {
     font-size: 11px;

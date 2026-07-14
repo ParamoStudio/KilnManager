@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { slide } from "svelte/transition";
+  import { fade } from "svelte/transition";
   import {
     planner,
     ui,
@@ -36,8 +36,8 @@
       posts = [Math.round(editing.supportHeightCm)];
       division = editing.division;
     } else {
-      // Suggest the tallest standard post that still fits the remaining space.
-      const fit = [...kiln.standardPostHeightsCm].sort((a, b) => b - a).find((p) => p <= maxSupport);
+      // Pre-select the smallest available standard post that still fits.
+      const fit = [...kiln.standardPostHeightsCm].sort((a, b) => a - b).find((p) => p <= maxSupport);
       posts = [fit ?? Math.max(2, Math.floor(maxSupport))];
       division = 1;
     }
@@ -119,7 +119,7 @@
       <button class="pluspill" onclick={() => (summing = true)} title="Stack several posts (e.g. 8 + 5)">+</button>
     </div>
   {:else}
-    <div class="sum-strip" transition:slide={{ duration: 170 }}>
+    <div class="sum-strip" transition:fade={{ duration: 90 }}>
       <div class="slots">
         {#each posts as p, i (i)}
           <span class="slot">{p}</span>
