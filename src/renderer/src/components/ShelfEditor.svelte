@@ -80,18 +80,23 @@
     closeShelfEditor();
   }
 
-  // Popover placement near the anchor (below it), clamped to the viewport.
-  const W = 300;
-  const px = $derived(
-    Math.min(Math.max(12, (ui.shelfEditorAnchor?.x ?? 400) - W / 2), (typeof window !== "undefined" ? window.innerWidth : 1400) - W - 12),
-  );
-  const py = $derived(Math.min((ui.shelfEditorAnchor?.y ?? 140) + 14, (typeof window !== "undefined" ? window.innerHeight : 800) - 340));
-  const arrowX = $derived(Math.max(16, Math.min((ui.shelfEditorAnchor?.x ?? px + W / 2) - px, W - 16)));
+  // Popover placement near the anchor. Opens below it, or flips above when there
+  // isn't room below (always fits somewhere).
+  const W = 296;
+  const POPH = 340;
+  const winW = typeof window !== "undefined" ? window.innerWidth : 1400;
+  const winH = typeof window !== "undefined" ? window.innerHeight : 800;
+  const ax = $derived(ui.shelfEditorAnchor?.x ?? 400);
+  const ay = $derived(ui.shelfEditorAnchor?.y ?? 140);
+  const px = $derived(Math.min(Math.max(12, ax - W / 2), winW - W - 12));
+  const above = $derived(ay + 14 + POPH > winH);
+  const py = $derived(above ? Math.max(12, ay - POPH - 14) : Math.min(ay + 14, winH - POPH - 12));
+  const arrowX = $derived(Math.max(16, Math.min(ax - px, W - 16)));
 </script>
 
 <button class="catch" onclick={closeShelfEditor} aria-label="Close"></button>
 <div class="pop" style="left:{px}px; top:{py}px; width:{W}px">
-  <div class="arrow" style="left:{arrowX}px"></div>
+  <div class="arrow" class:down={above} style="left:{arrowX}px"></div>
 
   <div class="head">
     <h3>{isNew ? "Add shelf" : "Edit shelf"}</h3>
@@ -157,7 +162,7 @@
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 12px;
-    padding: 16px;
+    padding: 14px;
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
     text-align: center;
   }
@@ -182,11 +187,19 @@
     border-top: 1px solid var(--line);
     transform: translateX(-50%) rotate(45deg);
   }
+  .arrow.down {
+    top: auto;
+    bottom: -7px;
+    border-left: none;
+    border-top: none;
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
   .head {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
   }
   h3 {
     font-size: 15px;
@@ -291,7 +304,7 @@
     line-height: 1.5;
   }
   .mt {
-    margin-top: 14px;
+    margin-top: 10px;
     display: block;
   }
   .splits {

@@ -22,23 +22,23 @@
   const names = $derived(clientNames());
   const colorOf = (owner: string): string => colorForIndex(names.indexOf(owner));
 
-  // Geometry (viewBox units)
-  const TOPY = 92;
-  const BOTY = 566;
+  // Geometry (viewBox units). Tall kiln + padding below the rim so content
+  // (shelves, the add-shelf button, labels) never collides with the top rim.
+  const TOPY = 88;
+  const BOTY = 588;
   const RY = 26;
   const X0 = 210;
   const X1 = 650;
   const CX = (X0 + X1) / 2;
   const RX = (X1 - X0) / 2;
-  // Fixed headroom band below the rim holds the "+ Add shelf" button, so the
-  // top shelf never collides with the rim regardless of how full the kiln is.
-  const HEADROOM = 96;
-  const yTopInner = TOPY + HEADROOM;
+  const PADDING = 22; // clear space between the rim and any content
+  const yTopInner = TOPY + PADDING;
   const yBotInner = BOTY;
   const Hpx = yBotInner - yTopInner;
 
   const pxPerCm = $derived(Hpx / kiln.usableHeightCm);
   const yOfCm = (cm: number): number => yBotInner - cm * pxPerCm;
+  const fmtCm = (n: number): string => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
   // Shelves stack from the floor up; remaining is at the top.
   const rows = $derived.by(() => {
@@ -115,25 +115,24 @@
     <rect x={X0} y={TOPY} width={X1 - X0} height={BOTY - TOPY} rx="4" class="side" fill="none" />
   {/if}
 
-  <!-- Remaining space + Add shelf (top) -->
-  <!-- Empty height (below the fixed add-shelf band, above the top shelf) -->
+  <!-- Empty (remaining) space is the hatched zone above the top shelf. The
+       "+ Add shelf" button lives INSIDE that empty space, centred, never near
+       the rim (there is always PADDING below the rim). -->
   {#if remaining > 0.5}
     <rect x={X0 + 3} y={yTopInner} width={X1 - X0 - 6} height={Math.max(0, yRemBottom - yTopInner)} fill="url(#rem-hatch)" opacity="0.5" />
   {/if}
-
-  <!-- Add shelf: fixed band below the rim, always clear of shelves + lid;
-       remaining space shown right under it. -->
   {#if canAdd}
+    {@const cy = Math.max(yTopInner + 26, (yTopInner + yRemBottom) / 2 - 6)}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <g class="add" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); openShelfEditor("new", { x: e.clientX, y: e.clientY }); }}>
-      <rect x={CX - 86} y={TOPY + 26} width="172" height="40" rx="9" class="add-rect" />
-      <text x={CX} y={TOPY + 51} text-anchor="middle" class="add-lbl">+ Add shelf</text>
+      <rect x={CX - 86} y={cy - 20} width="172" height="40" rx="9" class="add-rect" />
+      <text x={CX} y={cy + 5} text-anchor="middle" class="add-lbl">+ Add shelf</text>
     </g>
     {#if remaining > 0.5}
-      <text x={CX} y={TOPY + 84} text-anchor="middle" class="rem-lbl">({Math.round(remaining)} cm remaining)</text>
+      <text x={CX} y={cy + 38} text-anchor="middle" class="rem-lbl">({fmtCm(remaining)} cm remaining)</text>
     {/if}
   {:else if remaining > 0.5}
-    <text x={CX} y={TOPY + 52} text-anchor="middle" class="rem-lbl">{Math.round(remaining)} cm remaining</text>
+    <text x={CX} y={(yTopInner + yRemBottom) / 2} text-anchor="middle" class="rem-lbl">{fmtCm(remaining)} cm remaining</text>
   {/if}
 
   <!-- Shelves -->
@@ -173,7 +172,7 @@
         />
         <text x={zx + 8} y={row.ySpaceTop + 17} class="zid">{zoneLabel(row.id, k)}</text>
         {#if k === 0 && bandH > 30}
-          <text x={zx + 8} y={row.ySpaceTop + 32} class="zh">{Math.round(row.consumed)} cm</text>
+          <text x={zx + 8} y={row.ySpaceTop + 32} class="zh">{fmtCm(row.consumed)} cm</text>
         {/if}
         {#if owner && seg}
           {#if bandH > 40}
@@ -228,7 +227,7 @@
   {/each}
 
   {#if rows.length > 0}
-    <text x={X1 + 134} y={yTopInner - 12} text-anchor="middle" class="lbl">OCCUPANCY</text>
+    <text x={X1 + 134} y={yTopInner - 12} text-anchor="middle" class="lbl occ-h">OCCUPANCY</text>
   {/if}
 </svg>
 
@@ -412,6 +411,11 @@
   .occ {
     font-size: 14px;
     font-variant-numeric: tabular-nums;
+  }
+  .occ-h {
+    fill: var(--text-dim);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
   .occ-card {
     fill: rgba(255, 255, 255, 0.015);
