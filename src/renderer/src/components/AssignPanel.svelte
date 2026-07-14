@@ -13,7 +13,7 @@
   import { colorForName } from "../lib/colors";
 
   const names = $derived(clientNames());
-  const pickable = $derived(Array.from(new Set([...names, ...contacts.names])));
+  const pickable = $derived(Array.from(new Set([...names, ...contacts.list.map((c) => c.name)])));
   const count = $derived(ui.selection.length);
   const owners = $derived(selectionOwners());
 

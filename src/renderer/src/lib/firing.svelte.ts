@@ -110,15 +110,29 @@ export function clearAll(): void {
   planner.levels = [];
 }
 
-/** Populate with the agreed worked example (first run / demo). */
-export function seedDemo(): void {
-  planner.levels = [
-    { id: newId(), supportHeightCm: 8.5, shelfThicknessCm: 1.5, division: 1, segments: [{ contactName: "Luis", complexity: "complex" }] },
-    { id: newId(), supportHeightCm: 13.5, shelfThicknessCm: 1.5, division: 1, segments: [{ contactName: "Anna", complexity: "medium" }] },
-    { id: newId(), supportHeightCm: 8.5, shelfThicknessCm: 1.5, division: 2, segments: [{ contactName: "Studio Work", complexity: "simple" }, null] },
-    { id: newId(), supportHeightCm: 10.5, shelfThicknessCm: 1.5, division: 1, segments: [{ contactName: "Guest", complexity: "simple" }] },
-  ];
+/** First run: seed the agreed worked example as one Current Firing. */
+export function seedDemoFiring(): void {
+  const kiln = demoKilns[0]!;
   ["Luis", "Anna", "Studio Work", "Guest"].forEach(addContact);
+  firings.list.push({
+    id: `f${Date.now().toString(36)}${seq++}`,
+    title: "",
+    createdAt: Date.now(),
+    status: "current",
+    clientNotes: {},
+    planner: {
+      kilnId: kiln.id,
+      serviceId: kiln.services[0]!.id,
+      modifiers: defaultModifiers(),
+      partners: [],
+      levels: [
+        { id: newId(), supportHeightCm: 8.5, shelfThicknessCm: 1.5, division: 1, segments: [{ contactName: "Luis", complexity: "complex" }] },
+        { id: newId(), supportHeightCm: 13.5, shelfThicknessCm: 1.5, division: 1, segments: [{ contactName: "Anna", complexity: "medium" }] },
+        { id: newId(), supportHeightCm: 8.5, shelfThicknessCm: 1.5, division: 2, segments: [{ contactName: "Studio Work", complexity: "simple" }, null] },
+        { id: newId(), supportHeightCm: 10.5, shelfThicknessCm: 1.5, division: 1, segments: [{ contactName: "Guest", complexity: "simple" }] },
+      ],
+    },
+  });
 }
 
 export function setDivision(id: string, division: number): void {
@@ -164,10 +178,11 @@ export function toggleModifier(id: string): void {
 
 // ---- Mapping to the pure engine -------------------------------------------
 
-export function toCoreFiring(): Firing {
-  const kiln = currentKiln();
-  const service = currentService();
-  const levels = planner.levels.map((l) => ({
+/** Build a pure-engine Firing from any planner state (active or a stored record). */
+export function coreFiringFrom(p: PlannerState): Firing {
+  const kiln = demoKilns.find((k) => k.id === p.kilnId) ?? demoKilns[0]!;
+  const service = kiln.services.find((s) => s.id === p.serviceId) ?? kiln.services[0]!;
+  const levels = p.levels.map((l) => ({
     supportHeightCm: l.supportHeightCm,
     shelfThicknessCm: l.shelfThicknessCm,
     allocations: l.segments
@@ -183,11 +198,15 @@ export function toCoreFiring(): Firing {
     kiln,
     serviceBasePrice: service.basePrice,
     serviceName: service.name,
-    modifiers: planner.modifiers.filter((m) => m.on).map((m) => ({ label: m.label, amount: m.amount })),
+    modifiers: p.modifiers.filter((m) => m.on).map((m) => ({ label: m.label, amount: m.amount })),
     costItems: kiln.defaultCostItems,
-    partners: planner.partners,
+    partners: p.partners,
     levels,
   };
+}
+
+export function toCoreFiring(): Firing {
+  return coreFiringFrom(planner);
 }
 
 /** Distinct client names in first-appearance order (top level first). */
@@ -201,23 +220,142 @@ export function clientNames(): string[] {
   return seen;
 }
 
-// ---- Persistence ----------------------------------------------------------
+// ---- App navigation -------------------------------------------------------
 
-const STORAGE_KEY = "currentFiring";
+export type Screen = "home" | "firing" | "kilnProfiles" | "appSettings";
 
-export async function loadPlanner(): Promise<void> {
-  const saved = await storage.read<PlannerState>(STORAGE_KEY);
-  if (saved && Array.isArray(saved.levels)) {
-    planner.kilnId = saved.kilnId ?? planner.kilnId;
-    planner.serviceId = saved.serviceId ?? planner.serviceId;
-    planner.levels = saved.levels;
-    if (Array.isArray(saved.modifiers) && saved.modifiers.length) planner.modifiers = saved.modifiers;
-    if (Array.isArray(saved.partners)) planner.partners = saved.partners;
-  }
+export const app = $state<{ screen: Screen; agendaOpen: boolean; exportOpen: boolean }>({
+  screen: "home",
+  agendaOpen: false,
+  exportOpen: false,
+});
+
+export function go(screen: Screen): void {
+  // Sync working edits into the active record when leaving the firing screen.
+  if (app.screen === "firing" && screen !== "firing") saveActive();
+  app.screen = screen;
 }
 
-export function savePlanner(): void {
-  void storage.write(STORAGE_KEY, $state.snapshot(planner));
+// ---- Firings collection + lifecycle ---------------------------------------
+
+export interface FiringRecord {
+  id: string;
+  title: string;
+  createdAt: number;
+  status: "current" | "closed";
+  closedAt?: number;
+  planner: PlannerState;
+  clientNotes: Record<string, string>;
+}
+
+export const firings = $state<{ list: FiringRecord[]; activeId: string | null }>({
+  list: [],
+  activeId: null,
+});
+
+function loadIntoPlanner(state: PlannerState): void {
+  planner.kilnId = state.kilnId;
+  planner.serviceId = state.serviceId;
+  planner.levels = state.levels ?? [];
+  planner.modifiers = state.modifiers?.length ? state.modifiers : defaultModifiers();
+  planner.partners = state.partners ?? [];
+}
+
+export function activeFiring(): FiringRecord | null {
+  return firings.list.find((f) => f.id === firings.activeId) ?? null;
+}
+
+export function currentFirings(): FiringRecord[] {
+  return firings.list
+    .filter((f) => f.status === "current")
+    .sort((a, b) => a.createdAt - b.createdAt); // oldest first = most urgent
+}
+export function closedFirings(): FiringRecord[] {
+  return firings.list
+    .filter((f) => f.status === "closed")
+    .sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0));
+}
+
+export function newFiring(kilnId: string): void {
+  const kiln = demoKilns.find((k) => k.id === kilnId) ?? demoKilns[0]!;
+  const rec: FiringRecord = {
+    id: `f${Date.now().toString(36)}${seq++}`,
+    title: "",
+    createdAt: Date.now(),
+    status: "current",
+    clientNotes: {},
+    planner: {
+      kilnId: kiln.id,
+      serviceId: kiln.services[0]!.id,
+      levels: [],
+      modifiers: defaultModifiers(),
+      partners: [],
+    },
+  };
+  firings.list.push(rec);
+  firings.activeId = rec.id;
+  loadIntoPlanner(rec.planner);
+  ui.selection = [];
+  app.screen = "firing";
+  saveApp();
+}
+
+export function openFiring(id: string): void {
+  const rec = firings.list.find((f) => f.id === id);
+  if (!rec) return;
+  firings.activeId = id;
+  loadIntoPlanner(rec.planner);
+  ui.selection = [];
+  app.screen = "firing";
+}
+
+export function closeActiveFiring(): void {
+  const rec = activeFiring();
+  if (!rec) return;
+  rec.planner = $state.snapshot(planner) as PlannerState; // sync working edits
+  rec.status = "closed";
+  rec.closedAt = Date.now();
+  saveApp();
+}
+
+export function deleteFiring(id: string): void {
+  firings.list = firings.list.filter((f) => f.id !== id);
+  if (firings.activeId === id) firings.activeId = null;
+  saveApp();
+}
+
+export function setActiveTitle(title: string): void {
+  const rec = activeFiring();
+  if (rec) rec.title = title;
+}
+
+/** Per-client note for THIS firing (distinct from the contact's general note). */
+export function clientNote(name: string): string {
+  return activeFiring()?.clientNotes[name] ?? "";
+}
+export function setClientNote(name: string, text: string): void {
+  const rec = activeFiring();
+  if (rec) rec.clientNotes[name] = text;
+}
+
+/** Sync the working planner back into the active firing record + persist. */
+export function saveActive(): void {
+  const rec = activeFiring();
+  if (rec) rec.planner = $state.snapshot(planner) as PlannerState;
+  saveApp();
+}
+
+// ---- Persistence (whole app) ----------------------------------------------
+
+export function saveApp(): void {
+  void storage.write("firings", $state.snapshot(firings.list));
+}
+
+export async function loadApp(): Promise<void> {
+  const saved = await storage.read<FiringRecord[]>("firings");
+  if (Array.isArray(saved)) firings.list = saved;
+  await loadContacts();
+  if (firings.list.length === 0) seedDemoFiring();
 }
 
 // ---- UI / workflow state (transient, not part of the firing doc) ----------
@@ -240,23 +378,68 @@ export const ui = $state<{
   shelfEditor: null,
 });
 
-// ---- Contacts book (minimal; full cartilla + CSV is T4) -------------------
+// ---- Contacts book (the Agenda mini-app) ----------------------------------
 
-export const contacts = $state<{ names: string[] }>({ names: [] });
+export interface Contact {
+  id: string;
+  name: string;
+  surname?: string;
+  phone?: string;
+  notes?: string;
+  lastUsedAt?: number;
+}
+
+export const contacts = $state<{ list: Contact[] }>({ list: [] });
+
+let cseq = 0;
+const cid = (): string => `c${Date.now().toString(36)}${cseq++}`;
 
 export async function loadContacts(): Promise<void> {
-  const s = await storage.read<{ names: string[] }>("contacts");
-  if (s && Array.isArray(s.names)) contacts.names = s.names;
+  const s = await storage.read<{ list?: Contact[]; names?: string[] }>("contacts");
+  if (s?.list && Array.isArray(s.list)) contacts.list = s.list;
+  else if (s?.names && Array.isArray(s.names)) contacts.list = s.names.map((n) => ({ id: cid(), name: n }));
 }
-function saveContacts(): void {
+export function saveContacts(): void {
   void storage.write("contacts", $state.snapshot(contacts));
 }
-export function addContact(name: string): void {
+
+export function contactByName(name: string): Contact | undefined {
+  return contacts.list.find((c) => c.name === name);
+}
+
+/** Ensure a contact exists for this name; bump lastUsed. Returns it. */
+export function addContact(name: string): Contact {
   const n = name.trim();
-  if (n && !contacts.names.includes(n)) {
-    contacts.names.push(n);
-    saveContacts();
+  let c = contacts.list.find((x) => x.name === n);
+  if (!c && n) {
+    c = { id: cid(), name: n, lastUsedAt: Date.now() };
+    contacts.list.push(c);
+  } else if (c) {
+    c.lastUsedAt = Date.now();
   }
+  saveContacts();
+  return c ?? { id: "", name: n };
+}
+
+export function addContactFull(data: Omit<Contact, "id">): Contact {
+  const c: Contact = { id: cid(), ...data };
+  contacts.list.push(c);
+  saveContacts();
+  return c;
+}
+export function updateContact(id: string, patch: Partial<Contact>): void {
+  const c = contacts.list.find((x) => x.id === id);
+  if (c) Object.assign(c, patch);
+  saveContacts();
+}
+export function deleteContact(id: string): void {
+  contacts.list = contacts.list.filter((c) => c.id !== id);
+  saveContacts();
+}
+export function recentContacts(n = 4): Contact[] {
+  return [...contacts.list]
+    .sort((a, b) => (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0))
+    .slice(0, n);
 }
 
 // ---- Shelf editor popup ---------------------------------------------------

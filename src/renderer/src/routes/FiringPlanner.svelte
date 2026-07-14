@@ -1,26 +1,15 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import { computeFiring } from "@core";
-  import { planner, ui, toCoreFiring, loadPlanner, loadContacts, savePlanner, seedDemo } from "../lib/firing.svelte";
+  import { ui, toCoreFiring } from "../lib/firing.svelte";
   import KilnSvg from "../components/KilnSvg.svelte";
   import StructurePanel from "../components/StructurePanel.svelte";
   import AssignPanel from "../components/AssignPanel.svelte";
   import CapacityStrip from "../components/CapacityStrip.svelte";
   import ShelfEditor from "../components/ShelfEditor.svelte";
 
+  // The working `planner` drives the live view; it's synced back into the active
+  // firing record when leaving the screen (see go() / closeActiveFiring).
   const result = $derived(computeFiring(toCoreFiring()));
-
-  let loaded = $state(false);
-  onMount(async () => {
-    await Promise.all([loadPlanner(), loadContacts()]);
-    if (planner.levels.length === 0) seedDemo();
-    loaded = true;
-  });
-
-  $effect(() => {
-    $state.snapshot(planner);
-    if (loaded) savePlanner();
-  });
 </script>
 
 <div class="dash">
@@ -47,7 +36,7 @@
   .main {
     flex: 1;
     display: grid;
-    grid-template-columns: 256px 1fr 300px;
+    grid-template-columns: 264px 1fr 300px;
     gap: 14px;
     min-height: 0;
   }
