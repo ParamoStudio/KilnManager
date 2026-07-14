@@ -385,13 +385,19 @@ export const ui = $state<{
   primaryZone: ZoneRef | null;
   /** Complexity applied when assigning a fresh (free) selection. */
   complexity: ComplexityKey;
-  /** Shelf editor popup target: a level id, "new", or null (closed). */
+  /** Shelf editor popover target: a level id, "new", or null (closed). */
   shelfEditor: string | "new" | null;
+  /** Screen anchor for the shelf-editor popover (arrow points here). */
+  shelfEditorAnchor: { x: number; y: number } | null;
+  /** Zone hovered in the Assign rail → highlighted in the kiln. */
+  hoverZone: ZoneRef | null;
 }>({
   selection: [],
   primaryZone: null,
   complexity: "simple",
   shelfEditor: null,
+  shelfEditorAnchor: null,
+  hoverZone: null,
 });
 
 // ---- Contacts book (the Agenda mini-app) ----------------------------------
@@ -460,11 +466,16 @@ export function recentContacts(n = 4): Contact[] {
 
 // ---- Shelf editor popup ---------------------------------------------------
 
-export function openShelfEditor(target: string | "new"): void {
+export function openShelfEditor(target: string | "new", anchor?: { x: number; y: number }): void {
   ui.shelfEditor = target;
+  ui.shelfEditorAnchor = anchor ?? null;
 }
 export function closeShelfEditor(): void {
   ui.shelfEditor = null;
+  ui.shelfEditorAnchor = null;
+}
+export function setHoverZone(z: ZoneRef | null): void {
+  ui.hoverZone = z;
 }
 
 /** Physical fraction of a shelf's area that is occupied (0..1). */

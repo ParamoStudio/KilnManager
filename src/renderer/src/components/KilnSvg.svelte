@@ -1,6 +1,7 @@
 <script lang="ts">
   import {
     planner,
+    ui,
     currentKiln,
     toggleSelection,
     isSelected,
@@ -22,14 +23,17 @@
   const colorOf = (owner: string): string => colorForIndex(names.indexOf(owner));
 
   // Geometry (viewBox units)
-  const TOPY = 96;
-  const BOTY = 548;
+  const TOPY = 92;
+  const BOTY = 566;
   const RY = 26;
   const X0 = 210;
   const X1 = 650;
   const CX = (X0 + X1) / 2;
   const RX = (X1 - X0) / 2;
-  const yTopInner = TOPY + 22; // headroom: shelves never touch the top rim
+  // Fixed headroom band below the rim holds the "+ Add shelf" button, so the
+  // top shelf never collides with the rim regardless of how full the kiln is.
+  const HEADROOM = 80;
+  const yTopInner = TOPY + HEADROOM;
   const yBotInner = BOTY;
   const Hpx = yBotInner - yTopInner;
 
@@ -73,7 +77,7 @@
   }
 </script>
 
-<svg viewBox="0 0 880 600" class="kiln-svg" preserveAspectRatio="xMidYMid meet">
+<svg viewBox="0 0 880 640" class="kiln-svg" preserveAspectRatio="xMidYMid meet">
   <defs>
     <marker id="arrow" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto">
       <path d="M1,1 L6,3.5 L1,6" fill="none" stroke="var(--line)" stroke-width="1" />
@@ -111,25 +115,19 @@
   {/if}
 
   <!-- Remaining space + Add shelf (top) -->
+  <!-- Empty height (below the fixed add-shelf band, above the top shelf) -->
   {#if remaining > 0.5}
-    <rect x={X0 + 3} y={yTopInner + 2} width={X1 - X0 - 6} height={yRemBottom - yTopInner - 2} fill="url(#rem-hatch)" opacity="0.5" />
-    <text x={X1 - 8} y={yTopInner + 16} text-anchor="end" class="rem-lbl">{Math.round(remaining)} cm remaining</text>
-    {#if canAdd}
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <g class="add" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); openShelfEditor("new"); }}>
-        <rect
-          x={CX - 78}
-          y={Math.max(yTopInner + 8, (yTopInner + yRemBottom) / 2 - 18)}
-          width="156"
-          height="36"
-          rx="8"
-          class="add-rect"
-        />
-        <text x={CX} y={Math.max(yTopInner + 31, (yTopInner + yRemBottom) / 2 + 5)} text-anchor="middle" class="add-lbl">
-          + Add shelf
-        </text>
-      </g>
-    {/if}
+    <rect x={X0 + 3} y={yTopInner} width={X1 - X0 - 6} height={Math.max(0, yRemBottom - yTopInner)} fill="url(#rem-hatch)" opacity="0.5" />
+    <text x={X1 - 6} y={TOPY + 24} text-anchor="end" class="rem-lbl">{Math.round(remaining)} cm remaining</text>
+  {/if}
+
+  <!-- Add shelf: fixed band below the rim, always clear of shelves + lid -->
+  {#if canAdd}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <g class="add" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); openShelfEditor("new", { x: e.clientX, y: e.clientY }); }}>
+      <rect x={CX - 80} y={TOPY + 34} width="160" height="36" rx="8" class="add-rect" />
+      <text x={CX} y={TOPY + 57} text-anchor="middle" class="add-lbl">+ Add shelf</text>
+    </g>
   {/if}
 
   <!-- Shelves -->
@@ -143,8 +141,15 @@
       {@const zx = X0 + k * colW}
       {@const owner = seg?.contactName ?? null}
       {@const sel = isSelected(row.id, k)}
+      {@const hovered = ui.hoverZone?.levelId === row.id && ui.hoverZone?.segIdx === k}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <g class="zone" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); toggleSelection(row.id, k); }}>
+      <g
+        class="zone"
+        role="button"
+        tabindex="-1"
+        onclick={(e) => { e.stopPropagation(); toggleSelection(row.id, k); }}
+        ondblclick={(e) => { e.stopPropagation(); openShelfEditor(row.id, { x: e.clientX, y: e.clientY }); }}
+      >
         <rect
           x={zx + 2}
           y={row.ySpaceTop + 2}
@@ -155,6 +160,7 @@
           fill-opacity={owner ? 0.13 : 0}
           class="zone-rect"
           class:sel
+          class:hovered
           class:free={!owner}
           style={owner ? `--z:${colorOf(owner)}` : ""}
         />
@@ -193,24 +199,24 @@
     <!-- shelf controls: edit + delete -->
     {@const midY = (row.ySpaceTop + row.yPlate) / 2}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <g class="ctrl" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); openShelfEditor(row.id); }}>
-      <circle cx={X1 + 24} cy={midY} r="10" class="ctrl-c" />
-      <text x={X1 + 24} y={midY + 3.5} text-anchor="middle" class="ctrl-i">✎</text>
+    <g class="ctrl" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); openShelfEditor(row.id, { x: e.clientX, y: e.clientY }); }}>
+      <circle cx={X1 + 27} cy={midY} r="12" class="ctrl-c" />
+      <text x={X1 + 27} y={midY + 4} text-anchor="middle" class="ctrl-i">✎</text>
     </g>
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <g class="ctrl del" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); removeLevel(row.id); }}>
-      <circle cx={X1 + 50} cy={midY} r="10" class="ctrl-c" />
-      <text x={X1 + 50} y={midY + 4.5} text-anchor="middle" class="ctrl-i">×</text>
+      <circle cx={X1 + 57} cy={midY} r="12" class="ctrl-c" />
+      <text x={X1 + 57} y={midY + 5} text-anchor="middle" class="ctrl-i">×</text>
     </g>
 
     <!-- occupancy -->
-    <text x={X1 + 74} y={midY + 4} class="occ" style="fill:{bandColor[occupancyBand(occ)]}">
+    <text x={X1 + 86} y={midY + 4} class="occ" style="fill:{bandColor[occupancyBand(occ)]}">
       {Math.round(occ * 100)}%
     </text>
   {/each}
 
   {#if rows.length > 0}
-    <text x={X1 + 74} y={yTopInner - 12} class="lbl">OCCUPANCY</text>
+    <text x={X1 + 86} y={yTopInner - 12} class="lbl">OCCUPANCY</text>
   {/if}
 </svg>
 
@@ -305,8 +311,14 @@
     stroke: var(--accent);
     stroke-width: 1.75;
     stroke-dasharray: none;
-    fill: var(--accent);
-    fill-opacity: 0.1;
+    fill: #ffffff;
+    fill-opacity: 0.16;
+  }
+  .zone-rect.hovered {
+    stroke: var(--accent);
+    stroke-width: 2.5;
+    stroke-opacity: 1;
+    stroke-dasharray: none;
   }
   .zone:hover .zone-rect {
     stroke-opacity: 1;
@@ -365,8 +377,8 @@
     stroke: #e88;
   }
   .ctrl-i {
-    font-size: 12px;
-    fill: var(--text-dim);
+    font-size: 13px;
+    fill: var(--text);
   }
   .ctrl:hover .ctrl-i {
     fill: var(--text);

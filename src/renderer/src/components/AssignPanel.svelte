@@ -15,6 +15,7 @@
     setClientNote,
     clientNames,
     zoneLabel,
+    setHoverZone,
     type ZoneRef,
   } from "../lib/firing.svelte";
   import { COMPLEXITY, complexityKeys, type ComplexityKey } from "../lib/complexity";
@@ -67,11 +68,17 @@
     </div>
 
     <div class="block">
-      <span class="label">Complexity per cubicle</span>
+      <span class="label">Complexity per zone</span>
       <div class="boxes">
         {#each ui.selection as z (z.levelId + ":" + z.segIdx)}
           {@const s = segOf(z)}
-          <div class="boxrow">
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            class="boxrow"
+            role="group"
+            onmouseenter={() => setHoverZone(z)}
+            onmouseleave={() => setHoverZone(null)}
+          >
             <span class="bid">{zoneLabel(z.levelId, z.segIdx)}</span>
             <div class="cx">
               {#each complexityKeys as key (key)}
@@ -109,10 +116,10 @@
         </button>
         {#if pending}
           <div class="choice">
-            <span class="faint">Move to <b>{pending}</b>:</span>
-            <button class="mini" onclick={() => reassignTo(pending!, "primary")}>Only {primaryLabel}</button>
-            <button class="mini" onclick={() => reassignTo(pending!, "all")}>All of {owner}</button>
-            <button class="linkish" onclick={() => (pending = null)}>back</button>
+            <span class="move-h">Move to {pending}</span>
+            <button class="mini" onclick={() => reassignTo(pending!, "primary")}>Only selected {primaryLabel}</button>
+            <button class="mini" onclick={() => reassignTo(pending!, "all")}>Move all of {owner} to {pending}</button>
+            <button class="backpill" onclick={() => (pending = null)}>← back</button>
           </div>
         {:else}
           <input class="search" bind:value={query} placeholder="Search clients…" />
@@ -132,7 +139,7 @@
     </div>
 
     <div class="actions">
-      <button class="ghost danger" onclick={clearSelectedZones}>Empty cubicle{count === 1 ? "" : "s"}</button>
+      <button class="ghost danger" onclick={clearSelectedZones}>Empty selected</button>
     </div>
 
   {:else}
@@ -232,6 +239,15 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    padding: 6px 4px;
+    border-radius: 7px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .boxrow:last-child {
+    border-bottom: none;
+  }
+  .boxrow:hover {
+    background: var(--panel-2);
   }
   .bid {
     font-size: 12px;
@@ -300,26 +316,35 @@
   .choice {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 7px;
   }
-  .choice .faint {
-    font-size: 12px;
+  .move-h {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 2px;
   }
   .mini {
     background: var(--accent);
     color: #111;
     border: none;
     border-radius: 8px;
-    padding: 9px;
+    padding: 10px;
     font-size: 13px;
     font-weight: 600;
   }
-  .linkish {
-    background: none;
-    border: none;
-    color: var(--text-faint);
+  .backpill {
+    align-self: center;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--text-dim);
     font-size: 12px;
-    align-self: flex-start;
+    padding: 7px 18px;
+    margin-top: 2px;
+  }
+  .backpill:hover {
+    color: var(--text);
+    border-color: var(--text-faint);
   }
   .search {
     background: var(--panel-2);
