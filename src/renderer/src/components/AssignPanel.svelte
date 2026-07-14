@@ -5,6 +5,7 @@
     contacts,
     selectionOwners,
     assignSelectionTo,
+    assignSelectionToSelf,
     reassignTo,
     setZoneComplexity,
     applyComplexityToSelection,
@@ -86,7 +87,10 @@
                   class="cx-btn"
                   class:active={s?.complexity === key}
                   onclick={() => setZoneComplexity(z.levelId, z.segIdx, key)}
-                >{COMPLEXITY[key].label[0]}</button>
+                >
+                  <span class="cxl">{COMPLEXITY[key].label[0]}</span>
+                  <span class="cxf">×{COMPLEXITY[key].factor.toFixed(2)}</span>
+                </button>
               {/each}
             </div>
           </div>
@@ -134,6 +138,7 @@
             {/each}
           </div>
           <button class="new" onclick={newClientForAssign}>+ New client</button>
+          <button class="self" onclick={assignSelectionToSelf}>Assign to myself · not charged</button>
         {/if}
       {/if}
     </div>
@@ -170,6 +175,7 @@
         {#if results.length === 0}<p class="faint none">No match.</p>{/if}
       </div>
       <button class="new" onclick={newClientForAssign}>+ New client</button>
+      <button class="self" onclick={assignSelectionToSelf}>Assign to myself · not charged</button>
     </div>
   {/if}
 </div>
@@ -269,11 +275,28 @@
     padding: 6px 0;
     color: var(--text-dim);
     font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
   }
   .cx-btn.active {
     color: var(--text);
     border-color: var(--text-faint);
     background: var(--panel);
+  }
+  .cxl {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .cx-btn:not(.active) .cxl {
+    color: var(--text-dim);
+  }
+  .cxf {
+    font-size: 9px;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
   }
   .cx.wide .cx-btn {
     display: flex;
@@ -405,6 +428,19 @@
   }
   .new:hover {
     border-color: var(--accent);
+  }
+  .self {
+    background: none;
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    padding: 8px;
+    color: var(--text-dim);
+    font-size: 12px;
+    margin-top: 2px;
+  }
+  .self:hover {
+    color: var(--text);
+    border-color: var(--text-faint);
   }
   .actions {
     display: flex;

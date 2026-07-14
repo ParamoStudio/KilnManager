@@ -1,18 +1,24 @@
 <script lang="ts">
   import type { FiringResult } from "@core";
+  import { roundUp50 } from "@core";
   import { occupiedVolumeFraction, remainingCm, selectClientZones } from "../lib/firing.svelte";
   import { colorForIndex } from "../lib/colors";
   import { eur, pct } from "../lib/format";
 
   let { result }: { result: FiringResult } = $props();
   const occFill = $derived(occupiedVolumeFraction());
+  // Client-facing amounts round up to 0.50; the exact figure is kept for you.
+  const finalTotal = $derived(
+    result.clients.reduce((a, c) => a + (c.charged ? roundUp50(c.price) : 0), 0),
+  );
 </script>
 
 <div class="strip">
   <div class="head">
     <span class="label">Client breakdown</span>
     <span class="faint">
-      {pct(occFill)} loaded · {Math.round(remainingCm())} cm free · total {eur(result.accounting.revenue)}
+      {pct(occFill)} loaded · {Math.round(remainingCm())} cm free · total {eur(finalTotal)}
+      <span class="real">({eur(result.accounting.revenue)})</span>
     </span>
   </div>
 
@@ -25,7 +31,11 @@
           <span class="dot" style="--z:{colorForIndex(i)}"></span>
           <span class="cn">{c.contactName}</span>
           <span class="sh faint">{pct(c.sharePct)}</span>
-          <span class="pr">{eur(c.price)}</span>
+          {#if c.charged}
+            <span class="pr">{eur(roundUp50(c.price))}<span class="real">({eur(c.price)})</span></span>
+          {:else}
+            <span class="pr own">own</span>
+          {/if}
         </button>
       {/each}
     </div>
@@ -79,6 +89,17 @@
   .pr {
     font-variant-numeric: tabular-nums;
     font-weight: 600;
+  }
+  .pr.own {
+    color: var(--text-faint);
+    font-weight: 400;
+    font-style: italic;
+  }
+  .real {
+    color: var(--text-faint);
+    font-weight: 400;
+    font-size: 11px;
+    margin-left: 4px;
   }
   .empty {
     font-size: 13px;

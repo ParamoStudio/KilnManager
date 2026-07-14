@@ -3,6 +3,11 @@ export function roundCents(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+/** Round a money amount UP to the next 0.50 (client-facing invoicing). */
+export function roundUp50(n: number): number {
+  return Math.ceil(n / 0.5 - 1e-9) * 0.5;
+}
+
 /**
  * Split `total` money among `weights` so the parts sum EXACTLY to `total`
  * (to the cent), using the largest-remainder method. Essential for receipts:

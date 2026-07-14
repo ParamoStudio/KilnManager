@@ -35,7 +35,9 @@
       posts = [Math.round(editing.supportHeightCm)];
       division = editing.division;
     } else {
-      posts = [10];
+      // Suggest the tallest standard post that still fits the remaining space.
+      const fit = [...kiln.standardPostHeightsCm].sort((a, b) => b - a).find((p) => p <= maxSupport);
+      posts = [fit ?? Math.max(2, Math.floor(maxSupport))];
       division = 1;
     }
   });
@@ -44,11 +46,20 @@
   const reserved = $derived(support + thickness);
 
   function addPost(v: number): void {
-    if (summing) posts = [...posts, v];
-    else posts = [v];
+    if (summing) {
+      const room = maxSupport - support;
+      if (v <= room + 1e-6) posts = [...posts, v];
+    } else {
+      posts = [Math.min(v, maxSupport)];
+    }
   }
   function clearPosts(): void {
     posts = [];
+  }
+  function fillKiln(): void {
+    // Last shelf, tall piece: reserve all the remaining space.
+    posts = [Math.max(2, Math.round(maxSupport))];
+    summing = false;
   }
 
   const splits = [
@@ -89,12 +100,9 @@
 
   <div class="hrow">
     <span class="label">Shelf height</span>
-    <div class="hpills">
-      <button class="pill" class:active={summing} onclick={() => (summing = !summing)} title="Stack several posts">+</button>
-      {#if summing}
-        <button class="pill" onclick={clearPosts} title="Clear">×</button>
-      {/if}
-    </div>
+    <button class="pill" class:active={summing} onclick={() => (summing = !summing)} title="Stack several posts (e.g. 8 + 5)">+</button>
+    <button class="pill" onclick={clearPosts} disabled={!summing} title="Clear the stack">×</button>
+    {#if summing}<span class="faint summing-h">stacking posts</span>{/if}
   </div>
 
   <div class="presets">
@@ -102,6 +110,7 @@
       <button class="chip" class:active={!summing && support === p} onclick={() => addPost(p)} disabled={!summing && p > maxSupport}>{p}</button>
     {/each}
     <button class="chip" class:active={customOpen} onclick={() => (customOpen = !customOpen)}>Custom</button>
+    <button class="chip fill" onclick={fillKiln} title="Reserve all remaining height (last shelf / tall piece)">Fill kiln</button>
   </div>
 
   {#if customOpen}
@@ -179,25 +188,37 @@
   .hrow {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-  }
-  .hpills {
-    display: flex;
-    gap: 5px;
+    gap: 8px;
   }
   .pill {
     width: 24px;
-    height: 22px;
-    border-radius: 6px;
+    height: 24px;
+    border-radius: 50%;
     border: 1px solid var(--line);
     background: var(--panel-2);
     color: var(--text-dim);
-    font-size: 13px;
+    font-size: 15px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
   }
   .pill.active {
     color: #111;
-    background: var(--accent);
-    border-color: var(--accent);
+    background: var(--amber);
+    border-color: var(--amber);
+  }
+  .pill:disabled {
+    opacity: 0.35;
+  }
+  .summing-h {
+    font-size: 11px;
+    color: var(--amber);
+  }
+  .fill {
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
   }
   .presets {
     display: flex;

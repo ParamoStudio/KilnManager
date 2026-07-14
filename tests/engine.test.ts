@@ -69,6 +69,24 @@ describe("computeFiring — aggregation & complexity", () => {
     expect(res.clients[0]!.price).toBe(94);
   });
 
+  it("uncharged (studio-own) zones occupy but are not billed", () => {
+    const f: Firing = {
+      ...firing,
+      levels: [
+        { supportHeightCm: 13.5, shelfThicknessCm: 1.5, allocations: [{ contactName: "Client", fraction: 1, complexity: 1 }] },
+        { supportHeightCm: 13.5, shelfThicknessCm: 1.5, allocations: [{ contactName: "Myself", fraction: 1, complexity: 1, charged: false }] },
+      ],
+    };
+    const r = computeFiring(f);
+    const byName = Object.fromEntries(r.clients.map((c) => [c.contactName, c]));
+    expect(byName.Myself!.price).toBe(0);
+    expect(byName.Myself!.charged).toBe(false);
+    // Equal KLU → client covers half of the 94 € nominal; studio absorbs the rest.
+    expect(byName.Client!.price).toBeCloseTo(47, 1);
+    expect(r.serviceRevenue).toBe(94);
+    expect(r.accounting.revenue).toBeCloseTo(47, 1);
+  });
+
   it("uniform complexity cancels out (it is purely relative)", () => {
     const simple = computeFiring(firing).clients.map((c) => c.price);
     const allComplex: Firing = {

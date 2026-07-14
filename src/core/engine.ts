@@ -61,38 +61,45 @@ export function computeFiring(firing: Firing): FiringResult {
           klu: 0,
           sharePct: 0,
           price: 0,
+          charged: false,
         };
         byClient.set(key, entry);
         order.push(key);
       }
       entry.liters += liters;
       entry.klu += klu;
+      if (alloc.charged !== false) entry.charged = true; // charged if any zone is
     }
   }
 
   const clients = order.map((k) => byClient.get(k)!);
   const totalKLU = clients.reduce((a, c) => a + c.klu, 0);
+  const chargedKLU = clients.reduce((a, c) => a + (c.charged ? c.klu : 0), 0);
   const totalOccupiedLiters = clients.reduce((a, c) => a + c.liters, 0);
 
-  // 2. Revenue = base service price ± modifiers.
+  // 2. Nominal full-kiln price, and the portion actually charged: the studio's
+  //    own (uncharged) zones still occupy the kiln, so paying clients only cover
+  //    their proportional share — the studio absorbs the rest.
   const modifierTotal = firing.modifiers.reduce((a, m) => a + m.amount, 0);
-  const revenue = roundCents(firing.serviceBasePrice + modifierTotal);
+  const serviceRevenue = roundCents(firing.serviceBasePrice + modifierTotal);
+  const chargedRevenue = totalKLU > 0 ? roundCents((serviceRevenue * chargedKLU) / totalKLU) : 0;
 
-  // 3. Split revenue by KLU share, rounded so parts sum exactly to revenue.
-  const prices = splitAmount(revenue, clients.map((c) => c.klu));
+  // 3. Split the charged revenue by KLU among charged clients (0 weight → 0).
+  const prices = splitAmount(chargedRevenue, clients.map((c) => (c.charged ? c.klu : 0)));
   clients.forEach((c, i) => {
     c.sharePct = totalKLU > 0 ? c.klu / totalKLU : 0;
-    c.price = prices[i]!;
+    c.price = c.charged ? prices[i]! : 0;
   });
 
-  // 4. Accounting.
-  const accounting = computeAccounting(revenue, firing);
+  // 4. Accounting is based on what is actually charged.
+  const accounting = computeAccounting(chargedRevenue, firing);
 
   return {
     totalKLU,
     totalOccupiedLiters,
     usableKilnLiters,
     fillFraction: usableKilnLiters > 0 ? totalOccupiedLiters / usableKilnLiters : 0,
+    serviceRevenue,
     clients,
     accounting,
   };

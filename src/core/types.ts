@@ -59,6 +59,8 @@ export interface Allocation {
   fraction: number;
   /** Complexity factor (Simple 1.00 / Medium 1.15 / Complex 1.30 by default). */
   complexity: number;
+  /** false = studio's own work: counts for occupancy/KLU but is not charged. */
+  charged?: boolean;
   notes?: string;
 }
 
@@ -97,7 +99,8 @@ export interface ClientResult {
   liters: number; // raw occupied volume (litres)
   klu: number; // effective load units (liters × complexity)
   sharePct: number; // 0..1 of total KLU
-  price: number; // rounded so all client prices sum exactly to revenue
+  price: number; // charged amount (0 for uncharged / studio-own zones)
+  charged: boolean; // false = studio's own work, not billed
 }
 
 export interface AccountingResult {
@@ -113,6 +116,7 @@ export interface FiringResult {
   totalOccupiedLiters: number;
   usableKilnLiters: number;
   fillFraction: number; // occupied / usable (for "% full" display)
+  serviceRevenue: number; // nominal full-kiln price (base ± modifiers)
   clients: ClientResult[];
-  accounting: AccountingResult;
+  accounting: AccountingResult; // revenue here = actually charged (excludes own work)
 }

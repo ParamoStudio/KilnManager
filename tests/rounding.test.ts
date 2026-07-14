@@ -1,5 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { splitAmount, roundCents } from "../src/core/rounding.js";
+import { splitAmount, roundCents, roundUp50 } from "../src/core/rounding.js";
+
+describe("roundUp50", () => {
+  it("rounds up to the next 0.50", () => {
+    expect(roundUp50(29.07)).toBe(29.5);
+    expect(roundUp50(33.8)).toBe(34);
+    expect(roundUp50(25.26)).toBe(25.5);
+  });
+  it("leaves exact halves untouched", () => {
+    expect(roundUp50(29.5)).toBe(29.5);
+    expect(roundUp50(30)).toBe(30);
+  });
+});
 
 describe("splitAmount", () => {
   it("parts always sum exactly to the total", () => {

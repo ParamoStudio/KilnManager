@@ -87,10 +87,11 @@
     </pattern>
   </defs>
 
-  <!-- Diameter dimension -->
-  <text x={CX} y="30" text-anchor="middle" class="lbl">USABLE DIAMETER</text>
-  <line x1={X0} y1="44" x2={X1} y2="44" class="dim" marker-start="url(#arrow)" marker-end="url(#arrow)" />
-  <text x={CX} y="62" text-anchor="middle" class="val">
+  <!-- Diameter dimension: value centred on the line, with a gap -->
+  <text x={CX} y="20" text-anchor="middle" class="lbl">USABLE DIAMETER</text>
+  <line x1={X0} y1="40" x2={CX - 52} y2="40" class="dim" marker-start="url(#arrow)" />
+  <line x1={CX + 52} y1="40" x2={X1} y2="40" class="dim" marker-end="url(#arrow)" />
+  <text x={CX} y="45" text-anchor="middle" class="val">
     {kiln.shape === "cylinder" ? `${kiln.diameterCm} cm Ø` : `${kiln.widthCm} × ${kiln.depthCm} cm`}
   </text>
 
@@ -142,6 +143,7 @@
       {@const owner = seg?.contactName ?? null}
       {@const sel = isSelected(row.id, k)}
       {@const hovered = ui.hoverZone?.levelId === row.id && ui.hoverZone?.segIdx === k}
+      {@const bandH = row.yPlate - row.ySpaceTop}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <g
         class="zone"
@@ -165,22 +167,27 @@
           style={owner ? `--z:${colorOf(owner)}` : ""}
         />
         <text x={zx + 8} y={row.ySpaceTop + 17} class="zid">{zoneLabel(row.id, k)}</text>
-        {#if k === 0}
-          <text x={zx + 8} y={row.ySpaceTop + 31} class="zh">{Math.round(row.consumed)} cm</text>
+        {#if k === 0 && bandH > 30}
+          <text x={zx + 8} y={row.ySpaceTop + 32} class="zh">{Math.round(row.consumed)} cm</text>
         {/if}
-        {#if row.yPlate - row.ySpaceTop > 30}
-          {#if owner && seg}
+        {#if owner && seg}
+          {#if bandH > 40}
             <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2} text-anchor="middle" class="zname">
               {truncate(owner, row.div)}
             </text>
-            <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2 + 14} text-anchor="middle" class="zcx">
+            <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2 + 15} text-anchor="middle" class="zcx">
               {COMPLEXITY[seg.complexity].label}
             </text>
           {:else}
-            <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2 + 4} text-anchor="middle" class="zfrac">
-              {row.div === 1 ? "FULL" : `1/${row.div}`}
+            <!-- short shelf: name + complexity on the top line, clear of overlap -->
+            <text x={zx + colW / 2 + 18} y={row.ySpaceTop + 17} text-anchor="middle" class="zname-sm">
+              {truncate(owner, row.div)} · {COMPLEXITY[seg.complexity].label}
             </text>
           {/if}
+        {:else if bandH > 24}
+          <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2 + 4} text-anchor="middle" class="zfrac">
+            {row.div === 1 ? "FULL" : `1/${row.div}`}
+          </text>
         {/if}
       </g>
       {#if k > 0}
@@ -232,8 +239,8 @@
     fill: var(--text-faint);
   }
   .val {
-    font-size: 12px;
-    fill: var(--text-dim);
+    font-size: 15px;
+    fill: var(--text);
   }
   .dim {
     stroke: var(--line);
@@ -273,9 +280,9 @@
     stroke-width: 1.25;
   }
   .rem-lbl {
-    font-size: 10px;
-    fill: var(--text-faint);
-    letter-spacing: 0.04em;
+    font-size: 13px;
+    fill: var(--text-dim);
+    letter-spacing: 0.02em;
   }
   .add {
     cursor: pointer;
@@ -309,7 +316,7 @@
   }
   .zone-rect.sel {
     stroke: var(--accent);
-    stroke-width: 1.75;
+    stroke-width: 2.5;
     stroke-dasharray: none;
     fill: #ffffff;
     fill-opacity: 0.16;
@@ -344,6 +351,10 @@
     stroke-width: 1.5;
   }
   .zname {
+    font-size: 15px;
+    fill: var(--text);
+  }
+  .zname-sm {
     font-size: 12px;
     fill: var(--text);
   }
@@ -353,14 +364,14 @@
     fill: var(--text-faint);
   }
   .zid {
-    font-size: 11px;
+    font-size: 12px;
     fill: var(--text);
-    font-weight: 500;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
   .zh {
-    font-size: 10px;
-    fill: var(--text-faint);
+    font-size: 12px;
+    fill: var(--text-dim);
   }
   .ctrl {
     cursor: pointer;
@@ -387,12 +398,12 @@
     fill: #e88;
   }
   .zcx {
-    font-size: 9px;
-    fill: var(--text-faint);
-    letter-spacing: 0.06em;
+    font-size: 11px;
+    fill: var(--text-dim);
+    letter-spacing: 0.03em;
   }
   .occ {
-    font-size: 12px;
+    font-size: 14px;
     font-variant-numeric: tabular-nums;
   }
 </style>

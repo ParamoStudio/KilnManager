@@ -14,7 +14,7 @@
   <div class="row"><span class="muted">Base · {service.name}</span><span>{eur(service.basePrice)}</span></div>
   {#if modsPos > 0}<div class="row"><span class="muted">Modifiers</span><span>+{eur(modsPos)}</span></div>{/if}
   {#if modsNeg < 0}<div class="row"><span class="muted">Discounts</span><span class="disc">−{eur(Math.abs(modsNeg))}</span></div>{/if}
-  <div class="row total"><span>Total firing</span><span>{eur(result.accounting.revenue)}</span></div>
+  <div class="row total"><span>Total firing</span><span>{eur(result.serviceRevenue)}</span></div>
 </div>
 
 <style>

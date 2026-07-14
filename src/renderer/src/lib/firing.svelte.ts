@@ -6,6 +6,9 @@ import { storage } from "./storage";
 
 // ---- Planner state (renderer-only, richer than the core Firing) -----------
 
+/** Reserved client name for the studio's own (uncharged) work. */
+export const MYSELF = "Myself";
+
 export interface Segment {
   contactName: string;
   complexity: ComplexityKey;
@@ -191,6 +194,7 @@ export function coreFiringFrom(p: PlannerState): Firing {
         contactName: s.contactName,
         fraction: 1 / l.division,
         complexity: COMPLEXITY[s.complexity].factor,
+        charged: s.contactName !== MYSELF,
         notes: COMPLEXITY[s.complexity].label,
       })),
   }));
@@ -560,6 +564,14 @@ export function assignSelectionTo(name: string): void {
   addContact(n);
   for (const z of ui.selection) {
     setSegment(z.levelId, z.segIdx, { contactName: n, complexity: ui.complexity });
+  }
+  clearSelection();
+}
+
+/** Assign the selection to the studio's own (uncharged) work. */
+export function assignSelectionToSelf(): void {
+  for (const z of ui.selection) {
+    setSegment(z.levelId, z.segIdx, { contactName: MYSELF, complexity: ui.complexity });
   }
   clearSelection();
 }
