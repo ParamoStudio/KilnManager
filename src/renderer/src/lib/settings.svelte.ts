@@ -50,7 +50,7 @@ function defaultFuels(): Record<FuelKind, FuelDef> {
     electricity: { label: "Electricity", unit: "kWh", price: 0.15 },
     propane: { label: "Propane", unit: "bottle", price: 21, bottleKg: 11 },
     butane: { label: "Butane", unit: "bottle", price: 17, bottleKg: 12.5 },
-    wood: { label: "Wood", unit: "load", price: 30 },
+    wood: { label: "Wood", unit: "kg", price: 0.3 },
     other: { label: "Fuel", unit: "unit", price: 0 },
   };
 }
@@ -154,8 +154,13 @@ export async function loadSettings(): Promise<void> {
   if (saved && saved.complexity && Array.isArray(saved.partners)) {
     settings.complexity = saved.complexity;
     settings.partners = saved.partners;
-    // Fuels/history arrived later — backfill any missing keys from defaults.
-    settings.fuels = { ...defaultFuels(), ...(saved.fuels ?? {}) };
+    // Keep the user's saved PRICES, but take label/unit from the current
+    // defaults so definition changes (e.g. wood load → kg) always propagate.
+    const sf = saved.fuels ?? ({} as Partial<Record<FuelKind, FuelDef>>);
+    const df = defaultFuels();
+    settings.fuels = Object.fromEntries(
+      FUEL_KINDS.map((k) => [k, { ...df[k], price: typeof sf[k]?.price === "number" ? sf[k]!.price : df[k].price }]),
+    ) as Record<FuelKind, FuelDef>;
     settings.priceHistory = Array.isArray(saved.priceHistory) ? saved.priceHistory : [];
   }
 }
