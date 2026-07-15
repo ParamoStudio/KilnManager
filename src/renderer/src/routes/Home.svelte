@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { computeFiring } from "@core";
+  import { computeFiring, roundUp50 } from "@core";
   import {
     currentFirings,
     closedFirings,
@@ -22,9 +22,12 @@
   let logId = $state<string | null>(null);
 
   const kilnOf = (rec: FiringRecord) => demoKilns.find((k) => k.id === rec.planner.kilnId) ?? demoKilns[0]!;
-  function summary(rec: FiringRecord): { clients: number; total: number } {
+  // `rounded` is what clients actually pay (each charged amount rounded up to the
+  // next 0.50); `real` is the exact figure kept for the record.
+  function summary(rec: FiringRecord): { clients: number; rounded: number; real: number } {
     const r = computeFiring(coreFiringFrom(rec.planner));
-    return { clients: r.clients.length, total: r.accounting.revenue };
+    const rounded = r.clients.reduce((a, c) => a + (c.charged ? roundUp50(c.price) : 0), 0);
+    return { clients: r.clients.length, rounded, real: r.accounting.revenue };
   }
   const fmt = (ts: number): string => new Date(ts).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
   const fmtFull = (ts: number): string =>
@@ -58,7 +61,7 @@
             </div>
             <div class="title">{k.name}</div>
             <div class="faint meta">
-              {#if titled}{fmtFull(rec.createdAt)} · {/if}{s.clients} client{s.clients === 1 ? "" : "s"} · {eur(s.total)}
+              {#if titled}{fmtFull(rec.createdAt)} · {/if}{s.clients} client{s.clients === 1 ? "" : "s"} · {eur(s.rounded)}
             </div>
           </div>
           {#if confirmDelete === rec.id}
@@ -110,7 +113,7 @@
           <KilnThumb shape={k.shape} size={30} />
           <div class="info">
             <div class="kiln">{rec.title || k.name}</div>
-            <div class="faint meta">{fmt(rec.closedAt ?? rec.createdAt)} · {s.clients} · {eur(s.total)}</div>
+            <div class="faint meta">{fmt(rec.closedAt ?? rec.createdAt)} · {s.clients} · {eur(s.rounded)} <span class="real">({eur(s.real)})</span></div>
           </div>
         </div>
       {/each}
@@ -304,6 +307,10 @@
     color: var(--text-dim);
   }
 
+  .real {
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
   .log-row {
     display: flex;
     align-items: center;

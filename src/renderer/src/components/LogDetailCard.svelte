@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { computeFiring } from "@core";
+  import { computeFiring, roundUp50 } from "@core";
   import { firings, coreFiringFrom } from "../lib/firing.svelte";
   import { demoKilns } from "../lib/kilns";
   import { colorForIndex } from "../lib/colors";
@@ -11,6 +11,11 @@
   const result = $derived(rec ? computeFiring(coreFiringFrom(rec.planner)) : null);
   const kiln = $derived(rec ? (demoKilns.find((k) => k.id === rec.planner.kilnId) ?? demoKilns[0]!) : null);
   const fmt = (ts?: number): string => (ts ? new Date(ts).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }) : "");
+
+  // What is actually collected: each charged amount rounded up to the next 0.50.
+  const roundedTotal = $derived(
+    result ? result.clients.reduce((a, c) => a + (c.charged ? roundUp50(c.price) : 0), 0) : 0,
+  );
 </script>
 
 <div class="scrim" role="presentation" onclick={onclose}></div>
@@ -32,18 +37,23 @@
             <td><span class="dot" style="--z:{colorForIndex(i)}"></span>{c.contactName}</td>
             <td class="r">{c.klu.toFixed(1)}</td>
             <td class="r">{pct(c.sharePct)}</td>
-            <td class="r">{eur(c.price)}</td>
+            <td class="r">
+              {#if c.charged}{eur(roundUp50(c.price))} <span class="real">({eur(c.price)})</span>{:else}<span class="real">own</span>{/if}
+            </td>
           </tr>
         {/each}
       </tbody>
-      <tfoot><tr><td>Total</td><td class="r"></td><td class="r">100%</td><td class="r">{eur(result.accounting.revenue)}</td></tr></tfoot>
+      <tfoot><tr><td>Total</td><td class="r"></td><td class="r">100%</td><td class="r">{eur(roundedTotal)} <span class="real">({eur(result.accounting.revenue)})</span></td></tr></tfoot>
     </table>
 
     <div class="ledger faint">
-      Revenue {eur(result.accounting.revenue)} · costs {eur(result.accounting.kilnCosts)} · net to you {eur(result.accounting.netToYou)}
+      Collected {eur(roundedTotal)} <span class="real">(exact {eur(result.accounting.revenue)})</span> · costs {eur(result.accounting.kilnCosts)} · net to you {eur(roundedTotal - result.accounting.kilnCosts)}
     </div>
 
-    <div class="reexport faint">Re-export (PDF / message) arrives in the Outputs phase.</div>
+    <div class="footer">
+      <button class="export" title="Export engine arrives in the Outputs phase">Export firing</button>
+      <span class="faint hint">Wiring to PDF / message arrives in the Outputs phase.</span>
+    </div>
   {/if}
 </div>
 
@@ -121,14 +131,38 @@
     background: var(--z);
     margin-right: 8px;
   }
+  .real {
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
   .ledger {
     font-size: 12px;
     margin-top: 12px;
   }
-  .reexport {
-    font-size: 11px;
-    margin-top: 14px;
-    padding-top: 12px;
+  .footer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 14px;
     border-top: 1px solid var(--line-soft);
+  }
+  .export {
+    background: var(--panel-2);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+    border-radius: 8px;
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    flex-shrink: 0;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .export:hover {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, var(--panel-2));
+  }
+  .hint {
+    font-size: 11px;
   }
 </style>

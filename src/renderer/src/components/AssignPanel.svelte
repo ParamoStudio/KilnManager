@@ -145,7 +145,7 @@
             {/each}
           </div>
           <button class="new" onclick={newClientForAssign}>+ New client</button>
-          <button class="self" onclick={assignSelectionToSelf}>Assign to myself · not charged</button>
+          <button class="self" onclick={assignSelectionToSelf}>Assign to myself</button>
         {/if}
       {/if}
     </div>
@@ -185,7 +185,7 @@
         {#if results.length === 0}<p class="faint none">No match.</p>{/if}
       </div>
       <button class="new" onclick={newClientForAssign}>+ New client</button>
-      <button class="self" onclick={assignSelectionToSelf}>Assign to myself · not charged</button>
+      <button class="self" onclick={assignSelectionToSelf}>Assign to myself</button>
     </div>
   {/if}
 </div>
@@ -441,7 +441,7 @@
   }
   .self {
     background: none;
-    border: 1px solid var(--line-soft);
+    border: 1px solid color-mix(in srgb, var(--amber) 40%, var(--line));
     border-radius: 8px;
     padding: 8px;
     color: var(--text-dim);
@@ -450,7 +450,7 @@
   }
   .self:hover {
     color: var(--text);
-    border-color: var(--text-faint);
+    border-color: var(--amber);
   }
   .actions {
     display: flex;

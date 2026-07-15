@@ -141,9 +141,11 @@ export function seedDemoFiring(): void {
 export function setDivision(id: string, division: number): void {
   const lvl = planner.levels.find((l) => l.id === id);
   if (!lvl) return;
-  const next: (Segment | null)[] = Array.from({ length: division }, (_, i) => lvl.segments[i] ?? null);
+  if (lvl.division === division) return; // unchanged: keep the clients as they are
+  // Re-dividing changes the shelf geometry, so it clears every assignment (the
+  // editor warns about this) rather than shifting clients into the new columns.
   lvl.division = division;
-  lvl.segments = next;
+  lvl.segments = Array.from({ length: division }, () => null);
 }
 
 export function setSegment(id: string, segIdx: number, seg: Segment | null): void {

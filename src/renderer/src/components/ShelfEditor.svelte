@@ -84,22 +84,25 @@
     closeShelfEditor();
   }
 
-  // Popover placement near the anchor. Opens below it, or flips above when there
-  // isn't room below (always fits somewhere).
+  // Popover placement: it emanates from the edit button (the anchor), opening
+  // below it, or flipping above when there isn't room below. Its real height is
+  // measured so the flip and the on-screen clamp are always correct — the arrow
+  // stays pinned on the button.
   const W = 296;
-  const POPH = 340;
+  const GAP = 14;
+  let popH = $state(340);
   const winW = typeof window !== "undefined" ? window.innerWidth : 1400;
   const winH = typeof window !== "undefined" ? window.innerHeight : 800;
   const ax = $derived(ui.shelfEditorAnchor?.x ?? 400);
   const ay = $derived(ui.shelfEditorAnchor?.y ?? 140);
   const px = $derived(Math.min(Math.max(12, ax - W / 2), winW - W - 12));
-  const above = $derived(ay + 14 + POPH > winH);
-  const py = $derived(above ? Math.max(12, ay - POPH - 14) : Math.min(ay + 14, winH - POPH - 12));
+  const above = $derived(ay + GAP + popH > winH && ay - GAP - popH > 12);
+  const py = $derived(above ? ay - popH - GAP : Math.min(ay + GAP, winH - popH - 12));
   const arrowX = $derived(Math.max(16, Math.min(ax - px, W - 16)));
 </script>
 
 <button class="catch" onclick={closeShelfEditor} aria-label="Close"></button>
-<div class="pop" style="left:{px}px; top:{py}px; width:{W}px">
+<div class="pop" bind:clientHeight={popH} style="left:{px}px; top:{py}px; width:{W}px">
   <div class="arrow" class:down={above} style="left:{arrowX}px"></div>
 
   <div class="head">
@@ -114,21 +117,19 @@
     {/each}
   </div>
 
-  {#if !summing}
-    <div class="sum-strip">
-      <button class="pluspill" onclick={() => (summing = true)} title="Stack several posts (e.g. 8 + 5)">+</button>
-    </div>
-  {:else}
-    <div class="sum-strip" transition:fade={{ duration: 90 }}>
-      <div class="slots">
+  <div class="sum-strip">
+    {#if !summing}
+      <button class="pluspill" transition:fade={{ duration: 90 }} onclick={() => (summing = true)} title="Stack several posts (e.g. 8 + 5)">+</button>
+    {:else}
+      <div class="slots" transition:fade={{ duration: 90 }}>
         {#each posts as p, i (i)}
           <span class="slot">{p}</span>
           {#if i < posts.length - 1}<span class="op">+</span>{/if}
         {/each}
         <button class="xpill" onclick={clearSum} title="Clear / collapse">×</button>
       </div>
-    </div>
-  {/if}
+    {/if}
+  </div>
 
   <div class="faint reserved">
     {#if posts.length > 1}{posts.join(" + ")} = {support} cm · {/if}posts {support} + shelf {thickness}
@@ -262,15 +263,21 @@
   .chip:disabled {
     opacity: 0.3;
   }
+  /* Grid so the "+" and the slots row share one cell and cross-fade in place,
+     with no layout sweep when toggling. */
   .sum-strip {
-    display: flex;
-    justify-content: center;
+    display: grid;
+    justify-items: center;
+    align-items: center;
     background: var(--panel-2);
     border: 1px solid var(--line-soft);
     border-radius: 8px;
     padding: 7px;
     margin-bottom: 6px;
-    overflow: hidden;
+    min-height: 40px;
+  }
+  .sum-strip > :global(*) {
+    grid-area: 1 / 1;
   }
   .pluspill {
     width: 26px;

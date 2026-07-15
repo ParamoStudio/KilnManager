@@ -14,13 +14,17 @@
     remainingCm,
     clientNames,
     zoneLabel,
+    MYSELF,
   } from "../lib/firing.svelte";
   import { COMPLEXITY } from "../lib/complexity";
   import { colorForIndex } from "../lib/colors";
 
   const kiln = $derived(currentKiln());
   const names = $derived(clientNames());
-  const colorOf = (owner: string): string => colorForIndex(names.indexOf(owner));
+  // "Myself" is always white and never consumes a colour slot, so paying
+  // clients keep their distinct colours.
+  const colorOf = (owner: string): string =>
+    owner === MYSELF ? "#ffffff" : colorForIndex(names.filter((n) => n !== MYSELF).indexOf(owner));
 
   // Geometry (viewBox units). A FIXED headroom band below the rim always holds
   // the add-shelf button + remaining label, so it never collides with the rim
@@ -78,7 +82,7 @@
   }
 </script>
 
-<svg viewBox="0 0 880 700" class="kiln-svg" preserveAspectRatio="xMidYMid meet">
+<svg viewBox="72 8 752 684" class="kiln-svg" preserveAspectRatio="xMidYMid meet">
   <defs>
     <marker id="arrow" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto">
       <path d="M1,1 L6,3.5 L1,6" fill="none" stroke="var(--line)" stroke-width="1" />
@@ -96,13 +100,13 @@
     {kiln.shape === "cylinder" ? `${kiln.diameterCm} cm Ø` : `${kiln.widthCm} × ${kiln.depthCm} cm`}
   </text>
 
-  <!-- Height ruler -->
-  <text x="118" y={yTopInner - 34} text-anchor="end" class="lbl">USABLE H.</text>
-  <text x="118" y={yTopInner - 14} text-anchor="end" class="val">{kiln.usableHeightCm} cm</text>
-  <line x1="120" y1={yTopInner} x2="120" y2={yBotInner} class="dim-soft" />
+  <!-- Height ruler — sits close to the kiln body, bright enough to read. -->
+  <text x="130" y={yTopInner - 34} text-anchor="end" class="lbl">USABLE H.</text>
+  <text x="130" y={yTopInner - 14} text-anchor="end" class="val">{kiln.usableHeightCm} cm</text>
+  <line x1="132" y1={yTopInner} x2="132" y2={yBotInner} class="dim-soft" />
   {#each ticks as t (t)}
-    <line x1="115" y1={yOfCm(t)} x2="125" y2={yOfCm(t)} class="tick" />
-    <text x="108" y={yOfCm(t) + 3.5} text-anchor="end" class="tick-lbl">{t}</text>
+    <line x1="127" y1={yOfCm(t)} x2="137" y2={yOfCm(t)} class="tick" />
+    <text x="120" y={yOfCm(t) + 3.5} text-anchor="end" class="tick-lbl">{t}</text>
   {/each}
 
   <!-- Kiln body -->
@@ -116,25 +120,27 @@
     <rect x={X0} y={TOPY} width={X1 - X0} height={BOTY - TOPY} rx="4" class="side" fill="none" />
   {/if}
 
-  <!-- The "+ Add shelf" button sits in the FIXED headroom band between the rim
-       and the top shelf (yTopInner). It never moves and never collides with the
-       rim or the shelves, however full the kiln is. The hatched remaining zone
-       is separate, below the band, above the top shelf. -->
+  <!-- The "+ Add shelf" button is CENTRED in the free space between the rim and
+       the top shelf, so it floats in the middle of the available zone. It is
+       clamped so it always keeps padding below the rim and never touches the top
+       shelf, even when only a few cm remain. -->
   {#if remaining > 0.5}
     <rect x={X0 + 3} y={yTopInner} width={X1 - X0 - 6} height={Math.max(0, yRemBottom - yTopInner)} fill="url(#rem-hatch)" opacity="0.5" />
   {/if}
   {#if canAdd}
-    {@const cy = TOPY + 62}
+    {@const spanTop = TOPY + RY + 20}
+    {@const cy = Math.max(spanTop + 20, Math.min((spanTop + yRemBottom) / 2, yRemBottom - 34))}
+    {@const showRem = remaining > 0.5 && yRemBottom - cy > 48}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <g class="add" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); openShelfEditor("new", { x: e.clientX, y: e.clientY }); }}>
       <rect x={CX - 86} y={cy - 20} width="172" height="40" rx="9" class="add-rect" />
       <text x={CX} y={cy + 5} text-anchor="middle" class="add-lbl">+ Add shelf</text>
     </g>
-    {#if remaining > 0.5}
+    {#if showRem}
       <text x={CX} y={cy + 36} text-anchor="middle" class="rem-lbl">({fmtCm(remaining)} cm remaining)</text>
     {/if}
   {:else if remaining > 0.5}
-    <text x={CX} y={TOPY + 62} text-anchor="middle" class="rem-lbl">{fmtCm(remaining)} cm remaining</text>
+    <text x={CX} y={(TOPY + RY + 20 + yRemBottom) / 2} text-anchor="middle" class="rem-lbl">{fmtCm(remaining)} cm remaining</text>
   {/if}
 
   <!-- Shelves -->
@@ -145,10 +151,10 @@
 
     <!-- architectural height dimension on the left of the shelf -->
     {#if row.yPlate - row.ySpaceTop > 12}
-      <line x1={X0 - 30} y1={row.ySpaceTop + 3} x2={X0 - 30} y2={row.yPlate - 3} class="dim-br" />
-      <line x1={X0 - 34} y1={row.ySpaceTop + 3} x2={X0 - 26} y2={row.ySpaceTop + 3} class="dim-br" />
-      <line x1={X0 - 34} y1={row.yPlate - 3} x2={X0 - 26} y2={row.yPlate - 3} class="dim-br" />
-      <text x={X0 - 40} y={(row.ySpaceTop + row.yPlate) / 2 + 4} text-anchor="end" class="dim-cm">{fmtCm(row.consumed)} cm</text>
+      <line x1={X0 - 18} y1={row.ySpaceTop + 3} x2={X0 - 18} y2={row.yPlate - 3} class="dim-br" />
+      <line x1={X0 - 22} y1={row.ySpaceTop + 3} x2={X0 - 14} y2={row.ySpaceTop + 3} class="dim-br" />
+      <line x1={X0 - 22} y1={row.yPlate - 3} x2={X0 - 14} y2={row.yPlate - 3} class="dim-br" />
+      <text x={X0 - 26} y={(row.ySpaceTop + row.yPlate) / 2 + 4} text-anchor="end" class="dim-cm">{fmtCm(row.consumed)} cm</text>
     {/if}
 
     <!-- zones (space above the plate) -->
@@ -158,6 +164,9 @@
       {@const sel = isSelected(row.id, k)}
       {@const hovered = ui.hoverZone?.levelId === row.id && ui.hoverZone?.segIdx === k}
       {@const bandH = row.yPlate - row.ySpaceTop}
+      {@const narrow = colW < 128}
+      {@const nameFs = Math.max(7, Math.min(bandH > 40 ? 15 : 12, colW * 0.095))}
+      {@const idFs = Math.max(8, Math.min(12, colW * 0.11))}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <g
         class="zone"
@@ -180,23 +189,23 @@
           class:free={!owner}
           style={owner ? `--z:${colorOf(owner)}` : ""}
         />
-        <text x={zx + 8} y={row.ySpaceTop + 17} class="zid">{zoneLabel(row.id, k)}</text>
+        <text x={zx + 8} y={row.ySpaceTop + 17} class="zid" style="font-size:{idFs}px">{zoneLabel(row.id, k)}</text>
         {#if owner && seg}
           {#if bandH > 40}
-            <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2} text-anchor="middle" class="zname">
+            <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2} text-anchor="middle" class="zname" style="font-size:{nameFs}px">
               {truncate(owner, row.div)}
             </text>
-            <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2 + 15} text-anchor="middle" class="zcx">
+            <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2 + 15} text-anchor="middle" class="zcx" style="font-size:{Math.max(8, nameFs * 0.72)}px">
               {COMPLEXITY[seg.complexity].label}
             </text>
           {:else}
-            <!-- short shelf: name + complexity on the top line, clear of overlap -->
-            <text x={zx + colW / 2 + 18} y={row.ySpaceTop + 17} text-anchor="middle" class="zname-sm">
-              {truncate(owner, row.div)} · {COMPLEXITY[seg.complexity].label}
+            <!-- short shelf: name (+ complexity when it fits) auto-shrunk to the cell -->
+            <text x={zx + colW / 2 + (narrow ? 0 : 18)} y={row.ySpaceTop + 17} text-anchor="middle" class="zname-sm" style="font-size:{nameFs}px">
+              {narrow ? truncate(owner, row.div * 2) : `${truncate(owner, row.div)} · ${COMPLEXITY[seg.complexity].label}`}
             </text>
           {/if}
         {:else if bandH > 24}
-          <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2 + 4} text-anchor="middle" class="zfrac">
+          <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2 + 4} text-anchor="middle" class="zfrac" style="font-size:{Math.max(8, Math.min(11, colW * 0.1))}px">
             {row.div === 1 ? "FULL" : `1/${row.div}`}
           </text>
         {/if}
@@ -255,37 +264,37 @@
     stroke-width: 1;
   }
   .dim-soft {
-    stroke: var(--line-soft);
+    stroke: color-mix(in srgb, var(--text-faint) 60%, var(--line));
     stroke-width: 1;
   }
   .tick {
-    stroke: var(--line-soft);
+    stroke: color-mix(in srgb, var(--text-faint) 70%, var(--line));
     stroke-width: 1;
   }
   .tick-lbl {
     font-size: 9px;
-    fill: var(--text-faint);
+    fill: var(--text-dim);
   }
   .rim {
     fill: none;
-    stroke: var(--line);
-    stroke-width: 1.25;
+    stroke: color-mix(in srgb, var(--text-dim) 55%, var(--line));
+    stroke-width: 1.4;
   }
   .rim-bottom {
     fill: none;
-    stroke: var(--line);
-    stroke-width: 1.25;
+    stroke: color-mix(in srgb, var(--text-dim) 55%, var(--line));
+    stroke-width: 1.4;
   }
   .rim-back {
     fill: none;
-    stroke: var(--line-soft);
+    stroke: color-mix(in srgb, var(--text-faint) 60%, var(--line));
     stroke-width: 1;
     stroke-dasharray: 3 4;
   }
   .side {
     fill: none;
-    stroke: var(--line);
-    stroke-width: 1.25;
+    stroke: color-mix(in srgb, var(--text-dim) 55%, var(--line));
+    stroke-width: 1.4;
   }
   .rem-lbl {
     font-size: 13px;
@@ -345,23 +354,23 @@
     stroke: var(--text-faint);
   }
   .divider {
-    stroke: var(--line-soft);
+    stroke: color-mix(in srgb, var(--text-faint) 55%, var(--line));
     stroke-width: 1;
     stroke-dasharray: 2 3;
   }
   .plate {
-    fill: rgba(255, 255, 255, 0.015);
-    stroke: var(--line);
-    stroke-width: 1;
+    fill: rgba(255, 255, 255, 0.025);
+    stroke: color-mix(in srgb, var(--text-faint) 55%, var(--line));
+    stroke-width: 1.1;
   }
   .plate-front {
     fill: none;
-    stroke: var(--line);
-    stroke-width: 1.25;
+    stroke: color-mix(in srgb, var(--text-dim) 45%, var(--line));
+    stroke-width: 1.35;
   }
   .plate-line {
-    stroke: var(--line);
-    stroke-width: 1.5;
+    stroke: color-mix(in srgb, var(--text-dim) 45%, var(--line));
+    stroke-width: 1.6;
   }
   .zname {
     font-size: 15px;
@@ -374,7 +383,7 @@
   .zfrac {
     font-size: 11px;
     letter-spacing: 0.08em;
-    fill: var(--text-faint);
+    fill: var(--text-dim);
   }
   .zid {
     font-size: 12px;
@@ -383,13 +392,13 @@
     font-variant-numeric: tabular-nums;
   }
   .dim-br {
-    stroke: var(--line);
+    stroke: color-mix(in srgb, var(--text-faint) 75%, var(--line));
     stroke-width: 1;
     stroke-dasharray: 2 3;
   }
   .dim-cm {
     font-size: 12px;
-    fill: var(--text-dim);
+    fill: var(--text);
     font-variant-numeric: tabular-nums;
   }
   .ctrl {
