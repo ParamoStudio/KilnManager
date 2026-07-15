@@ -498,7 +498,8 @@ export function occupiedVolumeFraction(): number {
   for (const l of planner.levels) {
     occ += (l.supportHeightCm + l.shelfThicknessCm) * occupiedFraction(l);
   }
-  return occ / uH;
+  // Occupancy can never exceed the kiln — clamp any rounding overshoot to 100%.
+  return Math.min(1, occ / uH);
 }
 
 /** Structure fill: how much usable height is shelved (0..1). */
