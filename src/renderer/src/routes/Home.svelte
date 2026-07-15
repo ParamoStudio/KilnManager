@@ -79,8 +79,8 @@
   </section>
 
   <!-- New firing -->
-  <section class="col newcol panel">
-    <div class="newmid">
+  <section class="col newcol">
+    <div class="newmid panel">
       {#if !picking}
         <button class="new-firing" onclick={startNew}>
           <span class="plus">+</span>
