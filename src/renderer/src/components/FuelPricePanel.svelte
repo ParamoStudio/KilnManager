@@ -22,7 +22,6 @@
 <div class="fuel">
   <div class="fhead">
     <span class="ftitle">Fuel control</span>
-    <span class="faint fsub">the volatile side of your margin</span>
   </div>
 
   <div class="fcols">
@@ -89,19 +88,15 @@
   }
   .fhead {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
+    justify-content: center;
   }
   .ftitle {
-    font-size: 12px;
-    letter-spacing: 0.12em;
+    font-size: 12.5px;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--text-faint);
+    color: var(--text);
     font-weight: 600;
-  }
-  .fsub {
-    font-size: 11px;
+    text-align: center;
   }
   .fcols {
     display: grid;
@@ -120,7 +115,7 @@
     min-width: 0;
   }
   .csub {
-    font-size: 11px;
+    font-size: 12.5px;
     color: var(--text-dim);
   }
   .rows {

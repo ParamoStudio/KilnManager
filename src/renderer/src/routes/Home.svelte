@@ -154,11 +154,12 @@
     padding: 18px 16px;
   }
   .col-title {
-    font-size: 11px;
-    letter-spacing: 0.12em;
+    font-size: 12.5px;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--text-faint);
+    color: var(--text);
     font-weight: 600;
+    text-align: center;
   }
   .list {
     display: flex;
