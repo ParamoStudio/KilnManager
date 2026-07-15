@@ -11,7 +11,6 @@
     recordFuelPrice,
     FUEL_KINDS,
   } from "../lib/settings.svelte";
-  import { contacts } from "../lib/firing.svelte";
   import { eur } from "../lib/format";
 
   const persist = (): void => saveSettings();
@@ -20,33 +19,6 @@
     const v = parseFloat(raw);
     tier.pct = Number.isNaN(v) ? 0 : Math.max(0, Math.min(100, v)) / 100;
     persist();
-  }
-
-  // Agenda plain-text export.
-  const agendaText = $derived(
-    [
-      "PÁRAMO — Agenda",
-      "",
-      ...contacts.list
-        .slice()
-        .sort((a, b) => `${a.name} ${a.surname ?? ""}`.localeCompare(`${b.name} ${b.surname ?? ""}`))
-        .map((c) => {
-          const parts = [`${c.name}${c.surname ? ` ${c.surname}` : ""}`];
-          if (c.phone) parts.push(c.phone);
-          if (c.notes) parts.push(c.notes);
-          return "• " + parts.join(" · ");
-        }),
-    ].join("\n"),
-  );
-  let copied = $state(false);
-  async function copyAgenda(): Promise<void> {
-    try {
-      await navigator.clipboard.writeText(agendaText);
-      copied = true;
-      setTimeout(() => (copied = false), 1600);
-    } catch {
-      copied = false;
-    }
   }
 </script>
 
@@ -81,15 +53,13 @@
         The volatile part of each firing's cost. Set the current price per unit; it multiplies each
         service's fuel use. You can also update these quickly from Home when you buy.
       </p>
-      <div class="rows">
+      <div class="ftable">
         {#each FUEL_KINDS as fk (fk)}
           {@const f = settings.fuels[fk]}
-          <div class="lrow">
-            <span class="grow flabel">{f.label}</span>
-            <div class="fac">
-              <input type="number" min="0" step="0.01" value={f.price} onchange={(e) => recordFuelPrice(fk, parseFloat(e.currentTarget.value))} />
-              <span class="unit">/{f.unit}</span>
-            </div>
+          <div class="ftrow">
+            <span class="flabel">{f.label}</span>
+            <input class="fprice" type="number" min="0" step="0.01" value={f.price} onchange={(e) => recordFuelPrice(fk, parseFloat(e.currentTarget.value))} />
+            <span class="funit">/{f.unit}</span>
           </div>
         {/each}
       </div>
@@ -135,10 +105,6 @@
         {#if settings.partners.length === 0}<p class="faint none">No partners yet.</p>{/if}
       </div>
       <button class="add" onclick={addPartner}>+ Add partner</button>
-
-      <span class="side-title mt">Agenda export</span>
-      <p class="faint explain">Copy your whole contact book as plain text — paste it anywhere.</p>
-      <button class="copy" onclick={copyAgenda}>{copied ? "Copied ✓" : `Copy agenda (${contacts.list.length})`}</button>
     </section>
   </div>
 </div>
@@ -226,15 +192,39 @@
     font-variant-numeric: tabular-nums;
   }
   .mul,
-  .pct,
-  .unit {
+  .pct {
     color: var(--text-faint);
     font-size: 13px;
+  }
+  /* Fuel prices as an aligned little table with row dividers + a border. */
+  .ftable {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .ftrow {
+    display: grid;
+    grid-template-columns: 1fr 96px 54px;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .ftrow:last-child {
+    border-bottom: none;
   }
   .flabel {
     font-size: 14px;
     color: var(--text);
-    padding: 9px 2px;
+  }
+  .fprice {
+    width: 100%;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .funit {
+    color: var(--text-faint);
+    font-size: 12px;
   }
   .hist {
     display: flex;
@@ -317,20 +307,6 @@
   .add.sm {
     padding: 5px 10px;
     font-size: 12px;
-  }
-  .copy {
-    align-self: flex-start;
-    background: var(--panel-2);
-    border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
-    border-radius: 8px;
-    padding: 9px 16px;
-    color: var(--text);
-    font-size: 13px;
-    font-weight: 600;
-  }
-  .copy:hover {
-    border-color: var(--accent);
-    background: color-mix(in srgb, var(--accent) 8%, var(--panel-2));
   }
   .none {
     font-size: 12px;

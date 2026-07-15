@@ -64,13 +64,36 @@
     deleteContact(id);
   }
   const fullName = (c: Contact): string => (c.surname ? `${c.name} ${c.surname}` : c.name);
+
+  // Export the whole agenda as a CSV file (opens anywhere / imports to Contacts).
+  function csvCell(s: string): string {
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }
+  function exportCsv(): void {
+    const rows: string[][] = [
+      ["Name", "Surname", "Phone", "Notes"],
+      ...contacts.list.map((c) => [c.name, c.surname ?? "", c.phone ?? "", c.notes ?? ""]),
+    ];
+    const csv = "﻿" + rows.map((r) => r.map(csvCell).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "paramo-agenda.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
 </script>
 
 <div class="scrim" role="presentation" onclick={onclose}></div>
 <div class="card" role="dialog" aria-label="Agenda">
   <div class="head">
     <h3>Client agenda</h3>
-    <button class="x" onclick={onclose} aria-label="Close">×</button>
+    <div class="hactions">
+      <button class="export" onclick={exportCsv} disabled={contacts.list.length === 0} title="Export the agenda as a CSV file">Export CSV</button>
+      <button class="x" onclick={onclose} aria-label="Close">×</button>
+    </div>
   </div>
 
   <div class="body">
@@ -134,6 +157,26 @@
   h3 {
     font-size: 17px;
     font-weight: 600;
+  }
+  .hactions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .export {
+    background: var(--panel-2);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+    border-radius: 7px;
+    padding: 5px 11px;
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .export:hover {
+    border-color: var(--accent);
+  }
+  .export:disabled {
+    opacity: 0.4;
   }
   .x {
     background: none;
