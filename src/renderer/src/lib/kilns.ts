@@ -26,6 +26,12 @@ export const demoKilns: KilnProfile[] = [
       { name: "Maintenance reserve", amount: 4, kind: "fixed" },
       { name: "Consumables", amount: 3, kind: "fixed" },
     ],
+    modifiers: [
+      { id: "m-priority", name: "Priority (expedite)", family: "surcharge", mode: "percent", value: 10 },
+      { id: "m-curve", name: "Custom curve", family: "surcharge", mode: "fixed", value: 5 },
+      { id: "m-studio", name: "Studio", family: "discount", mode: "percent", value: 20 },
+      { id: "m-fullkiln", name: "Full kiln", family: "discount", mode: "fixed", value: 9.5 },
+    ],
   },
   {
     id: "box-40l",
@@ -44,6 +50,10 @@ export const demoKilns: KilnProfile[] = [
     defaultCostItems: [
       { name: "Maintenance reserve", amount: 3, kind: "fixed" },
       { name: "Consumables", amount: 0, kind: "fixed" },
+    ],
+    modifiers: [
+      { id: "m-priority", name: "Priority (expedite)", family: "surcharge", mode: "percent", value: 10 },
+      { id: "m-student", name: "Student", family: "discount", mode: "percent", value: 15 },
     ],
   },
 ];

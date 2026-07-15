@@ -1,12 +1,17 @@
 <script lang="ts">
   import type { FiringResult } from "@core";
+  import type { KilnModifier } from "@core";
   import {
     planner,
     app,
     currentKiln,
     currentService,
     setService,
-    toggleModifier,
+    surcharges,
+    discountTiers,
+    toggleSurcharge,
+    setDiscountTier,
+    setCustomDiscount,
     activeFiring,
     setActiveTitle,
     closeActiveFiring,
@@ -18,6 +23,19 @@
   const kiln = $derived(currentKiln());
   const svc = $derived(currentService());
   const title = $derived(activeFiring()?.title ?? "");
+
+  const fmtMod = (m: KilnModifier): string => (m.mode === "percent" ? `${m.value}%` : eur(m.value));
+  const tierActive = (id: string): boolean =>
+    !!planner.discount && "tierId" in planner.discount && planner.discount.tierId === id;
+  const customActive = $derived(!!planner.discount && "custom" in planner.discount);
+
+  let customOpen = $state(false);
+  let customVal = $state<number>(0);
+  let customMode = $state<"percent" | "fixed">("percent");
+  function applyCustom(): void {
+    setCustomDiscount(customMode, customVal || 0);
+    customOpen = false;
+  }
 
   let svcOpen = $state(false);
   let confirming = $state(false);
@@ -65,15 +83,39 @@
     </div>
   </div>
 
+  {#if surcharges().length > 0}
+    <div class="block">
+      <span class="label">Surcharges</span>
+      {#each surcharges() as m (m.id)}
+        <button class="mod" onclick={() => toggleSurcharge(m.id)}>
+          <span class="box" class:checked={planner.surcharges.includes(m.id)}></span>
+          <span class="ml">{m.name}</span>
+          <span class="amt">+{fmtMod(m)}</span>
+        </button>
+      {/each}
+    </div>
+  {/if}
+
   <div class="block">
-    <span class="label">Modifiers</span>
-    {#each planner.modifiers as m (m.id)}
-      <button class="mod" onclick={() => toggleModifier(m.id)}>
-        <span class="box" class:checked={m.on}></span>
-        <span class="ml">{m.label}</span>
-        <span class="amt" class:neg={m.amount < 0}>{m.amount < 0 ? "−" : "+"}{eur(Math.abs(m.amount))}</span>
-      </button>
-    {/each}
+    <span class="label">Discount</span>
+    <div class="tiers">
+      {#each discountTiers() as t (t.id)}
+        <button class="tier" class:active={tierActive(t.id)} onclick={() => setDiscountTier(t.id)}>
+          {t.name} <span class="tval">−{fmtMod(t)}</span>
+        </button>
+      {/each}
+      <button class="tier" class:active={customActive} onclick={() => (customOpen = !customOpen)}>Custom…</button>
+    </div>
+    {#if customOpen}
+      <div class="custom">
+        <input type="number" min="0" step="0.5" bind:value={customVal} placeholder="0" />
+        <div class="modeseg">
+          <button class:active={customMode === "percent"} onclick={() => (customMode = "percent")}>%</button>
+          <button class:active={customMode === "fixed"} onclick={() => (customMode = "fixed")}>€</button>
+        </div>
+        <button class="applyc" onclick={applyCustom}>Apply</button>
+      </div>
+    {/if}
   </div>
 
   <div class="foot">
@@ -217,8 +259,85 @@
     color: var(--text-dim);
     font-variant-numeric: tabular-nums;
   }
-  .amt.neg {
+
+  .tiers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tier {
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    padding: 7px 11px;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+  .tier:hover {
+    border-color: var(--text-faint);
+    color: var(--text);
+  }
+  .tier.active {
+    border-color: var(--green);
+    color: var(--text);
+    background: color-mix(in srgb, var(--green) 10%, var(--panel-2));
+  }
+  .tval {
     color: var(--green);
+    font-variant-numeric: tabular-nums;
+  }
+  .custom {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    align-items: center;
+  }
+  .custom input {
+    flex: 1;
+    min-width: 0;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 7px 10px;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .custom input:focus {
+    outline: none;
+    border-color: var(--text-faint);
+  }
+  .modeseg {
+    display: flex;
+  }
+  .modeseg button {
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    color: var(--text-dim);
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+  .modeseg button:first-child {
+    border-radius: 8px 0 0 8px;
+  }
+  .modeseg button:last-child {
+    border-radius: 0 8px 8px 0;
+    border-left: none;
+  }
+  .modeseg button.active {
+    color: var(--text);
+    border-color: var(--text-faint);
+    background: var(--panel);
+  }
+  .applyc {
+    background: var(--accent);
+    color: #111;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 600;
   }
 
   .foot {

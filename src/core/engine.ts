@@ -80,8 +80,11 @@ export function computeFiring(firing: Firing): FiringResult {
   // 2. Nominal full-kiln price, and the portion actually charged: the studio's
   //    own (uncharged) zones still occupy the kiln, so paying clients only cover
   //    their proportional share — the studio absorbs the rest.
-  const modifierTotal = firing.modifiers.reduce((a, m) => a + m.amount, 0);
-  const serviceRevenue = roundCents(firing.serviceBasePrice + modifierTotal);
+  // Fixed € modifiers adjust the base; the net percentage then applies to that
+  // subtotal. Surcharges are positive, discounts negative (mode missing = fixed).
+  const fixedSum = firing.modifiers.reduce((a, m) => a + (m.mode === "percent" ? 0 : m.amount), 0);
+  const pctSum = firing.modifiers.reduce((a, m) => a + (m.mode === "percent" ? m.amount : 0), 0);
+  const serviceRevenue = roundCents((firing.serviceBasePrice + fixedSum) * (1 + pctSum / 100));
   const chargedRevenue = totalKLU > 0 ? roundCents((serviceRevenue * chargedKLU) / totalKLU) : 0;
 
   // 3. Split the charged revenue by KLU among charged clients (0 weight → 0).

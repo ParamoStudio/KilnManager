@@ -1,4 +1,4 @@
-import type { Firing, Allocation, KilnProfile, FiringService } from "@core";
+import type { Firing, Allocation, KilnProfile, FiringService, KilnModifier } from "@core";
 import { consumedHeightCm } from "@core";
 import { kilnStore, loadKilns } from "./kilns.svelte";
 import { type ComplexityKey } from "./complexity";
@@ -23,26 +23,19 @@ export interface PlannerLevel {
   segments: (Segment | null)[]; // length === division
 }
 
-export interface PlannerModifier {
-  id: string;
-  label: string;
-  amount: number; // negative = discount
-  on: boolean;
-}
+/** The chosen firing-wide discount: one of the kiln's tiers, or a custom value. */
+export type DiscountChoice =
+  | { tierId: string }
+  | { custom: { mode: "percent" | "fixed"; value: number } };
 
 export interface PlannerState {
   kilnId: string;
   serviceId: string;
   levels: PlannerLevel[]; // index 0 = topmost level
-  modifiers: PlannerModifier[];
+  surcharges: string[]; // active surcharge modifier ids
+  discount: DiscountChoice | null; // one discount at a time (tier or custom)
   partners: { name: string; pct: number }[];
 }
-
-const defaultModifiers = (): PlannerModifier[] => [
-  { id: "priority", label: "Priority (expedite)", amount: 10, on: false },
-  { id: "custom-curve", label: "Custom curve", amount: 8, on: false },
-  { id: "full-kiln", label: "Full kiln discount", amount: -9.5, on: false },
-];
 
 function initialState(): PlannerState {
   const kiln = kilnStore.list[0]!;
@@ -50,7 +43,8 @@ function initialState(): PlannerState {
     kilnId: kiln.id,
     serviceId: kiln.services[0]!.id,
     levels: [],
-    modifiers: defaultModifiers(),
+    surcharges: [],
+    discount: null,
     partners: [{ name: "Studio", pct: 0.2 }],
   };
 }
@@ -127,7 +121,8 @@ export function seedDemoFiring(): void {
     planner: {
       kilnId: kiln.id,
       serviceId: kiln.services[0]!.id,
-      modifiers: defaultModifiers(),
+      surcharges: [],
+      discount: null,
       partners: [],
       levels: [
         { id: newId(), supportHeightCm: 8.5, shelfThicknessCm: 1.5, division: 1, segments: [{ contactName: "Luis", complexity: "complex" }] },
@@ -177,9 +172,33 @@ export function setService(id: string): void {
   planner.serviceId = id;
 }
 
-export function toggleModifier(id: string): void {
-  const m = planner.modifiers.find((x) => x.id === id);
-  if (m) m.on = !m.on;
+// ---- Modifiers ------------------------------------------------------------
+
+/** The current kiln's defined modifiers (surcharges + discount tiers). */
+export function kilnModifiers(): KilnModifier[] {
+  return currentKiln().modifiers ?? [];
+}
+export function surcharges(): KilnModifier[] {
+  return kilnModifiers().filter((m) => m.family === "surcharge");
+}
+export function discountTiers(): KilnModifier[] {
+  return kilnModifiers().filter((m) => m.family === "discount");
+}
+export function toggleSurcharge(id: string): void {
+  const i = planner.surcharges.indexOf(id);
+  if (i >= 0) planner.surcharges.splice(i, 1);
+  else planner.surcharges.push(id);
+}
+export function setDiscountTier(tierId: string): void {
+  // Clicking the active tier again clears it (one discount at a time).
+  const cur = planner.discount;
+  planner.discount = cur && "tierId" in cur && cur.tierId === tierId ? null : { tierId };
+}
+export function setCustomDiscount(mode: "percent" | "fixed", value: number): void {
+  planner.discount = value > 0 ? { custom: { mode, value } } : null;
+}
+export function clearDiscount(): void {
+  planner.discount = null;
 }
 
 // ---- Mapping to the pure engine -------------------------------------------
@@ -211,11 +230,30 @@ export function coreFiringFrom(p: PlannerState): Firing {
     kiln,
     serviceBasePrice: service.basePrice,
     serviceName: service.name,
-    modifiers: p.modifiers.filter((m) => m.on).map((m) => ({ label: m.label, amount: m.amount })),
+    modifiers: resolveModifiers(kiln, p),
     costItems: [fuelItem, ...kiln.defaultCostItems],
     partners: p.partners,
     levels,
   };
+}
+
+/** Turn the active surcharges + chosen discount into engine Modifier lines. */
+function resolveModifiers(kiln: KilnProfile, p: PlannerState): { label: string; mode: "percent" | "fixed"; amount: number }[] {
+  const defined = kiln.modifiers ?? [];
+  const out: { label: string; mode: "percent" | "fixed"; amount: number }[] = [];
+  for (const m of defined) {
+    if (m.family === "surcharge" && p.surcharges.includes(m.id)) {
+      out.push({ label: m.name, mode: m.mode, amount: m.value });
+    }
+  }
+  const d = p.discount;
+  if (d && "tierId" in d) {
+    const t = defined.find((m) => m.id === d.tierId && m.family === "discount");
+    if (t) out.push({ label: t.name, mode: t.mode, amount: -t.value });
+  } else if (d) {
+    out.push({ label: "Custom discount", mode: d.custom.mode, amount: -d.custom.value });
+  }
+  return out;
 }
 
 export function toCoreFiring(): Firing {
@@ -283,7 +321,8 @@ function loadIntoPlanner(state: PlannerState): void {
   planner.kilnId = state.kilnId;
   planner.serviceId = state.serviceId;
   planner.levels = state.levels ?? [];
-  planner.modifiers = state.modifiers?.length ? state.modifiers : defaultModifiers();
+  planner.surcharges = state.surcharges ?? [];
+  planner.discount = state.discount ?? null;
   planner.partners = state.partners ?? [];
 }
 
@@ -314,7 +353,8 @@ export function newFiring(kilnId: string): void {
       kilnId: kiln.id,
       serviceId: kiln.services[0]!.id,
       levels: [],
-      modifiers: defaultModifiers(),
+      surcharges: [],
+      discount: null,
       partners: [],
     },
   };

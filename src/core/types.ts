@@ -66,6 +66,8 @@ export interface KilnProfile {
 
   services: FiringService[];
   defaultCostItems: CostItem[];
+  /** Price modifiers offered when planning a firing on this kiln. */
+  modifiers?: KilnModifier[];
 }
 
 /** One client's slice of a shelf level. */
@@ -91,7 +93,18 @@ export interface ShelfLevel {
 /** An optional firing-wide price adjustment (Priority, Custom curve, discounts…). */
 export interface Modifier {
   label: string;
-  amount: number; // added to base price; negative for discounts
+  /** "fixed" = a € amount; "percent" = a percentage of the price. Missing = fixed. */
+  mode?: "percent" | "fixed";
+  amount: number; // signed: + surcharge, − discount (€ for fixed, % for percent)
+}
+
+/** A price modifier defined on a kiln profile, applied when planning a firing. */
+export interface KilnModifier {
+  id: string;
+  name: string;
+  family: "surcharge" | "discount";
+  mode: "percent" | "fixed";
+  value: number; // always positive; the family decides the sign
 }
 
 /** A full firing being planned or recorded. */

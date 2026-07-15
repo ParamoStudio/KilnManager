@@ -2,7 +2,7 @@
  * Kiln profiles store — the studio's kilns, editable in Kiln Profiles and
  * persisted. Seeded from the demo profiles on first run.
  */
-import type { CostItem, KilnProfile, KilnShape } from "@core";
+import type { CostItem, KilnModifier, KilnProfile, KilnShape } from "@core";
 import { demoKilns } from "./kilns";
 import { storage } from "./storage";
 
@@ -54,6 +54,7 @@ function blankKiln(shape: KilnShape = "cylinder"): KilnProfile {
       { name: "Maintenance reserve", amount: 0, kind: "fixed" },
       { name: "Consumables", amount: 0, kind: "fixed" },
     ],
+    modifiers: [],
   };
 }
 
@@ -70,7 +71,34 @@ function normalizeKiln(k: KilnProfile): KilnProfile {
     energy: k.energy ?? "other",
     services: k.services.map((s) => ({ ...s, fuelUse: s.fuelUse ?? 0 })),
     defaultCostItems: items,
+    modifiers: k.modifiers ?? [],
   };
+}
+
+export const newModifierId = (): string => `mod-${newKilnId()}`;
+
+export function addModifier(kilnId: string, family: "surcharge" | "discount"): void {
+  const k = getKiln(kilnId);
+  if (!k) return;
+  if (!k.modifiers) k.modifiers = [];
+  k.modifiers.push({
+    id: newModifierId(),
+    name: family === "surcharge" ? "New surcharge" : "New discount",
+    family,
+    mode: "percent",
+    value: 10,
+  });
+  saveKilns();
+}
+export function removeModifier(kilnId: string, id: string): void {
+  const k = getKiln(kilnId);
+  if (!k?.modifiers) return;
+  k.modifiers = k.modifiers.filter((m) => m.id !== id);
+  saveKilns();
+}
+export function setModifierMode(m: KilnModifier, mode: "percent" | "fixed"): void {
+  m.mode = mode;
+  saveKilns();
 }
 
 export function addKiln(shape: KilnShape = "cylinder"): KilnProfile {
