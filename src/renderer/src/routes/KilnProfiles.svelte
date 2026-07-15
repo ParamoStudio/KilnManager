@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { KilnShape } from "@core";
+  import type { KilnShape, KilnEnergy } from "@core";
   import {
     kilnStore,
     addKiln,
@@ -7,16 +7,27 @@
     kilnVolumeL,
     saveKilns,
     newServiceId,
+    BUILTIN_FIXED,
   } from "../lib/kilns.svelte";
+  import { settings, fuelDefFor, fuelKeyForKiln, fuelCostFor } from "../lib/settings.svelte";
   import { eur } from "../lib/format";
   import KilnThumb from "../components/KilnThumb.svelte";
+  import PostCylinder from "../components/PostCylinder.svelte";
 
   let editingId = $state<string | null>(null);
   let confirmDelete = $state(false);
 
   const editing = $derived(kilnStore.list.find((k) => k.id === editingId) ?? null);
-
   const persist = (): void => saveKilns();
+
+  const energyOptions: { key: KilnEnergy; label: string }[] = [
+    { key: "electric", label: "Electric" },
+    { key: "gas", label: "Gas" },
+    { key: "wood", label: "Wood" },
+    { key: "other", label: "Other" },
+  ];
+  const energyLabel = (k: (typeof kilnStore.list)[number]): string =>
+    k.energy === "gas" ? (k.gasType === "butane" ? "Butane" : "Propane") : fuelDefFor(k).label;
 
   const dimsLabel = (k: (typeof kilnStore.list)[number]): string =>
     k.shape === "cylinder" ? `${k.diameterCm ?? 0} cm Ø` : `${k.widthCm ?? 0} × ${k.depthCm ?? 0} cm`;
@@ -31,10 +42,16 @@
     }
     persist();
   }
+  function setEnergy(energy: KilnEnergy): void {
+    if (!editing) return;
+    editing.energy = energy;
+    if (energy === "gas" && !editing.gasType) editing.gasType = "propane";
+    persist();
+  }
 
   function addService(): void {
     if (!editing) return;
-    editing.services.push({ id: newServiceId(), name: "New service", basePrice: 0 });
+    editing.services.push({ id: newServiceId(), name: "New service", basePrice: 0, fuelUse: 0 });
     persist();
   }
   function removeService(id: string): void {
@@ -44,7 +61,7 @@
   }
   function addCost(): void {
     if (!editing) return;
-    editing.defaultCostItems.push({ name: "New cost", amount: 0, kind: "variable" });
+    editing.defaultCostItems.push({ name: "New cost", amount: 0, kind: "fixed" });
     persist();
   }
   function removeCost(idx: number): void {
@@ -52,21 +69,23 @@
     editing.defaultCostItems.splice(idx, 1);
     persist();
   }
+  const isBuiltin = (name: string): boolean => (BUILTIN_FIXED as readonly string[]).includes(name);
 
-  // Standard post heights edited as a comma list; parsed on change.
-  let postsText = $state("");
-  $effect(() => {
-    if (editing) postsText = editing.standardPostHeightsCm.join(", ");
-  });
-  function commitPosts(): void {
+  // Standard posts as editable mini-cards.
+  function addPost(): void {
     if (!editing) return;
-    const nums = postsText
-      .split(/[,\s]+/)
-      .map((s) => parseFloat(s))
-      .filter((n) => !Number.isNaN(n) && n > 0)
-      .sort((a, b) => a - b);
-    editing.standardPostHeightsCm = nums.length ? nums : [5, 10];
-    postsText = editing.standardPostHeightsCm.join(", ");
+    const last = editing.standardPostHeightsCm.at(-1) ?? 8;
+    editing.standardPostHeightsCm = [...editing.standardPostHeightsCm, last + 2];
+    persist();
+  }
+  function setPost(i: number, v: number): void {
+    if (!editing) return;
+    editing.standardPostHeightsCm[i] = Math.max(1, v || 1);
+    persist();
+  }
+  function removePost(i: number): void {
+    if (!editing || editing.standardPostHeightsCm.length <= 1) return;
+    editing.standardPostHeightsCm.splice(i, 1);
     persist();
   }
 
@@ -93,7 +112,7 @@
         <div class="kcard" role="button" tabindex="0" onclick={() => (editingId = k.id)}>
           <div class="kthumb"><KilnThumb shape={k.shape} size={58} /></div>
           <div class="kname">{k.name}</div>
-          <div class="faint kmeta">{dimsLabel(k)} · {k.usableHeightCm} cm</div>
+          <div class="faint kmeta">{dimsLabel(k)} · {k.usableHeightCm} cm · {energyLabel(k)}</div>
           <div class="kvol">{kilnVolumeL(k).toFixed(1)} L</div>
           <div class="kservices">
             {#each k.services as s (s.id)}
@@ -111,6 +130,7 @@
   </div>
 {:else}
   {#key editingId}
+    {@const fuel = fuelDefFor(editing)}
     <div class="editor">
       <div class="ehead">
         <button class="back" onclick={() => { editingId = null; confirmDelete = false; }}>← All kilns</button>
@@ -134,6 +154,21 @@
             <span class="fl">Location <span class="opt">optional</span></span>
             <input bind:value={editing.location} onchange={persist} placeholder="e.g. Back studio" />
           </label>
+
+          <div class="field">
+            <span class="fl">Energy</span>
+            <div class="seg four">
+              {#each energyOptions as o (o.key)}
+                <button class:active={(editing.energy ?? "other") === o.key} onclick={() => setEnergy(o.key)}>{o.label}</button>
+              {/each}
+            </div>
+            {#if editing.energy === "gas"}
+              <div class="seg sub">
+                <button class:active={editing.gasType !== "butane"} onclick={() => { editing.gasType = "propane"; persist(); }}>Propane</button>
+                <button class:active={editing.gasType === "butane"} onclick={() => { editing.gasType = "butane"; persist(); }}>Butane</button>
+              </div>
+            {/if}
+          </div>
 
           <div class="field">
             <span class="fl">Shape</span>
@@ -170,15 +205,26 @@
             <span class="vol">{kilnVolumeL(editing).toFixed(1)} L</span>
           </div>
 
-          <div class="row2">
-            <label class="field">
-              <span class="fl">Shelf thickness (cm)</span>
-              <input type="number" min="0" step="0.1" bind:value={editing.defaultShelfThicknessCm} onchange={persist} />
-            </label>
-            <label class="field">
-              <span class="fl">Standard post heights (cm)</span>
-              <input bind:value={postsText} onchange={commitPosts} placeholder="5, 8, 10, 13" />
-            </label>
+          <label class="field">
+            <span class="fl">Shelf thickness (cm)</span>
+            <input type="number" min="0" step="0.1" bind:value={editing.defaultShelfThicknessCm} onchange={persist} />
+          </label>
+
+          <div class="field">
+            <span class="fl">Standard post heights</span>
+            <div class="posts">
+              {#each editing.standardPostHeightsCm as p, i (i)}
+                <div class="postcard">
+                  <button class="postx" onclick={() => removePost(i)} disabled={editing.standardPostHeightsCm.length <= 1} aria-label="Remove post">×</button>
+                  <PostCylinder cm={p} />
+                  <div class="postval">
+                    <input type="number" min="1" value={p} onchange={(e) => setPost(i, parseFloat(e.currentTarget.value))} />
+                    <span class="cmlbl">cm</span>
+                  </div>
+                </div>
+              {/each}
+              <button class="postadd" onclick={addPost}>＋<span>Add post</span></button>
+            </div>
           </div>
         </section>
 
@@ -187,41 +233,46 @@
           <span class="side-title">Pricing &amp; costs</span>
 
           <div class="field">
-            <span class="fl">Services <span class="opt">name + full-kiln price</span></span>
-            <div class="rows">
-              {#each editing.services as s (s.id)}
-                <div class="lrow">
-                  <input class="grow" bind:value={s.name} onchange={persist} />
-                  <div class="money">
-                    <input type="number" min="0" step="0.5" bind:value={s.basePrice} onchange={persist} />
-                    <span class="cur">€</span>
-                  </div>
-                  <button class="x" onclick={() => removeService(s.id)} disabled={editing.services.length <= 1} aria-label="Remove">×</button>
-                </div>
-              {/each}
+            <span class="fl">Services <span class="opt">price + fuel used per firing</span></span>
+            <div class="fuelnote faint">
+              Fuel: <b>{fuel.label}</b> · {eur(fuel.price)}/{fuel.unit} — update in Home / App Settings.
+              Cost = fuel used × this price.
             </div>
+            <div class="srow shead">
+              <span>Service</span><span class="r">Price</span><span class="r">Fuel ({fuel.unit})</span><span class="r">= fuel</span><span></span>
+            </div>
+            {#each editing.services as s (s.id)}
+              <div class="srow">
+                <input class="grow" bind:value={s.name} onchange={persist} />
+                <div class="money"><input type="number" min="0" step="0.5" bind:value={s.basePrice} onchange={persist} /><span class="cur">€</span></div>
+                <input class="num" type="number" min="0" step="0.1" bind:value={s.fuelUse} onchange={persist} />
+                <span class="fcost">{eur(fuelCostFor(editing, s.fuelUse ?? 0))}</span>
+                <button class="x" onclick={() => removeService(s.id)} disabled={editing.services.length <= 1} aria-label="Remove">×</button>
+              </div>
+            {/each}
             <button class="add" onclick={addService}>+ Add service</button>
           </div>
 
           <div class="field">
-            <span class="fl">Cost items <span class="opt">internal margin only — never the client price</span></span>
+            <span class="fl">Fixed costs <span class="opt">flat per firing — internal margin only</span></span>
             <div class="rows">
               {#each editing.defaultCostItems as c, i (i)}
                 <div class="lrow">
-                  <input class="grow" bind:value={c.name} onchange={persist} />
-                  <div class="money">
-                    <input type="number" min="0" step="0.5" bind:value={c.amount} onchange={persist} />
-                    <span class="cur">€</span>
-                  </div>
-                  <button class="kind" onclick={() => { c.kind = c.kind === "fixed" ? "variable" : "fixed"; persist(); }} title="Fixed = default from profile · Variable = adjust per firing">
-                    {c.kind === "fixed" ? "fixed" : "variable"}
-                  </button>
-                  <button class="x" onclick={() => removeCost(i)} aria-label="Remove">×</button>
+                  {#if isBuiltin(c.name)}
+                    <span class="grow lockname">{c.name}</span>
+                  {:else}
+                    <input class="grow" bind:value={c.name} onchange={persist} />
+                  {/if}
+                  <div class="money"><input type="number" min="0" step="0.5" bind:value={c.amount} onchange={persist} /><span class="cur">€</span></div>
+                  {#if isBuiltin(c.name)}
+                    <span class="xspace"></span>
+                  {:else}
+                    <button class="x" onclick={() => removeCost(i)} aria-label="Remove">×</button>
+                  {/if}
                 </div>
               {/each}
-              {#if editing.defaultCostItems.length === 0}<p class="faint none">No cost items yet.</p>{/if}
             </div>
-            <button class="add" onclick={addCost}>+ Add cost item</button>
+            <button class="add" onclick={addCost}>+ Add fixed cost</button>
           </div>
         </section>
       </div>
@@ -433,6 +484,13 @@
     border-color: var(--text-faint);
     background: var(--panel);
   }
+  .seg.sub {
+    margin-top: 6px;
+  }
+  .seg.sub button {
+    padding: 7px 0;
+    font-size: 12px;
+  }
   .volbox {
     display: flex;
     align-items: center;
@@ -448,6 +506,105 @@
     color: var(--accent);
     font-variant-numeric: tabular-nums;
   }
+
+  /* Post cards */
+  .posts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .postcard {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    width: 68px;
+    padding: 8px 6px 7px;
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+  }
+  .postx {
+    position: absolute;
+    top: 2px;
+    right: 3px;
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-size: 13px;
+    line-height: 1;
+    padding: 0;
+  }
+  .postx:hover {
+    color: #e88;
+  }
+  .postx:disabled {
+    opacity: 0.25;
+  }
+  .postval {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+  }
+  .postval input {
+    width: 42px;
+    padding: 3px 3px;
+    text-align: center;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .cmlbl {
+    font-size: 10px;
+    color: var(--text-faint);
+  }
+  .postadd {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: 68px;
+    height: 88px;
+    background: none;
+    border: 1px dashed color-mix(in srgb, var(--accent) 35%, var(--line));
+    border-radius: 10px;
+    color: var(--text-dim);
+    font-size: 18px;
+  }
+  .postadd span {
+    font-size: 10px;
+  }
+  .postadd:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  /* Services + costs */
+  .fuelnote {
+    font-size: 11.5px;
+    line-height: 1.5;
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    padding: 7px 10px;
+  }
+  .srow {
+    display: grid;
+    grid-template-columns: 1fr 92px 70px 52px 20px;
+    gap: 6px;
+    align-items: center;
+  }
+  .srow.shead {
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  .srow.shead .r {
+    text-align: right;
+  }
   .rows {
     display: flex;
     flex-direction: column;
@@ -461,45 +618,50 @@
   .grow {
     flex: 1;
   }
+  .lockname {
+    font-size: 14px;
+    color: var(--text);
+    padding: 9px 2px;
+  }
   .money {
     display: flex;
     align-items: center;
     gap: 3px;
   }
   .money input {
-    width: 78px;
+    width: 100%;
     text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .fcost {
+    text-align: right;
+    font-size: 13px;
+    color: var(--text-dim);
     font-variant-numeric: tabular-nums;
   }
   .cur {
     color: var(--text-faint);
     font-size: 13px;
   }
-  .kind {
-    background: var(--panel-2);
-    border: 1px solid var(--line-soft);
-    border-radius: 7px;
-    padding: 6px 9px;
-    color: var(--text-dim);
-    font-size: 11px;
-    white-space: nowrap;
-  }
-  .kind:hover {
-    border-color: var(--text-faint);
-    color: var(--text);
-  }
   .x {
     background: none;
     border: none;
     color: var(--text-faint);
     font-size: 18px;
-    padding: 0 4px;
+    padding: 0;
   }
   .x:hover {
     color: #e88;
   }
   .x:disabled {
     opacity: 0.3;
+  }
+  .xspace {
+    width: 14px;
   }
   .add {
     align-self: flex-start;
@@ -514,9 +676,5 @@
   .add:hover {
     border-color: var(--accent);
     color: var(--text);
-  }
-  .none {
-    font-size: 12px;
-    margin: 2px 0;
   }
 </style>

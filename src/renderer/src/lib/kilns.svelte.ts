@@ -2,9 +2,12 @@
  * Kiln profiles store — the studio's kilns, editable in Kiln Profiles and
  * persisted. Seeded from the demo profiles on first run.
  */
-import type { KilnProfile, KilnShape } from "@core";
+import type { CostItem, KilnProfile, KilnShape } from "@core";
 import { demoKilns } from "./kilns";
 import { storage } from "./storage";
+
+/** Fixed cost lines every kiln always shows (in this order, deduped by name). */
+export const BUILTIN_FIXED = ["Maintenance reserve", "Consumables"] as const;
 
 export const kilnStore = $state<{ list: KilnProfile[] }>({
   list: structuredClone(demoKilns),
@@ -42,11 +45,31 @@ function blankKiln(shape: KilnShape = "cylinder"): KilnProfile {
     diameterCm: shape === "cylinder" ? 40 : undefined,
     widthCm: shape === "box" ? 40 : undefined,
     depthCm: shape === "box" ? 30 : undefined,
+    energy: "electric",
     usableHeightCm: 50,
     defaultShelfThicknessCm: 1.5,
     standardPostHeightsCm: [5, 8, 10, 13, 15, 20],
-    services: [{ id: `svc-${newKilnId()}`, name: "Firing", basePrice: 80 }],
-    defaultCostItems: [{ name: "Fuel", amount: 8, kind: "variable" }],
+    services: [{ id: `svc-${newKilnId()}`, name: "Firing", basePrice: 80, fuelUse: 0 }],
+    defaultCostItems: [
+      { name: "Maintenance reserve", amount: 0, kind: "fixed" },
+      { name: "Consumables", amount: 0, kind: "fixed" },
+    ],
+  };
+}
+
+/** Backfill fields added after a kiln may have been persisted, so old data and
+ *  new data behave the same (energy, per-service fuelUse, the built-in fixed
+ *  items). Never removes the user's own custom cost items. */
+function normalizeKiln(k: KilnProfile): KilnProfile {
+  const items: CostItem[] = k.defaultCostItems ? [...k.defaultCostItems] : [];
+  for (const name of BUILTIN_FIXED) {
+    if (!items.some((c) => c.name === name)) items.push({ name, amount: 0, kind: "fixed" });
+  }
+  return {
+    ...k,
+    energy: k.energy ?? "other",
+    services: k.services.map((s) => ({ ...s, fuelUse: s.fuelUse ?? 0 })),
+    defaultCostItems: items,
   };
 }
 
@@ -78,7 +101,7 @@ export function saveKilns(): void {
 export async function loadKilns(): Promise<void> {
   const saved = await storage.read<KilnProfile[]>("kilns");
   if (Array.isArray(saved) && saved.length > 0) {
-    kilnStore.list = saved;
+    kilnStore.list = saved.map(normalizeKiln);
   } else {
     kilnStore.list = structuredClone(demoKilns);
     saveKilns();

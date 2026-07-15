@@ -8,11 +8,22 @@
 
 export type KilnShape = "cylinder" | "box";
 
+/** How the kiln is fired. Drives the (variable) fuel cost + a record label. */
+export type KilnEnergy = "electric" | "gas" | "wood" | "other";
+/** The concrete fuel whose global price applies. */
+export type FuelKind = "electricity" | "propane" | "butane" | "wood" | "other";
+
 /** A named firing service with the base price the studio charges for it. */
 export interface FiringService {
   id: string;
   name: string; // e.g. "Bisque", "High-temp glaze", "Crystalline"
   basePrice: number; // the studio's "source of truth" price for a full firing
+  /**
+   * Fuel consumed by this service, in the kiln fuel's native unit (bottles for
+   * gas, kWh for electric, loads for wood). The firing's variable fuel cost is
+   * this × the fuel's current global price. Longer/hotter services use more.
+   */
+  fuelUse?: number;
 }
 
 /** A configurable cost line for a firing (feeds the internal margin only). */
@@ -32,6 +43,11 @@ export interface KilnProfile {
   id: string;
   name: string;
   location?: string;
+  /** Energy source (record + drives the variable fuel cost). Optional only so
+   *  legacy/test fixtures stay valid; real profiles always set it. */
+  energy?: KilnEnergy;
+  /** Which bottled gas, when energy === "gas". */
+  gasType?: "propane" | "butane";
   shape: KilnShape;
 
   /** cylinder geometry */

@@ -10,8 +10,10 @@
     type FiringRecord,
   } from "../lib/firing.svelte";
   import { kilnStore } from "../lib/kilns.svelte";
+  import { fuelDefFor } from "../lib/settings.svelte";
   import { eur } from "../lib/format";
   import KilnThumb from "../components/KilnThumb.svelte";
+  import FuelPricePanel from "../components/FuelPricePanel.svelte";
   import LogDetailCard from "../components/LogDetailCard.svelte";
 
   const current = $derived(currentFirings());
@@ -22,6 +24,8 @@
   let logId = $state<string | null>(null);
 
   const kilnOf = (rec: FiringRecord) => kilnStore.list.find((k) => k.id === rec.planner.kilnId) ?? kilnStore.list[0]!;
+  const energyLabel = (k: (typeof kilnStore.list)[number]): string =>
+    k.energy === "gas" ? (k.gasType === "butane" ? "Butane" : "Propane") : fuelDefFor(k).label;
   // `rounded` is what clients actually pay (each charged amount rounded up to the
   // next 0.50); `real` is the exact figure kept for the record.
   function summary(rec: FiringRecord): { clients: number; rounded: number; real: number } {
@@ -59,7 +63,7 @@
               <span class="kiln">{titled || fmtFull(rec.createdAt)}</span>
               <span class="pending">pending</span>
             </div>
-            <div class="title">{k.name}</div>
+            <div class="title">{k.name} <span class="energy">· {energyLabel(k)}</span></div>
             <div class="faint meta">
               {#if titled}{fmtFull(rec.createdAt)} · {/if}{s.clients} client{s.clients === 1 ? "" : "s"} · {eur(s.rounded)}
             </div>
@@ -75,27 +79,30 @@
   </section>
 
   <!-- New firing -->
-  <section class="col center panel">
-    {#if !picking}
-      <button class="new-firing" onclick={startNew}>
-        <span class="plus">+</span>
-        <span>Start new firing</span>
-      </button>
-    {:else}
-      <div class="picker">
-        <span class="col-title center-t">Choose a kiln</span>
-        <div class="kilns">
-          {#each kilnStore.list as k (k.id)}
-            <button class="kiln-card" onclick={() => newFiring(k.id)}>
-              <KilnThumb shape={k.shape} size={54} />
-              <span class="kn">{k.name}</span>
-              <span class="faint kd">{k.shape === "cylinder" ? `${k.diameterCm} cm Ø` : `${k.widthCm}×${k.depthCm} cm`} · {k.usableHeightCm} cm</span>
-            </button>
-          {/each}
+  <section class="col newcol panel">
+    <div class="newmid">
+      {#if !picking}
+        <button class="new-firing" onclick={startNew}>
+          <span class="plus">+</span>
+          <span>Start new firing</span>
+        </button>
+      {:else}
+        <div class="picker">
+          <span class="col-title center-t">Choose a kiln</span>
+          <div class="kilns">
+            {#each kilnStore.list as k (k.id)}
+              <button class="kiln-card" onclick={() => newFiring(k.id)}>
+                <KilnThumb shape={k.shape} size={54} />
+                <span class="kn">{k.name}</span>
+                <span class="faint kd">{k.shape === "cylinder" ? `${k.diameterCm} cm Ø` : `${k.widthCm}×${k.depthCm} cm`} · {k.usableHeightCm} cm · {energyLabel(k)}</span>
+              </button>
+            {/each}
+          </div>
+          <button class="cancel" onclick={() => (picking = false)}>Cancel</button>
         </div>
-        <button class="cancel" onclick={() => (picking = false)}>Cancel</button>
-      </div>
-    {/if}
+      {/if}
+    </div>
+    <FuelPricePanel />
   </section>
 
   <!-- Firing log -->
@@ -231,9 +238,20 @@
     padding: 4px 8px;
   }
 
-  .center {
+  .newcol {
+    align-items: center;
+    gap: 14px;
+  }
+  .newmid {
+    flex: 1;
+    align-self: stretch;
+    display: flex;
     align-items: center;
     justify-content: center;
+    min-height: 0;
+  }
+  .energy {
+    color: var(--text-faint);
   }
   .new-firing {
     display: flex;

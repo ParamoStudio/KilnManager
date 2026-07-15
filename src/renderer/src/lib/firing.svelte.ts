@@ -2,7 +2,7 @@ import type { Firing, Allocation, KilnProfile, FiringService } from "@core";
 import { consumedHeightCm } from "@core";
 import { kilnStore, loadKilns } from "./kilns.svelte";
 import { type ComplexityKey } from "./complexity";
-import { cx, loadSettings } from "./settings.svelte";
+import { cx, loadSettings, fuelCostFor, fuelDefFor } from "./settings.svelte";
 import { storage } from "./storage";
 
 // ---- Planner state (renderer-only, richer than the core Firing) -----------
@@ -201,12 +201,18 @@ export function coreFiringFrom(p: PlannerState): Firing {
         notes: cx(s.complexity).label,
       })),
   }));
+  // Variable fuel cost = this service's consumption × the fuel's current price.
+  const fuelItem = {
+    name: fuelDefFor(kiln).label,
+    amount: fuelCostFor(kiln, service.fuelUse ?? 0),
+    kind: "variable" as const,
+  };
   return {
     kiln,
     serviceBasePrice: service.basePrice,
     serviceName: service.name,
     modifiers: p.modifiers.filter((m) => m.on).map((m) => ({ label: m.label, amount: m.amount })),
-    costItems: kiln.defaultCostItems,
+    costItems: [fuelItem, ...kiln.defaultCostItems],
     partners: p.partners,
     levels,
   };

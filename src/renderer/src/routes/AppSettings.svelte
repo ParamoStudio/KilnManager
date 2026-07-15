@@ -8,8 +8,11 @@
     removePartner,
     addTier,
     removeTier,
+    recordFuelPrice,
+    FUEL_KINDS,
   } from "../lib/settings.svelte";
   import { contacts } from "../lib/firing.svelte";
+  import { eur } from "../lib/format";
 
   const persist = (): void => saveSettings();
 
@@ -72,6 +75,31 @@
         {/each}
       </div>
       <button class="reset" onclick={resetComplexity}>Reset to defaults (1.00 / 1.15 / 1.30)</button>
+
+      <span class="side-title mt">Fuel prices</span>
+      <p class="faint explain">
+        The volatile part of each firing's cost. Set the current price per unit; it multiplies each
+        service's fuel use. You can also update these quickly from Home when you buy.
+      </p>
+      <div class="rows">
+        {#each FUEL_KINDS as fk (fk)}
+          {@const f = settings.fuels[fk]}
+          <div class="lrow">
+            <span class="grow flabel">{f.label}</span>
+            <div class="fac">
+              <input type="number" min="0" step="0.01" value={f.price} onchange={(e) => recordFuelPrice(fk, parseFloat(e.currentTarget.value))} />
+              <span class="unit">/{f.unit}</span>
+            </div>
+          </div>
+        {/each}
+      </div>
+      {#if settings.priceHistory.length}
+        <div class="hist">
+          {#each settings.priceHistory.slice(0, 6) as h (h.id)}
+            <span class="hitem">{settings.fuels[h.fuel].label} {eur(h.price)} · {new Date(h.at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</span>
+          {/each}
+        </div>
+      {/if}
     </section>
 
     <!-- Partners -->
@@ -198,9 +226,27 @@
     font-variant-numeric: tabular-nums;
   }
   .mul,
-  .pct {
+  .pct,
+  .unit {
     color: var(--text-faint);
     font-size: 13px;
+  }
+  .flabel {
+    font-size: 14px;
+    color: var(--text);
+    padding: 9px 2px;
+  }
+  .hist {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .hitem {
+    font-size: 10.5px;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
   }
   .reset {
     align-self: flex-start;
