@@ -16,7 +16,7 @@
     zoneLabel,
     MYSELF,
   } from "../lib/firing.svelte";
-  import { COMPLEXITY } from "../lib/complexity";
+  import { cx } from "../lib/settings.svelte";
   import { colorForIndex } from "../lib/colors";
 
   const kiln = $derived(currentKiln());
@@ -196,15 +196,15 @@
               {truncate(owner, row.div)}
             </text>
             <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2 + 15} text-anchor="middle" class="zcx" style="font-size:{Math.max(8, nameFs * 0.72)}px">
-              {COMPLEXITY[seg.complexity].label}
+              {cx(seg.complexity).label}
             </text>
           {:else}
             <!-- short shelf: full complexity word when it fits, otherwise the
                  single S/M/C initial so the factor is still readable at a glance -->
             <text x={zx + colW / 2 + (narrow ? 0 : 18)} y={row.ySpaceTop + 17} text-anchor="middle" class="zname-sm" style="font-size:{nameFs}px">
               {narrow
-                ? `${truncate(owner, row.div * 2)} · ${COMPLEXITY[seg.complexity].label[0]}`
-                : `${truncate(owner, row.div)} · ${COMPLEXITY[seg.complexity].label}`}
+                ? `${truncate(owner, row.div * 2)} · ${cx(seg.complexity).label[0]}`
+                : `${truncate(owner, row.div)} · ${cx(seg.complexity).label}`}
             </text>
           {/if}
         {:else if bandH > 24}

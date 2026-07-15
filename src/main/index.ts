@@ -1,9 +1,14 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, nativeImage } from "electron";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { registerStorage } from "./storage.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// App icon. resources/ sits at the project root in dev (app.getAppPath()) and is
+// bundled as an extra resource once packaging is set up.
+const iconPath = join(app.getAppPath(), "resources", "icon.png");
+const appIcon = nativeImage.createFromPath(iconPath);
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -13,6 +18,7 @@ function createWindow(): void {
     minHeight: 640,
     show: false,
     backgroundColor: "#0b0b0d",
+    icon: appIcon,
     titleBarStyle: "hiddenInset",
     webPreferences: {
       preload: join(__dirname, "../preload/index.mjs"),
@@ -33,6 +39,10 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  // macOS shows the dock icon rather than the window icon.
+  if (process.platform === "darwin" && app.dock && !appIcon.isEmpty()) {
+    app.dock.setIcon(appIcon);
+  }
   registerStorage();
   createWindow();
 

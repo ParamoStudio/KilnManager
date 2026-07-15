@@ -20,7 +20,8 @@
     setHoverZone,
     type ZoneRef,
   } from "../lib/firing.svelte";
-  import { COMPLEXITY, complexityKeys, type ComplexityKey } from "../lib/complexity";
+  import { complexityKeys, type ComplexityKey } from "../lib/complexity";
+  import { cx } from "../lib/settings.svelte";
   import { colorForIndex } from "../lib/colors";
 
   const count = $derived(ui.selection.length);
@@ -95,8 +96,8 @@
                   class:active={s?.complexity === key}
                   onclick={() => setZoneComplexity(z.levelId, z.segIdx, key)}
                 >
-                  <span class="cxl">{COMPLEXITY[key].label[0]}</span>
-                  <span class="cxf">×{COMPLEXITY[key].factor.toFixed(2)}</span>
+                  <span class="cxl">{cx(key).label[0]}</span>
+                  <span class="cxf">×{cx(key).factor.toFixed(2)}</span>
                 </button>
               {/each}
             </div>
@@ -166,7 +167,7 @@
       <div class="cx wide">
         {#each complexityKeys as key (key)}
           <button class="cx-btn" class:active={ui.complexity === key} onclick={() => applyComplexityToSelection(key)}>
-            {COMPLEXITY[key].label}<span class="f">×{COMPLEXITY[key].factor.toFixed(2)}</span>
+            {cx(key).label}<span class="f">×{cx(key).factor.toFixed(2)}</span>
           </button>
         {/each}
       </div>

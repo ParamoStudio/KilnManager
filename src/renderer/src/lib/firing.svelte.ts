@@ -1,7 +1,8 @@
 import type { Firing, Allocation, KilnProfile, FiringService } from "@core";
 import { consumedHeightCm } from "@core";
-import { demoKilns } from "./kilns";
-import { COMPLEXITY, type ComplexityKey } from "./complexity";
+import { kilnStore, loadKilns } from "./kilns.svelte";
+import { type ComplexityKey } from "./complexity";
+import { cx, loadSettings } from "./settings.svelte";
 import { storage } from "./storage";
 
 // ---- Planner state (renderer-only, richer than the core Firing) -----------
@@ -44,7 +45,7 @@ const defaultModifiers = (): PlannerModifier[] => [
 ];
 
 function initialState(): PlannerState {
-  const kiln = demoKilns[0]!;
+  const kiln = kilnStore.list[0]!;
   return {
     kilnId: kiln.id,
     serviceId: kiln.services[0]!.id,
@@ -59,7 +60,7 @@ export const planner = $state<PlannerState>(initialState());
 // ---- Lookups --------------------------------------------------------------
 
 export function currentKiln(): KilnProfile {
-  return demoKilns.find((k) => k.id === planner.kilnId) ?? demoKilns[0]!;
+  return kilnStore.list.find((k) => k.id === planner.kilnId) ?? kilnStore.list[0]!;
 }
 
 export function currentService(): FiringService {
@@ -115,7 +116,7 @@ export function clearAll(): void {
 
 /** First run: seed the agreed worked example as one Current Firing. */
 export function seedDemoFiring(): void {
-  const kiln = demoKilns[0]!;
+  const kiln = kilnStore.list[0]!;
   ["Luis", "Anna", "Studio Work", "Guest"].forEach(addContact);
   firings.list.push({
     id: `f${Date.now().toString(36)}${seq++}`,
@@ -164,7 +165,7 @@ export function setSupportHeight(id: string, cm: number): void {
 }
 
 export function setKiln(id: string): void {
-  const kiln = demoKilns.find((k) => k.id === id);
+  const kiln = kilnStore.list.find((k) => k.id === id);
   if (!kiln) return;
   planner.kilnId = id;
   if (!kiln.services.some((s) => s.id === planner.serviceId)) {
@@ -185,7 +186,7 @@ export function toggleModifier(id: string): void {
 
 /** Build a pure-engine Firing from any planner state (active or a stored record). */
 export function coreFiringFrom(p: PlannerState): Firing {
-  const kiln = demoKilns.find((k) => k.id === p.kilnId) ?? demoKilns[0]!;
+  const kiln = kilnStore.list.find((k) => k.id === p.kilnId) ?? kilnStore.list[0]!;
   const service = kiln.services.find((s) => s.id === p.serviceId) ?? kiln.services[0]!;
   const levels = p.levels.map((l) => ({
     supportHeightCm: l.supportHeightCm,
@@ -195,9 +196,9 @@ export function coreFiringFrom(p: PlannerState): Firing {
       .map<Allocation>((s) => ({
         contactName: s.contactName,
         fraction: 1 / l.division,
-        complexity: COMPLEXITY[s.complexity].factor,
+        complexity: cx(s.complexity).factor,
         charged: s.contactName !== MYSELF,
-        notes: COMPLEXITY[s.complexity].label,
+        notes: cx(s.complexity).label,
       })),
   }));
   return {
@@ -296,7 +297,7 @@ export function closedFirings(): FiringRecord[] {
 }
 
 export function newFiring(kilnId: string): void {
-  const kiln = demoKilns.find((k) => k.id === kilnId) ?? demoKilns[0]!;
+  const kiln = kilnStore.list.find((k) => k.id === kilnId) ?? kilnStore.list[0]!;
   const rec: FiringRecord = {
     id: `f${Date.now().toString(36)}${seq++}`,
     title: "",
@@ -371,6 +372,8 @@ export function saveApp(): void {
 }
 
 export async function loadApp(): Promise<void> {
+  await loadKilns();
+  await loadSettings();
   const saved = await storage.read<FiringRecord[]>("firings");
   if (Array.isArray(saved)) firings.list = saved;
   await loadContacts();

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { computeFiring, roundUp50 } from "@core";
   import { firings, coreFiringFrom } from "../lib/firing.svelte";
-  import { demoKilns } from "../lib/kilns";
+  import { kilnStore } from "../lib/kilns.svelte";
   import { colorForIndex } from "../lib/colors";
   import { eur, pct } from "../lib/format";
 
@@ -9,7 +9,7 @@
 
   const rec = $derived(firings.list.find((f) => f.id === id));
   const result = $derived(rec ? computeFiring(coreFiringFrom(rec.planner)) : null);
-  const kiln = $derived(rec ? (demoKilns.find((k) => k.id === rec.planner.kilnId) ?? demoKilns[0]!) : null);
+  const kiln = $derived(rec ? (kilnStore.list.find((k) => k.id === rec.planner.kilnId) ?? kilnStore.list[0]!) : null);
   const fmt = (ts?: number): string => (ts ? new Date(ts).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }) : "");
 
   // What is actually collected: each charged amount rounded up to the next 0.50.

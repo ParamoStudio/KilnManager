@@ -9,7 +9,7 @@
     deleteFiring,
     type FiringRecord,
   } from "../lib/firing.svelte";
-  import { demoKilns } from "../lib/kilns";
+  import { kilnStore } from "../lib/kilns.svelte";
   import { eur } from "../lib/format";
   import KilnThumb from "../components/KilnThumb.svelte";
   import LogDetailCard from "../components/LogDetailCard.svelte";
@@ -21,7 +21,7 @@
   let confirmDelete = $state<string | null>(null);
   let logId = $state<string | null>(null);
 
-  const kilnOf = (rec: FiringRecord) => demoKilns.find((k) => k.id === rec.planner.kilnId) ?? demoKilns[0]!;
+  const kilnOf = (rec: FiringRecord) => kilnStore.list.find((k) => k.id === rec.planner.kilnId) ?? kilnStore.list[0]!;
   // `rounded` is what clients actually pay (each charged amount rounded up to the
   // next 0.50); `real` is the exact figure kept for the record.
   function summary(rec: FiringRecord): { clients: number; rounded: number; real: number } {
@@ -34,7 +34,7 @@
     new Date(ts).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
 
   function startNew(): void {
-    if (demoKilns.length === 1) newFiring(demoKilns[0]!.id);
+    if (kilnStore.list.length === 1) newFiring(kilnStore.list[0]!.id);
     else picking = true;
   }
 </script>
@@ -85,7 +85,7 @@
       <div class="picker">
         <span class="col-title center-t">Choose a kiln</span>
         <div class="kilns">
-          {#each demoKilns as k (k.id)}
+          {#each kilnStore.list as k (k.id)}
             <button class="kiln-card" onclick={() => newFiring(k.id)}>
               <KilnThumb shape={k.shape} size={54} />
               <span class="kn">{k.name}</span>
