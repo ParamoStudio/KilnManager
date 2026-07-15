@@ -31,6 +31,7 @@ export interface Partner {
 export interface KilnProfile {
   id: string;
   name: string;
+  location?: string;
   shape: KilnShape;
 
   /** cylinder geometry */
