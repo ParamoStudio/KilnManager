@@ -12,6 +12,7 @@
     removeModifier,
     setModifierMode,
   } from "../lib/kilns.svelte";
+  import { app } from "../lib/firing.svelte";
   import { settings, fuelDefFor, fuelKeyForKiln, fuelCostFor } from "../lib/settings.svelte";
   import { eur } from "../lib/format";
   import KilnThumb from "../components/KilnThumb.svelte";
@@ -21,6 +22,15 @@
   let confirmDelete = $state(false);
 
   const editing = $derived(kilnStore.list.find((k) => k.id === editingId) ?? null);
+
+  // The "add your first kiln" prompt (and similar) can hand us a kiln to open.
+  $effect(() => {
+    if (app.editKilnId) {
+      editingId = app.editKilnId;
+      confirmDelete = false;
+      app.editKilnId = null;
+    }
+  });
   const persist = (): void => saveKilns();
 
   const energyOptions: { key: KilnEnergy; label: string }[] = [

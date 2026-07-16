@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { app, go, loadApp } from "./lib/firing.svelte";
   import { vault } from "./lib/storage";
+  import { kilnStore } from "./lib/kilns.svelte";
   import Home from "./routes/Home.svelte";
   import FiringPlanner from "./routes/FiringPlanner.svelte";
   import KilnProfiles from "./routes/KilnProfiles.svelte";
@@ -9,6 +10,7 @@
   import AgendaCard from "./components/AgendaCard.svelte";
   import ExportCard from "./components/ExportCard.svelte";
   import VaultOnboarding from "./components/VaultOnboarding.svelte";
+  import FirstKilnPrompt from "./components/FirstKilnPrompt.svelte";
 
   let ready = $state(false);
   let needsVault = $state(false);
@@ -21,6 +23,7 @@
     if (s.valid) {
       await loadApp();
       ready = true;
+      if (kilnStore.list.length === 0) app.firstKilnOpen = true;
     } else {
       vaultConfigured = s.configured;
       needsVault = true;
@@ -31,6 +34,7 @@
     needsVault = false;
     await loadApp();
     ready = true;
+    if (kilnStore.list.length === 0) app.firstKilnOpen = true;
   }
 
   const inFiring = $derived(app.screen === "firing");
@@ -105,6 +109,9 @@
 
 {#if needsVault}
   <VaultOnboarding configured={vaultConfigured} onready={onVaultReady} />
+{/if}
+{#if ready && app.firstKilnOpen}
+  <FirstKilnPrompt />
 {/if}
 {#if app.agendaOpen}
   <AgendaCard

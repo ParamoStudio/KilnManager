@@ -38,10 +38,10 @@ export interface PlannerState {
 }
 
 function initialState(): PlannerState {
-  const kiln = kilnStore.list[0]!;
+  const kiln = kilnStore.list[0]; // may be undefined on a fresh, kiln-less install
   return {
-    kilnId: kiln.id,
-    serviceId: kiln.services[0]!.id,
+    kilnId: kiln?.id ?? "",
+    serviceId: kiln?.services[0]?.id ?? "",
     levels: [],
     surcharges: [],
     discount: null,
@@ -106,32 +106,6 @@ export function removeLevel(id: string): void {
 
 export function clearAll(): void {
   planner.levels = [];
-}
-
-/** First run: seed the agreed worked example as one Current Firing. */
-export function seedDemoFiring(): void {
-  const kiln = kilnStore.list[0]!;
-  ["Luis", "Anna", "Studio Work", "Guest"].forEach(addContact);
-  firings.list.push({
-    id: `f${Date.now().toString(36)}${seq++}`,
-    title: "",
-    createdAt: Date.now(),
-    status: "current",
-    clientNotes: {},
-    planner: {
-      kilnId: kiln.id,
-      serviceId: kiln.services[0]!.id,
-      surcharges: [],
-      discount: null,
-      partners: [],
-      levels: [
-        { id: newId(), supportHeightCm: 8.5, shelfThicknessCm: 1.5, division: 1, segments: [{ contactName: "Luis", complexity: "complex" }] },
-        { id: newId(), supportHeightCm: 13.5, shelfThicknessCm: 1.5, division: 1, segments: [{ contactName: "Anna", complexity: "medium" }] },
-        { id: newId(), supportHeightCm: 8.5, shelfThicknessCm: 1.5, division: 2, segments: [{ contactName: "Studio Work", complexity: "simple" }, null] },
-        { id: newId(), supportHeightCm: 10.5, shelfThicknessCm: 1.5, division: 1, segments: [{ contactName: "Guest", complexity: "simple" }] },
-      ],
-    },
-  });
 }
 
 export function setDivision(id: string, division: number): void {
@@ -281,11 +255,17 @@ export const app = $state<{
   exportOpen: boolean;
   /** When set, the agenda opens in add-mode and assigns the new client on save. */
   agendaAddFor: "assign" | null;
+  /** Shown until the studio has at least one kiln. */
+  firstKilnOpen: boolean;
+  /** When set, Kiln Profiles opens this kiln straight in the editor. */
+  editKilnId: string | null;
 }>({
   screen: "home",
   agendaOpen: false,
   exportOpen: false,
   agendaAddFor: null,
+  firstKilnOpen: false,
+  editKilnId: null,
 });
 
 /** Open the agenda to create a client and assign the current selection to them. */
@@ -414,16 +394,25 @@ export function saveActive(): void {
 // ---- Persistence (whole app) ----------------------------------------------
 
 export function saveApp(): void {
-  void storage.write("firings", $state.snapshot(firings.list));
+  const snap = $state.snapshot(firings.list) as FiringRecord[];
+  // Split by status so the folder stays clean and self-explanatory.
+  void storage.write("PendingFirings", snap.filter((f) => f.status === "current"));
+  void storage.write("FiringsLog", snap.filter((f) => f.status === "closed"));
 }
 
 export async function loadApp(): Promise<void> {
   await loadKilns();
   await loadSettings();
-  const saved = await storage.read<FiringRecord[]>("firings");
-  if (Array.isArray(saved)) firings.list = saved;
+  const pending = await storage.read<FiringRecord[]>("PendingFirings");
+  const log = await storage.read<FiringRecord[]>("FiringsLog");
+  if (Array.isArray(pending) || Array.isArray(log)) {
+    firings.list = [...(pending ?? []), ...(log ?? [])];
+  } else {
+    // Legacy single-file store (pre-split) — read once if present.
+    const legacy = await storage.read<FiringRecord[]>("firings");
+    if (Array.isArray(legacy)) firings.list = legacy;
+  }
   await loadContacts();
-  if (firings.list.length === 0) seedDemoFiring();
 }
 
 // ---- UI / workflow state (transient, not part of the firing doc) ----------

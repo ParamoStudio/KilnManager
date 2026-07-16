@@ -1,6 +1,7 @@
 <script lang="ts">
   import { computeFiring, roundUp50 } from "@core";
   import {
+    app,
     currentFirings,
     closedFirings,
     coreFiringFrom,
@@ -36,7 +37,8 @@
   const fmt = fmtDay;
 
   function startNew(): void {
-    if (kilnStore.list.length === 1) newFiring(kilnStore.list[0]!.id);
+    if (kilnStore.list.length === 0) app.firstKilnOpen = true;
+    else if (kilnStore.list.length === 1) newFiring(kilnStore.list[0]!.id);
     else picking = true;
   }
 </script>
