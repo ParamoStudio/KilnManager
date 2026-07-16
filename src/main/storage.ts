@@ -94,20 +94,35 @@ export function registerStorage(): void {
 
   // ---- Data read/write/list — all go to the vault ----
   ipcMain.handle("storage:read", async (_e, key: string) => {
+    const target = fileFor(key);
+    let raw: string;
     try {
-      return JSON.parse(await fs.readFile(fileFor(key), "utf8"));
+      raw = await fs.readFile(target, "utf8");
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
       throw err;
+    }
+    try {
+      return JSON.parse(raw);
+    } catch {
+      // Corrupt or hand-edited JSON — keep a copy aside and start that key fresh
+      // so a single bad file never bricks the whole app.
+      try {
+        await fs.rename(target, `${target}.corrupt-${Date.now()}`);
+      } catch {
+        /* ignore — worst case the next write overwrites it */
+      }
+      return null;
     }
   });
 
   ipcMain.handle("storage:write", async (_e, key: string, value: unknown) => {
     if (!vaultPath) return; // not ready yet — the onboarding gates this
     await fs.mkdir(vaultPath, { recursive: true });
-    // Write atomically: temp file + rename, so a crash never corrupts data.
+    // Write atomically: a UNIQUE temp file + rename, so a crash never corrupts
+    // data and two near-simultaneous writes to the same key can't interleave.
     const target = fileFor(key);
-    const tmp = `${target}.tmp`;
+    const tmp = `${target}.${randomUUID()}.tmp`;
     await fs.writeFile(tmp, JSON.stringify(value, null, 2), "utf8");
     await fs.rename(tmp, target);
   });

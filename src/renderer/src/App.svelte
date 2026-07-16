@@ -21,20 +21,28 @@
     // (and hasn't been moved/deleted) before loading. On web this is a no-op.
     const s = await vault.status();
     if (s.valid) {
-      await loadApp();
-      ready = true;
-      if (kilnStore.list.length === 0) app.firstKilnOpen = true;
+      await bootstrap();
     } else {
       vaultConfigured = s.configured;
       needsVault = true;
     }
   });
 
+  // Never leave the app blank: even if a load step fails, show the UI.
+  async function bootstrap(): Promise<void> {
+    try {
+      await loadApp();
+    } catch (err) {
+      console.error("loadApp failed", err);
+    } finally {
+      ready = true;
+      if (kilnStore.list.length === 0) app.firstKilnOpen = true;
+    }
+  }
+
   async function onVaultReady(): Promise<void> {
     needsVault = false;
-    await loadApp();
-    ready = true;
-    if (kilnStore.list.length === 0) app.firstKilnOpen = true;
+    await bootstrap();
   }
 
   const inFiring = $derived(app.screen === "firing");
