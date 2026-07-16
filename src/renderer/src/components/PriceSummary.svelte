@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { FiringResult, KilnModifier } from "@core";
   import { roundUp50 } from "@core";
-  import { planner, currentService, occupiedVolumeFraction, surcharges, discountTiers } from "../lib/firing.svelte";
+  import { planner, currentService, occupiedVolumeFraction, fullKilnMods, modSign } from "../lib/firing.svelte";
   import { eur, pct } from "../lib/format";
 
   let { result }: { result: FiringResult } = $props();
@@ -11,27 +11,22 @@
   const fmtMod = (m: { mode: "percent" | "fixed"; value: number }): string =>
     m.mode === "percent" ? `${m.value}%` : eur(m.value);
 
-  const activeSurcharges = $derived(surcharges().filter((m: KilnModifier) => planner.surcharges.includes(m.id)));
-  const discountLine = $derived.by(() => {
-    const d = planner.discount;
-    if (!d) return null;
-    if ("tierId" in d) {
-      const t = discountTiers().find((x) => x.id === d.tierId);
-      return t ? { name: t.name, mode: t.mode, value: t.value } : null;
-    }
-    return { name: "Custom", mode: d.custom.mode, value: d.custom.value };
-  });
+  const activeKilnMods = $derived(fullKilnMods().filter((m: KilnModifier) => planner.kilnMods.includes(m.id)));
+  const hasClientMods = $derived(Object.values(planner.clientMods ?? {}).some((a) => a.length > 0));
   // What is actually collected: each charged amount rounded up to the next 0.50.
   const roundedTotal = $derived(result.clients.reduce((a, c) => a + (c.charged ? roundUp50(c.price) : 0), 0));
 </script>
 
 <div class="summary">
   <div class="row"><span class="muted">Base · {service.name}</span><span>{eur(service.basePrice)}</span></div>
-  {#each activeSurcharges as m (m.id)}
-    <div class="row"><span class="muted">{m.name}</span><span>+{fmtMod(m)}</span></div>
+  {#each activeKilnMods as m (m.id)}
+    <div class="row"><span class="muted">{m.name}</span><span class:disc={modSign(m) < 0}>{modSign(m) > 0 ? "+" : "−"}{fmtMod(m)}</span></div>
   {/each}
-  {#if discountLine}
-    <div class="row"><span class="muted">{discountLine.name}</span><span class="disc">−{fmtMod(discountLine)}</span></div>
+  {#if planner.customDiscount}
+    <div class="row"><span class="muted">Custom discount</span><span class="disc">−{planner.customDiscount.mode === "percent" ? `${planner.customDiscount.value}%` : eur(planner.customDiscount.value)}</span></div>
+  {/if}
+  {#if hasClientMods}
+    <div class="row"><span class="muted">Client modifiers</span><span class="muted">applied</span></div>
   {/if}
   <div class="row"><span class="muted">Occupancy</span><span class="muted">{pct(occFill)} loaded</span></div>
   <div class="row total"><span>Total firing</span><span>{eur(roundedTotal)} <span class="real">({eur(result.accounting.revenue)})</span></span></div>

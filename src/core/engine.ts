@@ -87,15 +87,25 @@ export function computeFiring(firing: Firing): FiringResult {
   const serviceRevenue = roundCents((firing.serviceBasePrice + fixedSum) * (1 + pctSum / 100));
   const chargedRevenue = totalKLU > 0 ? roundCents((serviceRevenue * chargedKLU) / totalKLU) : 0;
 
-  // 3. Split the charged revenue by KLU among charged clients (0 weight → 0).
-  const prices = splitAmount(chargedRevenue, clients.map((c) => (c.charged ? c.klu : 0)));
+  // 3. Split the charged revenue by KLU among charged clients (0 weight → 0),
+  //    then apply each client's own modifiers to their share. A client discount
+  //    is absorbed by the studio; a client surcharge is added to what's charged.
+  const shares = splitAmount(chargedRevenue, clients.map((c) => (c.charged ? c.klu : 0)));
   clients.forEach((c, i) => {
     c.sharePct = totalKLU > 0 ? c.klu / totalKLU : 0;
-    c.price = c.charged ? prices[i]! : 0;
+    if (!c.charged) {
+      c.price = 0;
+      return;
+    }
+    const mods = firing.clientModifiers?.[c.contactName] ?? [];
+    const cFixed = mods.reduce((a, m) => a + (m.mode === "percent" ? 0 : m.amount), 0);
+    const cPct = mods.reduce((a, m) => a + (m.mode === "percent" ? m.amount : 0), 0);
+    c.price = roundCents((shares[i]! + cFixed) * (1 + cPct / 100));
   });
 
-  // 4. Accounting is based on what is actually charged.
-  const accounting = computeAccounting(chargedRevenue, firing);
+  // 4. Accounting is based on what is actually collected (after client mods).
+  const collectedRevenue = roundCents(clients.reduce((a, c) => a + c.price, 0));
+  const accounting = computeAccounting(collectedRevenue, firing);
 
   return {
     totalKLU,

@@ -15,6 +15,8 @@
     clientNames,
     zoneLabel,
     MYSELF,
+    applyPendingClientModAt,
+    clientHasMods,
   } from "../lib/firing.svelte";
   import { cx } from "../lib/settings.svelte";
   import { colorForIndex } from "../lib/colors";
@@ -170,9 +172,10 @@
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <g
         class="zone"
+        class:armed={ui.pendingClientMod}
         role="button"
         tabindex="-1"
-        onclick={(e) => { e.stopPropagation(); toggleSelection(row.id, k); }}
+        onclick={(e) => { e.stopPropagation(); if (ui.pendingClientMod) applyPendingClientModAt(row.id, k); else toggleSelection(row.id, k); }}
         ondblclick={(e) => { e.stopPropagation(); openShelfEditor(row.id, { x: e.clientX, y: e.clientY }); }}
       >
         <rect
@@ -190,6 +193,9 @@
           style={owner ? `--z:${colorOf(owner)}` : ""}
         />
         <text x={zx + 8} y={row.ySpaceTop + 17} class="zid" style="font-size:{idFs}px">{zoneLabel(row.id, k)}</text>
+        {#if owner && clientHasMods(owner)}
+          <text x={zx + colW - 6} y={row.ySpaceTop + 17} text-anchor="end" class="modbadge" style="font-size:{Math.max(9, idFs)}px">%</text>
+        {/if}
         {#if owner && seg}
           {#if bandH > 40}
             <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2} text-anchor="middle" class="zname" style="font-size:{nameFs}px">
@@ -393,6 +399,13 @@
     fill: var(--text);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
+  }
+  .modbadge {
+    fill: var(--accent);
+    font-weight: 700;
+  }
+  .zone.armed {
+    cursor: crosshair;
   }
   .dim-br {
     stroke: color-mix(in srgb, var(--text-faint) 75%, var(--line));

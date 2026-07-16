@@ -18,11 +18,15 @@
     clientNames,
     zoneLabel,
     setHoverZone,
+    modsForClient,
+    removeClientMod,
+    modSign,
     type ZoneRef,
   } from "../lib/firing.svelte";
   import { complexityKeys, type ComplexityKey } from "../lib/complexity";
   import { cx } from "../lib/settings.svelte";
   import { colorForIndex } from "../lib/colors";
+  import { eur } from "../lib/format";
 
   const count = $derived(ui.selection.length);
   const owners = $derived(selectionOwners());
@@ -76,49 +80,7 @@
       <span class="faint">{count} cubicle{count === 1 ? "" : "s"}</span>
     </div>
 
-    <div class="block">
-      <span class="label">Complexity per zone</span>
-      <div class="boxes">
-        {#each ui.selection as z (z.levelId + ":" + z.segIdx)}
-          {@const s = segOf(z)}
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div
-            class="boxrow"
-            role="group"
-            onmouseenter={() => setHoverZone(z)}
-            onmouseleave={() => setHoverZone(null)}
-          >
-            <span class="bid">{zoneLabel(z.levelId, z.segIdx)}</span>
-            <div class="cx">
-              {#each complexityKeys as key (key)}
-                <button
-                  class="cx-btn"
-                  class:active={s?.complexity === key}
-                  onclick={() => setZoneComplexity(z.levelId, z.segIdx, key)}
-                >
-                  <span class="cxl">{cx(key).label[0]}</span>
-                  <span class="cxf">×{cx(key).factor.toFixed(2)}</span>
-                </button>
-              {/each}
-            </div>
-          </div>
-        {/each}
-      </div>
-    </div>
-
-    <div class="block">
-      <span class="label">Note · {owner}</span>
-      <textarea
-        class="note"
-        maxlength="240"
-        rows="2"
-        placeholder="Optional note for this firing"
-        value={note}
-        oninput={(e) => setClientNote(owner!, e.currentTarget.value)}
-      ></textarea>
-    </div>
-
-    <!-- Collapsed reassign -->
+    <!-- Reassign — now directly under the client name -->
     <div class="block">
       {#if !reassignOpen}
         <button class="collapsed" onclick={() => (reassignOpen = true)}>Assign to another client ▾</button>
@@ -149,6 +111,63 @@
           <button class="self" onclick={assignSelectionToSelf}>Assign to myself</button>
         {/if}
       {/if}
+    </div>
+
+    <div class="block">
+      <span class="label">Complexity per zone</span>
+      <div class="boxes">
+        {#each ui.selection as z (z.levelId + ":" + z.segIdx)}
+          {@const s = segOf(z)}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            class="boxrow"
+            role="group"
+            onmouseenter={() => setHoverZone(z)}
+            onmouseleave={() => setHoverZone(null)}
+          >
+            <span class="bid">{zoneLabel(z.levelId, z.segIdx)}</span>
+            <div class="cx">
+              {#each complexityKeys as key (key)}
+                <button
+                  class="cx-btn"
+                  class:active={s?.complexity === key}
+                  onclick={() => setZoneComplexity(z.levelId, z.segIdx, key)}
+                >
+                  <span class="cxl">{cx(key).label[0]}</span>
+                  <span class="cxf">×{cx(key).factor.toFixed(2)}</span>
+                </button>
+              {/each}
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+
+    {#if modsForClient(owner).length > 0}
+      <div class="block">
+        <span class="label">Modifiers · {owner}</span>
+        <div class="cmods">
+          {#each modsForClient(owner) as m (m.id)}
+            <div class="cmrow">
+              <span class="cmname">{m.name}</span>
+              <span class="cmval" class:disc={modSign(m) < 0}>{modSign(m) > 0 ? "+" : "−"}{m.mode === "percent" ? `${m.value}%` : eur(m.value)}</span>
+              <button class="cmx" onclick={() => removeClientMod(owner, m.id)} aria-label="Remove modifier">×</button>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
+
+    <div class="block">
+      <span class="label">Note · {owner}</span>
+      <textarea
+        class="note"
+        maxlength="240"
+        rows="2"
+        placeholder="Optional note for this firing"
+        value={note}
+        oninput={(e) => setClientNote(owner!, e.currentTarget.value)}
+      ></textarea>
     </div>
 
     <div class="actions col">
@@ -333,6 +352,43 @@
   .note:focus {
     outline: none;
     border-color: var(--text-faint);
+  }
+  .cmods {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .cmrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    padding: 7px 10px;
+  }
+  .cmname {
+    flex: 1;
+    font-size: 13px;
+    min-width: 0;
+  }
+  .cmval {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .cmval.disc {
+    color: var(--green);
+  }
+  .cmx {
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-size: 16px;
+    padding: 0 2px;
+  }
+  .cmx:hover {
+    color: #e88;
   }
   .collapsed {
     background: none;

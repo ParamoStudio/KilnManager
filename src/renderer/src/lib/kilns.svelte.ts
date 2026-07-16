@@ -71,13 +71,18 @@ function normalizeKiln(k: KilnProfile): KilnProfile {
     energy: k.energy ?? "other",
     services: k.services.map((s) => ({ ...s, fuelUse: s.fuelUse ?? 0 })),
     defaultCostItems: items,
-    modifiers: k.modifiers ?? [],
+    // Modifiers gained a `scope` — treat legacy ones as full-kiln.
+    modifiers: (k.modifiers ?? []).map((m) => ({ ...m, scope: m.scope ?? "full-kiln" })),
   };
 }
 
 export const newModifierId = (): string => `mod-${newKilnId()}`;
 
-export function addModifier(kilnId: string, family: "surcharge" | "discount"): void {
+export function addModifier(
+  kilnId: string,
+  family: "surcharge" | "discount",
+  scope: "full-kiln" | "client",
+): void {
   const k = getKiln(kilnId);
   if (!k) return;
   if (!k.modifiers) k.modifiers = [];
@@ -85,6 +90,7 @@ export function addModifier(kilnId: string, family: "surcharge" | "discount"): v
     id: newModifierId(),
     name: family === "surcharge" ? "New surcharge" : "New discount",
     family,
+    scope,
     mode: "percent",
     value: 10,
   });

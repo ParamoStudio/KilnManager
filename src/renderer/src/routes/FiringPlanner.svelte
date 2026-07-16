@@ -1,6 +1,6 @@
 <script lang="ts">
   import { computeFiring } from "@core";
-  import { ui, toCoreFiring, clearSelection } from "../lib/firing.svelte";
+  import { ui, toCoreFiring, clearSelection, clientScopeMods, cancelClientMod } from "../lib/firing.svelte";
   import KilnSvg from "../components/KilnSvg.svelte";
   import StructurePanel from "../components/StructurePanel.svelte";
   import AssignPanel from "../components/AssignPanel.svelte";
@@ -10,13 +10,27 @@
   // The working `planner` drives the live view; it's synced back into the active
   // firing record when leaving the screen (see go() / closeActiveFiring).
   const result = $derived(computeFiring(toCoreFiring()));
+
+  const pendingMod = $derived(clientScopeMods().find((m) => m.id === ui.pendingClientMod) ?? null);
+  function stageClick(): void {
+    if (ui.pendingClientMod) cancelClientMod();
+    else clearSelection();
+  }
 </script>
 
 <div class="dash">
   <div class="main">
     <aside class="rail"><StructurePanel {result} /></aside>
     <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <section class="stage" role="presentation" onclick={clearSelection}><KilnSvg /></section>
+    <section class="stage" role="presentation" onclick={stageClick}>
+      {#if pendingMod}
+        <div class="pick-banner">
+          Pick a cubicle to apply <b>{pendingMod.name}</b> to that client
+          <button class="pcancel" onclick={(e) => { e.stopPropagation(); cancelClientMod(); }}>Cancel</button>
+        </div>
+      {/if}
+      <KilnSvg />
+    </section>
     <aside class="rail"><AssignPanel /></aside>
   </div>
   <footer class="bottom"><CapacityStrip {result} /></footer>
@@ -50,12 +64,39 @@
     min-height: 0;
   }
   .stage {
+    position: relative;
     background: var(--panel);
     border: 1px solid var(--line-soft);
     border-radius: var(--radius);
     padding: 8px 14px;
     min-height: 0;
     overflow: hidden;
+  }
+  .pick-banner {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: color-mix(in srgb, var(--amber) 18%, var(--panel));
+    border: 1px solid var(--amber);
+    border-radius: 999px;
+    padding: 8px 8px 8px 16px;
+    color: var(--text);
+    font-size: 13px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+  .pcancel {
+    background: var(--amber);
+    color: #1a1200;
+    border: none;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
   }
   .bottom {
     height: 92px;

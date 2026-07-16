@@ -8,18 +8,17 @@
     saveKilns,
     newServiceId,
     BUILTIN_FIXED,
-    addModifier,
-    removeModifier,
-    setModifierMode,
   } from "../lib/kilns.svelte";
   import { app } from "../lib/firing.svelte";
   import { settings, fuelDefFor, fuelKeyForKiln, fuelCostFor } from "../lib/settings.svelte";
   import { eur } from "../lib/format";
   import KilnThumb from "../components/KilnThumb.svelte";
   import PostCylinder from "../components/PostCylinder.svelte";
+  import KilnModifiersPanel from "../components/KilnModifiersPanel.svelte";
 
   let editingId = $state<string | null>(null);
   let confirmDelete = $state(false);
+  let modsOpen = $state(false);
 
   const editing = $derived(kilnStore.list.find((k) => k.id === editingId) ?? null);
 
@@ -289,44 +288,17 @@
           </div>
 
           <div class="field">
-            <span class="fl">Surcharges <span class="opt">add to the price · toggled per firing</span></span>
-            <div class="rows">
-              {#each (editing.modifiers ?? []).filter((m) => m.family === "surcharge") as m (m.id)}
-                <div class="mrow">
-                  <input class="grow" bind:value={m.name} onchange={persist} />
-                  <div class="modeseg">
-                    <button class:active={m.mode === "percent"} onclick={() => setModifierMode(m, "percent")}>%</button>
-                    <button class:active={m.mode === "fixed"} onclick={() => setModifierMode(m, "fixed")}>€</button>
-                  </div>
-                  <input class="mval" type="number" min="0" step="0.5" bind:value={m.value} onchange={persist} />
-                  <button class="x" onclick={() => removeModifier(editing.id, m.id)} aria-label="Remove">×</button>
-                </div>
-              {/each}
-            </div>
-            <button class="add" onclick={() => addModifier(editing.id, "surcharge")}>+ Add surcharge</button>
-          </div>
-
-          <div class="field">
-            <span class="fl">Discount tiers <span class="opt">subtract from the price · pick one (or Custom) per firing</span></span>
-            <div class="rows">
-              {#each (editing.modifiers ?? []).filter((m) => m.family === "discount") as m (m.id)}
-                <div class="mrow">
-                  <input class="grow" bind:value={m.name} onchange={persist} />
-                  <div class="modeseg">
-                    <button class:active={m.mode === "percent"} onclick={() => setModifierMode(m, "percent")}>%</button>
-                    <button class:active={m.mode === "fixed"} onclick={() => setModifierMode(m, "fixed")}>€</button>
-                  </div>
-                  <input class="mval" type="number" min="0" step="0.5" bind:value={m.value} onchange={persist} />
-                  <button class="x" onclick={() => removeModifier(editing.id, m.id)} aria-label="Remove">×</button>
-                </div>
-              {/each}
-            </div>
-            <button class="add" onclick={() => addModifier(editing.id, "discount")}>+ Add discount tier</button>
+            <span class="fl">Price modifiers <span class="opt">surcharges &amp; discounts · full-kiln or per-client</span></span>
+            <button class="modbtn" onclick={() => (modsOpen = true)}>Kiln Price Modifiers</button>
           </div>
         </section>
       </div>
     </div>
   {/key}
+{/if}
+
+{#if modsOpen && editingId}
+  <KilnModifiersPanel kilnId={editingId} onclose={() => (modsOpen = false)} />
 {/if}
 
 <style>
@@ -664,38 +636,19 @@
     align-items: center;
     gap: 7px;
   }
-  .mrow {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-  }
-  .modeseg {
-    display: flex;
-    flex-shrink: 0;
-  }
-  .modeseg button {
+  .modbtn {
+    align-self: flex-start;
     background: var(--panel-2);
-    border: 1px solid var(--line-soft);
-    color: var(--text-dim);
-    padding: 8px 10px;
-    font-size: 12px;
-  }
-  .modeseg button:first-child {
-    border-radius: 8px 0 0 8px;
-  }
-  .modeseg button:last-child {
-    border-radius: 0 8px 8px 0;
-    border-left: none;
-  }
-  .modeseg button.active {
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+    border-radius: 8px;
+    padding: 9px 16px;
     color: var(--text);
-    border-color: var(--text-faint);
-    background: var(--panel);
+    font-size: 13px;
+    font-weight: 600;
   }
-  .mval {
-    width: 64px;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
+  .modbtn:hover {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, var(--panel-2));
   }
   .grow {
     flex: 1;

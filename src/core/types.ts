@@ -103,8 +103,16 @@ export interface KilnModifier {
   id: string;
   name: string;
   family: "surcharge" | "discount";
+  /** full-kiln = adjusts the whole firing; client = adjusts one client's share. */
+  scope: "full-kiln" | "client";
   mode: "percent" | "fixed";
   value: number; // always positive; the family decides the sign
+}
+
+/** A resolved modifier line for the engine (signed: + surcharge, − discount). */
+export interface AppliedModifier {
+  mode: "percent" | "fixed";
+  amount: number;
 }
 
 /** A full firing being planned or recorded. */
@@ -114,7 +122,9 @@ export interface Firing {
   serviceBasePrice: number;
   serviceName?: string;
   levels: ShelfLevel[];
-  modifiers: Modifier[];
+  modifiers: Modifier[]; // full-kiln adjustments (applied to the whole pie)
+  /** Per-client adjustments (keyed by client name), applied to that client's share. */
+  clientModifiers?: Record<string, AppliedModifier[]>;
   costItems: CostItem[];
   partners: Partner[];
   date?: string; // ISO date

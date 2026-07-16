@@ -3,15 +3,18 @@
   import type { KilnModifier } from "@core";
   import {
     planner,
+    ui,
     app,
     currentKiln,
     currentService,
     setService,
-    surcharges,
-    discountTiers,
-    toggleSurcharge,
-    setDiscountTier,
+    fullKilnMods,
+    clientScopeMods,
+    toggleKilnMod,
     setCustomDiscount,
+    clearCustomDiscount,
+    startClientMod,
+    modSign,
     activeFiring,
     setActiveTitle,
     closeActiveFiring,
@@ -24,11 +27,12 @@
   const svc = $derived(currentService());
   const title = $derived(activeFiring()?.title ?? "");
 
-  const fmtMod = (m: KilnModifier): string => (m.mode === "percent" ? `${m.value}%` : eur(m.value));
-  const tierActive = (id: string): boolean =>
-    !!planner.discount && "tierId" in planner.discount && planner.discount.tierId === id;
-  const customActive = $derived(!!planner.discount && "custom" in planner.discount);
+  const fmtMod = (m: { mode: "percent" | "fixed"; value: number }): string =>
+    m.mode === "percent" ? `${m.value}%` : eur(m.value);
+  const signGlyph = (m: KilnModifier): string => (modSign(m) > 0 ? "+" : "−");
 
+  let kilnOpen = $state(false);
+  let clientOpen = $state(false);
   let customOpen = $state(false);
   let customVal = $state<number>(0);
   let customMode = $state<"percent" | "fixed">("percent");
@@ -83,37 +87,59 @@
     </div>
   </div>
 
-  {#if surcharges().length > 0}
-    <div class="block">
-      <span class="label">Surcharges</span>
-      {#each surcharges() as m (m.id)}
-        <button class="mod" onclick={() => toggleSurcharge(m.id)}>
-          <span class="box" class:checked={planner.surcharges.includes(m.id)}></span>
-          <span class="ml">{m.name}</span>
-          <span class="amt">+{fmtMod(m)}</span>
-        </button>
-      {/each}
-    </div>
-  {/if}
-
   <div class="block">
-    <span class="label">Discount</span>
-    <div class="tiers">
-      {#each discountTiers() as t (t.id)}
-        <button class="tier" class:active={tierActive(t.id)} onclick={() => setDiscountTier(t.id)}>
-          {t.name} <span class="tval">−{fmtMod(t)}</span>
+    <span class="label">Price Modifiers</span>
+
+    <!-- Full-kiln: tick any combination -->
+    <button class="acc-btn" onclick={() => (kilnOpen = !kilnOpen)}>
+      <span>Kiln Modifier</span><span class="chev" class:open={kilnOpen}>⌄</span>
+    </button>
+    {#if kilnOpen}
+      <div class="acc-body">
+        {#each fullKilnMods() as m (m.id)}
+          <button class="mod" onclick={() => toggleKilnMod(m.id)}>
+            <span class="box" class:checked={planner.kilnMods.includes(m.id)}></span>
+            <span class="ml">{m.name}</span>
+            <span class="amt">{signGlyph(m)}{fmtMod(m)}</span>
+          </button>
+        {/each}
+        {#if fullKilnMods().length === 0}<span class="faint none">None defined for this kiln.</span>{/if}
+
+        <button class="mod" onclick={() => (customOpen = !customOpen)}>
+          <span class="box" class:checked={!!planner.customDiscount}></span>
+          <span class="ml">Custom discount</span>
+          {#if planner.customDiscount}
+            <span class="amt">−{planner.customDiscount.mode === "percent" ? `${planner.customDiscount.value}%` : eur(planner.customDiscount.value)}</span>
+          {/if}
         </button>
-      {/each}
-      <button class="tier" class:active={customActive} onclick={() => (customOpen = !customOpen)}>Custom…</button>
-    </div>
-    {#if customOpen}
-      <div class="custom">
-        <input type="number" min="0" step="0.5" bind:value={customVal} placeholder="0" />
-        <div class="modeseg">
-          <button class:active={customMode === "percent"} onclick={() => (customMode = "percent")}>%</button>
-          <button class:active={customMode === "fixed"} onclick={() => (customMode = "fixed")}>€</button>
-        </div>
-        <button class="applyc" onclick={applyCustom}>Apply</button>
+        {#if customOpen}
+          <div class="custom">
+            <input type="number" min="0" step="0.5" bind:value={customVal} placeholder="0" />
+            <div class="modeseg">
+              <button class:active={customMode === "percent"} onclick={() => (customMode = "percent")}>%</button>
+              <button class:active={customMode === "fixed"} onclick={() => (customMode = "fixed")}>€</button>
+            </div>
+            <button class="applyc" onclick={applyCustom}>Apply</button>
+            {#if planner.customDiscount}<button class="clearc" onclick={clearCustomDiscount} aria-label="Clear">×</button>{/if}
+          </div>
+        {/if}
+      </div>
+    {/if}
+
+    <!-- Client-scope: pick a client's cubicle to apply -->
+    <button class="acc-btn" onclick={() => (clientOpen = !clientOpen)}>
+      <span>Client Modifier</span><span class="chev" class:open={clientOpen}>⌄</span>
+    </button>
+    {#if clientOpen}
+      <div class="acc-body">
+        {#each clientScopeMods() as m (m.id)}
+          <button class="cmod" class:armed={ui.pendingClientMod === m.id} onclick={() => startClientMod(m.id)}>
+            <span class="ml">{m.name}</span>
+            <span class="amt">{signGlyph(m)}{fmtMod(m)}</span>
+          </button>
+        {/each}
+        {#if clientScopeMods().length === 0}<span class="faint none">None defined for this kiln.</span>{/if}
+        {#if ui.pendingClientMod}<span class="hint faint">Click a client's cubicle in the kiln to apply.</span>{/if}
       </div>
     {/if}
   </div>
@@ -260,36 +286,81 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .tiers {
+  .acc-btn {
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .tier {
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
     background: var(--panel-2);
     border: 1px solid var(--line-soft);
     border-radius: 8px;
-    padding: 7px 11px;
-    color: var(--text-dim);
-    font-size: 12px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-size: 13px;
   }
-  .tier:hover {
+  .acc-btn:hover {
     border-color: var(--text-faint);
-    color: var(--text);
   }
-  .tier.active {
-    border-color: var(--green);
-    color: var(--text);
-    background: color-mix(in srgb, var(--green) 10%, var(--panel-2));
+  .chev {
+    color: var(--text-faint);
+    transition: transform 0.18s ease;
   }
-  .tval {
-    color: var(--green);
-    font-variant-numeric: tabular-nums;
+  .chev.open {
+    transform: rotate(180deg);
+  }
+  .acc-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px 2px 6px;
+  }
+  .none {
+    font-size: 12px;
+    padding: 2px 0;
+  }
+  .hint {
+    font-size: 11px;
+    color: var(--amber);
+    padding: 2px 0;
+  }
+  .cmod {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    padding: 8px 11px;
+    color: var(--text);
+    font-size: 13px;
+    text-align: left;
+  }
+  .cmod:hover {
+    border-color: var(--text-faint);
+  }
+  .cmod.armed {
+    border-color: var(--amber);
+    background: color-mix(in srgb, var(--amber) 12%, var(--panel-2));
+  }
+  .cmod .amt,
+  .mod .amt {
+    color: var(--text-dim);
+  }
+  .clearc {
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-size: 16px;
+    padding: 0 4px;
+  }
+  .clearc:hover {
+    color: #e88;
   }
   .custom {
     display: flex;
     gap: 6px;
-    margin-top: 8px;
+    margin-top: 6px;
     align-items: center;
   }
   .custom input {

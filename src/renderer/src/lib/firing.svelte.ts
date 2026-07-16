@@ -1,4 +1,4 @@
-import type { Firing, Allocation, KilnProfile, FiringService, KilnModifier } from "@core";
+import type { Firing, Allocation, KilnProfile, FiringService, KilnModifier, AppliedModifier } from "@core";
 import { consumedHeightCm } from "@core";
 import { kilnStore, loadKilns } from "./kilns.svelte";
 import { type ComplexityKey } from "./complexity";
@@ -23,17 +23,13 @@ export interface PlannerLevel {
   segments: (Segment | null)[]; // length === division
 }
 
-/** The chosen firing-wide discount: one of the kiln's tiers, or a custom value. */
-export type DiscountChoice =
-  | { tierId: string }
-  | { custom: { mode: "percent" | "fixed"; value: number } };
-
 export interface PlannerState {
   kilnId: string;
   serviceId: string;
   levels: PlannerLevel[]; // index 0 = topmost level
-  surcharges: string[]; // active surcharge modifier ids
-  discount: DiscountChoice | null; // one discount at a time (tier or custom)
+  kilnMods: string[]; // active full-kiln modifier ids (surcharge or discount)
+  customDiscount: { mode: "percent" | "fixed"; value: number } | null; // firing-wide failsafe
+  clientMods: Record<string, string[]>; // client name → applied client-modifier ids
   partners: { name: string; pct: number }[];
 }
 
@@ -43,8 +39,9 @@ function initialState(): PlannerState {
     kilnId: kiln?.id ?? "",
     serviceId: kiln?.services[0]?.id ?? "",
     levels: [],
-    surcharges: [],
-    discount: null,
+    kilnMods: [],
+    customDiscount: null,
+    clientMods: {},
     partners: [{ name: "Studio", pct: 0.2 }],
   };
 }
@@ -148,31 +145,64 @@ export function setService(id: string): void {
 
 // ---- Modifiers ------------------------------------------------------------
 
-/** The current kiln's defined modifiers (surcharges + discount tiers). */
+/** The current kiln's defined modifiers. */
 export function kilnModifiers(): KilnModifier[] {
   return currentKiln().modifiers ?? [];
 }
-export function surcharges(): KilnModifier[] {
-  return kilnModifiers().filter((m) => m.family === "surcharge");
+export function fullKilnMods(): KilnModifier[] {
+  return kilnModifiers().filter((m) => m.scope === "full-kiln");
 }
-export function discountTiers(): KilnModifier[] {
-  return kilnModifiers().filter((m) => m.family === "discount");
+export function clientScopeMods(): KilnModifier[] {
+  return kilnModifiers().filter((m) => m.scope === "client");
 }
-export function toggleSurcharge(id: string): void {
-  const i = planner.surcharges.indexOf(id);
-  if (i >= 0) planner.surcharges.splice(i, 1);
-  else planner.surcharges.push(id);
-}
-export function setDiscountTier(tierId: string): void {
-  // Clicking the active tier again clears it (one discount at a time).
-  const cur = planner.discount;
-  planner.discount = cur && "tierId" in cur && cur.tierId === tierId ? null : { tierId };
+export const modSign = (m: { family: "surcharge" | "discount" }): number =>
+  m.family === "surcharge" ? 1 : -1;
+
+// ---- Full-kiln modifiers (checkbox toggles) ----
+export function toggleKilnMod(id: string): void {
+  const i = planner.kilnMods.indexOf(id);
+  if (i >= 0) planner.kilnMods.splice(i, 1);
+  else planner.kilnMods.push(id);
 }
 export function setCustomDiscount(mode: "percent" | "fixed", value: number): void {
-  planner.discount = value > 0 ? { custom: { mode, value } } : null;
+  planner.customDiscount = value > 0 ? { mode, value } : null;
 }
-export function clearDiscount(): void {
-  planner.discount = null;
+export function clearCustomDiscount(): void {
+  planner.customDiscount = null;
+}
+
+// ---- Client modifiers (assigned to a client by picking a cubicle) ----
+export function modsForClient(name: string): KilnModifier[] {
+  const ids = planner.clientMods[name] ?? [];
+  const defined = kilnModifiers();
+  return ids.map((id) => defined.find((m) => m.id === id)).filter((m): m is KilnModifier => !!m);
+}
+export function clientHasMods(name: string | null): boolean {
+  return !!name && (planner.clientMods[name]?.length ?? 0) > 0;
+}
+/** Arm "pick a cubicle" mode for a client modifier (shows the kiln banner). */
+export function startClientMod(id: string): void {
+  ui.pendingClientMod = ui.pendingClientMod === id ? null : id;
+}
+export function cancelClientMod(): void {
+  ui.pendingClientMod = null;
+}
+/** Apply the armed client modifier to whichever client owns the clicked zone. */
+export function applyPendingClientModAt(levelId: string, segIdx: number): void {
+  const id = ui.pendingClientMod;
+  if (!id) return;
+  const owner = planner.levels.find((l) => l.id === levelId)?.segments[segIdx]?.contactName ?? null;
+  if (owner && owner !== MYSELF) {
+    const list = planner.clientMods[owner] ?? [];
+    if (!list.includes(id)) planner.clientMods[owner] = [...list, id];
+  }
+  ui.pendingClientMod = null;
+}
+export function removeClientMod(name: string, id: string): void {
+  const list = planner.clientMods[name] ?? [];
+  const next = list.filter((x) => x !== id);
+  if (next.length) planner.clientMods[name] = next;
+  else delete planner.clientMods[name];
 }
 
 // ---- Mapping to the pure engine -------------------------------------------
@@ -205,29 +235,41 @@ export function coreFiringFrom(p: PlannerState): Firing {
     serviceBasePrice: service.basePrice,
     serviceName: service.name,
     modifiers: resolveModifiers(kiln, p),
+    clientModifiers: resolveClientModifiers(kiln, p),
     costItems: [fuelItem, ...kiln.defaultCostItems],
     partners: p.partners,
     levels,
   };
 }
 
-/** Turn the active surcharges + chosen discount into engine Modifier lines. */
+/** Full-kiln modifiers (ticked) + the firing-wide custom discount → engine lines. */
 function resolveModifiers(kiln: KilnProfile, p: PlannerState): { label: string; mode: "percent" | "fixed"; amount: number }[] {
   const defined = kiln.modifiers ?? [];
   const out: { label: string; mode: "percent" | "fixed"; amount: number }[] = [];
   for (const m of defined) {
-    if (m.family === "surcharge" && p.surcharges.includes(m.id)) {
-      out.push({ label: m.name, mode: m.mode, amount: m.value });
+    if (m.scope === "full-kiln" && p.kilnMods.includes(m.id)) {
+      out.push({ label: m.name, mode: m.mode, amount: modSign(m) * m.value });
     }
   }
-  const d = p.discount;
-  if (d && "tierId" in d) {
-    const t = defined.find((m) => m.id === d.tierId && m.family === "discount");
-    if (t) out.push({ label: t.name, mode: t.mode, amount: -t.value });
-  } else if (d) {
-    out.push({ label: "Custom discount", mode: d.custom.mode, amount: -d.custom.value });
+  if (p.customDiscount) {
+    out.push({ label: "Custom discount", mode: p.customDiscount.mode, amount: -p.customDiscount.value });
   }
   return out;
+}
+
+/** Per-client modifiers → a map of engine AppliedModifier lines by client name. */
+function resolveClientModifiers(kiln: KilnProfile, p: PlannerState): Record<string, AppliedModifier[]> {
+  const defined = kiln.modifiers ?? [];
+  const map: Record<string, AppliedModifier[]> = {};
+  for (const [name, ids] of Object.entries(p.clientMods ?? {})) {
+    const arr: AppliedModifier[] = [];
+    for (const id of ids) {
+      const m = defined.find((x) => x.id === id && x.scope === "client");
+      if (m) arr.push({ mode: m.mode, amount: modSign(m) * m.value });
+    }
+    if (arr.length) map[name] = arr;
+  }
+  return map;
 }
 
 export function toCoreFiring(): Firing {
@@ -301,8 +343,9 @@ function loadIntoPlanner(state: PlannerState): void {
   planner.kilnId = state.kilnId;
   planner.serviceId = state.serviceId;
   planner.levels = state.levels ?? [];
-  planner.surcharges = state.surcharges ?? [];
-  planner.discount = state.discount ?? null;
+  planner.kilnMods = state.kilnMods ?? [];
+  planner.customDiscount = state.customDiscount ?? null;
+  planner.clientMods = state.clientMods ?? {};
   planner.partners = state.partners ?? [];
 }
 
@@ -333,8 +376,9 @@ export function newFiring(kilnId: string): void {
       kilnId: kiln.id,
       serviceId: kiln.services[0]!.id,
       levels: [],
-      surcharges: [],
-      discount: null,
+      kilnMods: [],
+      customDiscount: null,
+      clientMods: {},
       partners: [],
     },
   };
@@ -435,6 +479,8 @@ export const ui = $state<{
   shelfEditorAnchor: { x: number; y: number } | null;
   /** Zone hovered in the Assign rail → highlighted in the kiln. */
   hoverZone: ZoneRef | null;
+  /** When set, clicking a cubicle applies this client-modifier to its owner. */
+  pendingClientMod: string | null;
 }>({
   selection: [],
   primaryZone: null,
@@ -442,6 +488,7 @@ export const ui = $state<{
   shelfEditor: null,
   shelfEditorAnchor: null,
   hoverZone: null,
+  pendingClientMod: null,
 });
 
 // ---- Contacts book (the Agenda mini-app) ----------------------------------
