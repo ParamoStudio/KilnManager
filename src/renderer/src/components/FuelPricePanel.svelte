@@ -2,7 +2,7 @@
   import type { FuelKind } from "@core";
   import { kilnStore } from "../lib/kilns.svelte";
   import { settings, recordFuelPrice, fuelKeyForKiln } from "../lib/settings.svelte";
-  import { eur } from "../lib/format";
+  import { eur, fmtDay } from "../lib/format";
 
   // Only the fuels the studio actually burns (across its kilns).
   const usedFuels = $derived([...new Set(kilnStore.list.map((k) => fuelKeyForKiln(k)))] as FuelKind[]);
@@ -15,7 +15,6 @@
     draft[fuel] = "";
   }
 
-  const fmtDay = (ts: number): string => new Date(ts).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
   const recent = $derived(settings.priceHistory.slice(0, 4));
 </script>
 

@@ -11,7 +11,7 @@
   } from "../lib/firing.svelte";
   import { kilnStore } from "../lib/kilns.svelte";
   import { fuelDefFor } from "../lib/settings.svelte";
-  import { eur } from "../lib/format";
+  import { eur, fmtDay, fmtFull } from "../lib/format";
   import KilnThumb from "../components/KilnThumb.svelte";
   import FuelPricePanel from "../components/FuelPricePanel.svelte";
   import LogDetailCard from "../components/LogDetailCard.svelte";
@@ -33,9 +33,7 @@
     const rounded = r.clients.reduce((a, c) => a + (c.charged ? roundUp50(c.price) : 0), 0);
     return { clients: r.clients.length, rounded, real: r.accounting.revenue };
   }
-  const fmt = (ts: number): string => new Date(ts).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
-  const fmtFull = (ts: number): string =>
-    new Date(ts).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
+  const fmt = fmtDay;
 
   function startNew(): void {
     if (kilnStore.list.length === 1) newFiring(kilnStore.list[0]!.id);

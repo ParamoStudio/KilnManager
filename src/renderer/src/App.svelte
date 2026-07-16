@@ -1,18 +1,37 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { app, go, loadApp } from "./lib/firing.svelte";
+  import { vault } from "./lib/storage";
   import Home from "./routes/Home.svelte";
   import FiringPlanner from "./routes/FiringPlanner.svelte";
   import KilnProfiles from "./routes/KilnProfiles.svelte";
   import AppSettings from "./routes/AppSettings.svelte";
   import AgendaCard from "./components/AgendaCard.svelte";
   import ExportCard from "./components/ExportCard.svelte";
+  import VaultOnboarding from "./components/VaultOnboarding.svelte";
 
   let ready = $state(false);
+  let needsVault = $state(false);
+  let vaultConfigured = $state(false);
+
   onMount(async () => {
+    // Local-first: data lives in a folder the user owns. Make sure it's there
+    // (and hasn't been moved/deleted) before loading. On web this is a no-op.
+    const s = await vault.status();
+    if (s.valid) {
+      await loadApp();
+      ready = true;
+    } else {
+      vaultConfigured = s.configured;
+      needsVault = true;
+    }
+  });
+
+  async function onVaultReady(): Promise<void> {
+    needsVault = false;
     await loadApp();
     ready = true;
-  });
+  }
 
   const inFiring = $derived(app.screen === "firing");
   const tabs: { id: "home" | "kilnProfiles" | "appSettings"; label: string }[] = [
@@ -84,6 +103,9 @@
   </main>
 </div>
 
+{#if needsVault}
+  <VaultOnboarding configured={vaultConfigured} onready={onVaultReady} />
+{/if}
 {#if app.agendaOpen}
   <AgendaCard
     onclose={() => {

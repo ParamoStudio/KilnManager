@@ -11,7 +11,9 @@
     recordFuelPrice,
     FUEL_KINDS,
   } from "../lib/settings.svelte";
-  import { eur } from "../lib/format";
+  import { eur, fmtDay } from "../lib/format";
+  import { vault, isDesktop } from "../lib/storage";
+  import { onMount } from "svelte";
 
   const persist = (): void => saveSettings();
 
@@ -19,6 +21,16 @@
     const v = parseFloat(raw);
     tier.pct = Number.isNaN(v) ? 0 : Math.max(0, Math.min(100, v)) / 100;
     persist();
+  }
+
+  // Data folder (vault) — desktop only.
+  let vaultPath = $state<string | null>(null);
+  onMount(async () => {
+    if (isDesktop) vaultPath = (await vault.status()).path;
+  });
+  async function changeVault(mode: "create" | "locate"): Promise<void> {
+    const r = await vault.pick(mode);
+    if (r.ok) location.reload(); // re-read data from the new folder
   }
 </script>
 
@@ -66,8 +78,23 @@
       {#if settings.priceHistory.length}
         <div class="hist">
           {#each settings.priceHistory.slice(0, 6) as h (h.id)}
-            <span class="hitem">{settings.fuels[h.fuel].label} {eur(h.price)} · {new Date(h.at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</span>
+            <span class="hitem">{settings.fuels[h.fuel].label} {eur(h.price)} · {fmtDay(h.at)}</span>
           {/each}
+        </div>
+      {/if}
+
+      {#if isDesktop}
+        <span class="side-title mt">Data folder</span>
+        <p class="faint explain">
+          Everything is stored as plain JSON files here — yours to open, back up, or move.
+        </p>
+        <div class="vault">
+          <code class="vpath">{vaultPath ?? "—"}</code>
+          <div class="vrow">
+            <button class="vbtn" onclick={() => vault.reveal()}>Reveal in Finder</button>
+            <button class="vbtn" onclick={() => changeVault("locate")}>Locate existing…</button>
+            <button class="vbtn" onclick={() => changeVault("create")}>Move / new…</button>
+          </div>
         </div>
       {/if}
     </section>
@@ -237,6 +264,38 @@
     font-size: 10.5px;
     color: var(--text-faint);
     font-variant-numeric: tabular-nums;
+  }
+  .vault {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .vpath {
+    font-size: 11.5px;
+    color: var(--text-dim);
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    padding: 8px 10px;
+    word-break: break-all;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .vrow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .vbtn {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 7px 12px;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+  .vbtn:hover {
+    border-color: var(--text-faint);
+    color: var(--text);
   }
   .reset {
     align-self: flex-start;

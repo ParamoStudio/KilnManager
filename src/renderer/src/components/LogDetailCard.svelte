@@ -3,14 +3,14 @@
   import { firings, coreFiringFrom } from "../lib/firing.svelte";
   import { kilnStore } from "../lib/kilns.svelte";
   import { colorForIndex } from "../lib/colors";
-  import { eur, pct } from "../lib/format";
+  import { eur, pct, fmtFull } from "../lib/format";
 
   let { id, onclose }: { id: string; onclose: () => void } = $props();
 
   const rec = $derived(firings.list.find((f) => f.id === id));
   const result = $derived(rec ? computeFiring(coreFiringFrom(rec.planner)) : null);
   const kiln = $derived(rec ? (kilnStore.list.find((k) => k.id === rec.planner.kilnId) ?? kilnStore.list[0]!) : null);
-  const fmt = (ts?: number): string => (ts ? new Date(ts).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }) : "");
+  const fmt = (ts?: number): string => (ts ? fmtFull(ts) : "");
 
   // What is actually collected: each charged amount rounded up to the next 0.50.
   const roundedTotal = $derived(

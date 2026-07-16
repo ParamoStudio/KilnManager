@@ -11,12 +11,26 @@ export interface StorageAdapter {
   list(): Promise<string[]>;
 }
 
+export interface VaultStatus {
+  configured: boolean;
+  path: string | null;
+  valid: boolean;
+}
+export interface VaultPickResult {
+  ok: boolean;
+  reason?: string;
+  path?: string;
+}
+
 declare global {
   interface Window {
     kilnAPI?: {
       read(key: string): Promise<unknown>;
       write(key: string, value: unknown): Promise<void>;
       list(): Promise<string[]>;
+      vaultStatus(): Promise<VaultStatus>;
+      vaultPick(mode: "create" | "locate"): Promise<VaultPickResult>;
+      vaultReveal(): Promise<void>;
     };
   }
 }
@@ -50,3 +64,21 @@ export const storage: StorageAdapter =
     : browserAdapter;
 
 export const isDesktop = typeof window !== "undefined" && !!window.kilnAPI;
+
+/**
+ * Vault (the user's data folder). On the web build there is no real folder, so
+ * we report "valid" and the onboarding is skipped (data stays in localStorage).
+ */
+export const vault = {
+  async status(): Promise<VaultStatus> {
+    if (!window.kilnAPI) return { configured: true, path: null, valid: true };
+    return window.kilnAPI.vaultStatus();
+  },
+  async pick(mode: "create" | "locate"): Promise<VaultPickResult> {
+    if (!window.kilnAPI) return { ok: false, reason: "not-desktop" };
+    return window.kilnAPI.vaultPick(mode);
+  },
+  async reveal(): Promise<void> {
+    await window.kilnAPI?.vaultReveal();
+  },
+};
