@@ -25,7 +25,7 @@
     <section class="stage" role="presentation" onclick={stageClick}>
       {#if pendingMod}
         <div class="pick-banner">
-          Pick a cubicle to apply <b>{pendingMod.name}</b> to that client
+          <span class="ptext">Pick an assigned shelf to apply:&nbsp;<b>{pendingMod.name}</b>&nbsp;to that client</span>
           <button class="pcancel" onclick={(e) => { e.stopPropagation(); cancelClientMod(); }}>Cancel</button>
         </div>
       {/if}
@@ -81,13 +81,19 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    max-width: calc(100% - 24px);
     background: color-mix(in srgb, var(--amber) 18%, var(--panel));
     border: 1px solid var(--amber);
     border-radius: 999px;
-    padding: 8px 8px 8px 16px;
+    padding: 7px 7px 7px 16px;
     color: var(--text);
     font-size: 13px;
+    white-space: nowrap;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+  .ptext {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .pcancel {
     background: var(--amber);

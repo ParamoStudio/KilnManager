@@ -245,9 +245,10 @@ export function coreFiringFrom(p: PlannerState): Firing {
 /** Full-kiln modifiers (ticked) + the firing-wide custom discount → engine lines. */
 function resolveModifiers(kiln: KilnProfile, p: PlannerState): { label: string; mode: "percent" | "fixed"; amount: number }[] {
   const defined = kiln.modifiers ?? [];
+  const active = p.kilnMods ?? []; // guard: legacy records may lack this field
   const out: { label: string; mode: "percent" | "fixed"; amount: number }[] = [];
   for (const m of defined) {
-    if (m.scope === "full-kiln" && p.kilnMods.includes(m.id)) {
+    if (m.scope === "full-kiln" && active.includes(m.id)) {
       out.push({ label: m.name, mode: m.mode, amount: modSign(m) * m.value });
     }
   }

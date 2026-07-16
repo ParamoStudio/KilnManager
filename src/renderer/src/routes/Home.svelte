@@ -30,9 +30,14 @@
   // `rounded` is what clients actually pay (each charged amount rounded up to the
   // next 0.50); `real` is the exact figure kept for the record.
   function summary(rec: FiringRecord): { clients: number; rounded: number; real: number } {
-    const r = computeFiring(coreFiringFrom(rec.planner));
-    const rounded = r.clients.reduce((a, c) => a + (c.charged ? roundUp50(c.price) : 0), 0);
-    return { clients: r.clients.length, rounded, real: r.accounting.revenue };
+    try {
+      const r = computeFiring(coreFiringFrom(rec.planner));
+      const rounded = r.clients.reduce((a, c) => a + (c.charged ? roundUp50(c.price) : 0), 0);
+      return { clients: r.clients.length, rounded, real: r.accounting.revenue };
+    } catch {
+      // A malformed/legacy record must never blank the whole screen.
+      return { clients: 0, rounded: 0, real: 0 };
+    }
   }
   const fmt = fmtDay;
 
@@ -68,11 +73,15 @@
               {#if titled}{fmtFull(rec.createdAt)} · {/if}{s.clients} client{s.clients === 1 ? "" : "s"} · {eur(s.rounded)}
             </div>
           </div>
-          {#if confirmDelete === rec.id}
-            <button class="del confirm" onclick={(e) => { e.stopPropagation(); deleteFiring(rec.id); confirmDelete = null; }}>Delete?</button>
-          {:else}
-            <button class="del" onclick={(e) => { e.stopPropagation(); confirmDelete = rec.id; }} aria-label="Delete">×</button>
-          {/if}
+          <button
+            class="del"
+            class:armed={confirmDelete === rec.id}
+            aria-label="Delete firing"
+            onclick={(e) => { e.stopPropagation(); if (confirmDelete === rec.id) { deleteFiring(rec.id); confirmDelete = null; } else confirmDelete = rec.id; }}
+          >
+            {#if confirmDelete === rec.id}<span class="sure">Sure?</span>{/if}
+            ×
+          </button>
         </div>
       {/each}
     </div>
@@ -221,22 +230,34 @@
     font-size: 12px;
   }
   .del {
+    position: relative;
     background: none;
     border: none;
     color: var(--text-faint);
     font-size: 18px;
+    line-height: 1;
     padding: 2px 6px;
     flex-shrink: 0;
   }
   .del:hover {
-    color: #e88;
+    color: #ff6b6b;
   }
-  .del.confirm {
-    font-size: 12px;
-    color: #e88;
-    border: 1px solid #e88;
-    border-radius: 7px;
-    padding: 4px 8px;
+  /* Armed = aggressive red ×; the "Sure?" floats to its left so the card layout
+     never shifts. */
+  .del.armed {
+    color: #ff4d4d;
+  }
+  .sure {
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-right: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #ff4d4d;
+    white-space: nowrap;
+    pointer-events: none;
   }
 
   .newcol {
