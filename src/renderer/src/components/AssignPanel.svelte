@@ -70,14 +70,14 @@
   <span class="rail-title">Assign</span>
 
   {#if count === 0}
-    <p class="faint hint">Click cubicles in the kiln to select them. Click a client's cubicle to edit all of theirs.</p>
+    <p class="faint hint">Click shelves in the kiln to select them. Click a client's shelf to edit all of theirs.</p>
 
   {:else if owner}
     <!-- Client-edit mode -->
     <div class="pill">
       <span class="dot" style="--z:{colorForIndex(clientNames().indexOf(owner))}"></span>
       <span class="pn">{owner}</span>
-      <span class="faint">{count} cubicle{count === 1 ? "" : "s"}</span>
+      <span class="faint">{count} {count === 1 ? "shelf" : "shelves"}</span>
     </div>
 
     <!-- Reassign — now directly under the client name -->
@@ -178,8 +178,8 @@
     </div>
 
   {:else}
-    <!-- Free cubicles → assign directly -->
-    <div class="sel"><span class="sel-n">{count} cubicle{count === 1 ? "" : "s"} selected</span><span class="faint">Currently free</span></div>
+    <!-- Free shelves → assign directly -->
+    <div class="sel"><span class="sel-n">{count} {count === 1 ? "shelf" : "shelves"} selected</span><span class="faint">Currently free</span></div>
 
     <div class="block">
       <span class="label">Complexity</span>

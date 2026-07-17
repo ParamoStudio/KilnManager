@@ -126,7 +126,7 @@
       </div>
     {/if}
 
-    <!-- Client-scope: pick a client's cubicle to apply -->
+    <!-- Client-scope: pick a client's shelf to apply -->
     <button class="acc-btn" onclick={() => (clientOpen = !clientOpen)}>
       <span>Client Modifier</span><span class="chev" class:open={clientOpen}>⌄</span>
     </button>
@@ -139,7 +139,7 @@
           </button>
         {/each}
         {#if clientScopeMods().length === 0}<span class="faint none">None defined for this kiln.</span>{/if}
-        {#if ui.pendingClientMod}<span class="hint faint">Click a client's cubicle in the kiln to apply.</span>{/if}
+        {#if ui.pendingClientMod}<span class="hint faint">Click a client's shelf in the kiln to apply.</span>{/if}
       </div>
     {/if}
   </div>

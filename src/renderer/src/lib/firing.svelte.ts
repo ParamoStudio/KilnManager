@@ -171,7 +171,7 @@ export function clearCustomDiscount(): void {
   planner.customDiscount = null;
 }
 
-// ---- Client modifiers (assigned to a client by picking a cubicle) ----
+// ---- Client modifiers (assigned to a client by picking a shelf) ----
 export function modsForClient(name: string): KilnModifier[] {
   const ids = planner.clientMods[name] ?? [];
   const defined = kilnModifiers();
@@ -180,7 +180,7 @@ export function modsForClient(name: string): KilnModifier[] {
 export function clientHasMods(name: string | null): boolean {
   return !!name && (planner.clientMods[name]?.length ?? 0) > 0;
 }
-/** Arm "pick a cubicle" mode for a client modifier (shows the kiln banner). */
+/** Arm "pick a shelf" mode for a client modifier (shows the kiln banner). */
 export function startClientMod(id: string): void {
   ui.pendingClientMod = ui.pendingClientMod === id ? null : id;
 }
@@ -470,7 +470,7 @@ export interface ZoneRef {
 export const ui = $state<{
   /** Zones currently selected in the kiln (the Assign rail acts on these). */
   selection: ZoneRef[];
-  /** The cubicle originally clicked (for "assign only this one" on reassign). */
+  /** The shelf originally clicked (for "assign only this one" on reassign). */
   primaryZone: ZoneRef | null;
   /** Complexity applied when assigning a fresh (free) selection. */
   complexity: ComplexityKey;
@@ -480,7 +480,7 @@ export const ui = $state<{
   shelfEditorAnchor: { x: number; y: number } | null;
   /** Zone hovered in the Assign rail → highlighted in the kiln. */
   hoverZone: ZoneRef | null;
-  /** When set, clicking a cubicle applies this client-modifier to its owner. */
+  /** When set, clicking a shelf applies this client-modifier to its owner. */
   pendingClientMod: string | null;
 }>({
   selection: [],
@@ -611,8 +611,8 @@ export function isSelected(levelId: string, segIdx: number): boolean {
 }
 
 /**
- * Click a cubicle. A free cubicle toggles in/out of a multi-selection; an
- * assigned cubicle selects ALL of that client's cubicles (client-edit mode) and
+ * Click a shelf. A free shelf toggles in/out of a multi-selection; an
+ * assigned shelf selects ALL of that client's shelves (client-edit mode) and
  * remembers the clicked one as the primary (for "assign only this" on reassign).
  */
 export function toggleSelection(levelId: string, segIdx: number): void {
@@ -622,7 +622,7 @@ export function toggleSelection(levelId: string, segIdx: number): void {
     ui.primaryZone = { levelId, segIdx };
     return;
   }
-  // Free cubicle: if we were editing a client, restart with just this one.
+  // Free shelf: if we were editing a client, restart with just this one.
   if (selectionOwners().length > 0) {
     ui.selection = [{ levelId, segIdx }];
   } else {
@@ -681,7 +681,7 @@ export function clearSelectedZones(): void {
   clearSelection();
 }
 
-/** Empty ONLY the primary cubicle (the one originally clicked). */
+/** Empty ONLY the primary shelf (the one originally clicked). */
 export function clearPrimaryZone(): void {
   const p = ui.primaryZone;
   if (!p) return;
@@ -709,14 +709,14 @@ export function selectClientZones(name: string): void {
   ui.primaryZone = sel[0] ?? null;
 }
 
-/** Set the complexity of a single cubicle (per-box editing in client mode). */
+/** Set the complexity of a single shelf (per-box editing in client mode). */
 export function setZoneComplexity(levelId: string, segIdx: number, cx: ComplexityKey): void {
   const lvl = planner.levels.find((l) => l.id === levelId);
   const seg = lvl?.segments[segIdx];
   if (lvl && seg) lvl.segments[segIdx] = { ...seg, complexity: cx };
 }
 
-/** Reassign to another client, either the primary cubicle only or all selected. */
+/** Reassign to another client, either the primary shelf only or all selected. */
 export function reassignTo(name: string, scope: "primary" | "all"): void {
   const n = name.trim();
   if (!n) return;
@@ -730,7 +730,7 @@ export function reassignTo(name: string, scope: "primary" | "all"): void {
   clearSelection();
 }
 
-/** Human label for a cubicle: shelf number (bottom-up) / position. */
+/** Human label for a shelf: shelf number (bottom-up) / position. */
 export function zoneLabel(levelId: string, segIdx: number): string {
   const idx = planner.levels.findIndex((l) => l.id === levelId);
   if (idx < 0) return "";

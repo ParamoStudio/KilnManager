@@ -169,6 +169,9 @@
       {@const narrow = colW < 128}
       {@const nameFs = Math.max(7, Math.min(bandH > 40 ? 15 : 12, colW * 0.095))}
       {@const idFs = Math.max(8, Math.min(12, colW * 0.11))}
+      {@const hasMods = !!owner && clientHasMods(owner)}
+      {@const midY = (row.ySpaceTop + row.yPlate) / 2}
+      {@const cxFs = Math.max(8, nameFs * 0.72)}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <g
         class="zone"
@@ -193,24 +196,27 @@
           style={owner ? `--z:${colorOf(owner)}` : ""}
         />
         <text x={zx + 8} y={row.ySpaceTop + 17} class="zid" style="font-size:{idFs}px">{zoneLabel(row.id, k)}</text>
-        {#if owner && clientHasMods(owner)}
-          <text x={zx + colW - 6} y={row.ySpaceTop + 17} text-anchor="end" class="modbadge" style="font-size:{Math.max(9, idFs)}px">%</text>
-        {/if}
         {#if owner && seg}
           {#if bandH > 40}
-            <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2} text-anchor="middle" class="zname" style="font-size:{nameFs}px">
-              {truncate(owner, row.div)}
-            </text>
-            <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2 + 15} text-anchor="middle" class="zcx" style="font-size:{Math.max(8, nameFs * 0.72)}px">
-              {cx(seg.complexity).label}
-            </text>
+            {#if hasMods && bandH > 48}
+              <!-- name / factor / % pill (stacked, centred) -->
+              <text x={zx + colW / 2} y={midY - 13} text-anchor="middle" class="zname" style="font-size:{nameFs}px">{truncate(owner, row.div)}</text>
+              <text x={zx + colW / 2} y={midY} text-anchor="middle" class="zcx" style="font-size:{cxFs}px">{cx(seg.complexity).label}</text>
+              <rect x={zx + colW / 2 - 8.5} y={midY + 6} width="17" height="13" rx="6.5" class="modpill" />
+              <text x={zx + colW / 2} y={midY + 15.3} text-anchor="middle" class="modpill-tx">%</text>
+            {:else}
+              <text x={zx + colW / 2} y={midY} text-anchor="middle" class="zname" style="font-size:{nameFs}px">{truncate(owner, row.div)}</text>
+              <text x={zx + colW / 2} y={midY + 15} text-anchor="middle" class="zcx" style="font-size:{cxFs}px">
+                {cx(seg.complexity).label}{#if hasMods}<tspan class="modpct" dx="3">· %</tspan>{/if}
+              </text>
+            {/if}
           {:else}
             <!-- short shelf: full complexity word when it fits, otherwise the
                  single S/M/C initial so the factor is still readable at a glance -->
             <text x={zx + colW / 2 + (narrow ? 0 : 18)} y={row.ySpaceTop + 17} text-anchor="middle" class="zname-sm" style="font-size:{nameFs}px">
               {narrow
                 ? `${truncate(owner, row.div * 2)} · ${cx(seg.complexity).label[0]}`
-                : `${truncate(owner, row.div)} · ${cx(seg.complexity).label}`}
+                : `${truncate(owner, row.div)} · ${cx(seg.complexity).label}`}{#if hasMods}<tspan class="modpct" dx="3">· %</tspan>{/if}
             </text>
           {/if}
         {:else if bandH > 24}
@@ -400,7 +406,18 @@
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
-  .modbadge {
+  .modpill {
+    fill: color-mix(in srgb, var(--accent) 22%, var(--panel));
+    stroke: var(--accent);
+    stroke-width: 1;
+  }
+  .modpill-tx {
+    fill: var(--accent);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .modpct {
     fill: var(--accent);
     font-weight: 700;
   }
