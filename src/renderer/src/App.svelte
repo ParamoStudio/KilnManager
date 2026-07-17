@@ -49,8 +49,8 @@
   const inFiring = $derived(app.screen === "firing");
   const tabs: { id: "home" | "kilnProfiles" | "expenses" | "appSettings"; label: string }[] = [
     { id: "home", label: "Home" },
-    { id: "kilnProfiles", label: "Kiln Profiles" },
     { id: "expenses", label: "Expenses" },
+    { id: "kilnProfiles", label: "Kiln Profiles" },
     { id: "appSettings", label: "App Settings" },
   ];
 

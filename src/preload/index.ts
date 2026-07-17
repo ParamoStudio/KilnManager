@@ -16,6 +16,7 @@ const kilnAPI = {
   savePdf: (html: string, relParts: string[]): Promise<string | null> =>
     ipcRenderer.invoke("outputs:savePdf", html, relParts),
   saveCosts: (data: unknown): Promise<string | null> => ipcRenderer.invoke("outputs:saveCosts", data),
+  openExpenses: (): Promise<void> => ipcRenderer.invoke("outputs:openExpenses"),
   outputsReveal: (absPath: string): Promise<void> => ipcRenderer.invoke("outputs:reveal", absPath),
   outputsShare: (absPath: string): Promise<void> => ipcRenderer.invoke("outputs:share", absPath),
   outputsOpenFolder: (): Promise<void> => ipcRenderer.invoke("outputs:openFolder"),

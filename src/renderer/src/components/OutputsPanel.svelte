@@ -8,7 +8,7 @@
   import { colorForIndex } from "../lib/colors";
   import { eur, pct, fmtFull } from "../lib/format";
   import { buildTicketHtml, type TicketData, type TicketLine } from "../lib/ticket";
-  import { costData } from "../lib/expenses.svelte";
+  import { monthlyData } from "../lib/expenses.svelte";
   import { outputs, isDesktop } from "../lib/storage";
   import wordmarkSvg from "../assets/paramo-wordmark.svg?raw";
   import emblemSvg from "../assets/paramo-emblem.svg?raw";
@@ -149,7 +149,7 @@
       app.outputsAutoExport = false;
       if (isDesktop) {
         for (const c of chargedClients) void exportTicket(c.contactName);
-        void outputs.saveCosts(JSON.parse(JSON.stringify(costData())));
+        void outputs.saveCosts(JSON.parse(JSON.stringify(monthlyData())));
       }
     }
     selClient = chargedClients[0]?.contactName ?? null;

@@ -1,14 +1,27 @@
 /**
  * Cost data derived from the closed-firings log — the single source of truth
- * for both the in-app Expenses viewer and the exported KilnCosts.xlsx.
+ * for both the in-app Expenses viewer and the exported per-month workbooks.
  *
  * Nothing is stored here: every number is recomputed from each firing's saved
- * planner through the core engine, so the viewer and the workbook always agree
- * with the firing breakdowns.
+ * planner through the core engine, so the viewer and the workbooks always agree
+ * with the firing breakdowns. Partner-payment status is layered in from the
+ * payments store (default: pending).
  */
 import { computeFiring, roundUp50 } from "@core";
 import { firings, coreFiringFrom, type FiringRecord } from "./firing.svelte";
 import { kilnStore } from "./kilns.svelte";
+import { settings } from "./settings.svelte";
+import { isPaid } from "./payments.svelte";
+
+const round = (n: number): number => Math.round(n * 100) / 100;
+
+export interface PartnerCut {
+  partnerId: string;
+  tierId: string;
+  partner: string; // partner name
+  tier: string; // tier name
+  amount: number;
+}
 
 export interface FiringRow {
   id: string;
@@ -20,29 +33,37 @@ export interface FiringRow {
   fixedCost: number;
   kilnCosts: number; // fuel + fixed
   grossProfit: number; // revenue − kilnCosts
-  partnerCuts: { name: string; amount: number }[];
+  partnerCuts: PartnerCut[];
   net: number; // grossProfit − Σ partner cuts
 }
 
-export interface MonthBlock {
-  key: string; // "2026-07"
-  label: string; // "julio 2026"
+export interface KilnMonth {
+  kilnId: string;
+  kilnName: string;
   firings: FiringRow[];
   revenue: number;
   kilnCosts: number;
   grossProfit: number;
   net: number;
-  partnerDebt: { name: string; amount: number }[]; // owed per partner this month
 }
 
-export interface KilnCosts {
-  kilnId: string;
-  kilnName: string;
-  months: MonthBlock[]; // newest month first
+export interface PartnerDebt {
+  partnerId: string;
+  name: string;
+  total: number;
+  tiers: { tierId: string; tier: string; amount: number }[]; // breakdown
+  paid: boolean;
+}
+
+export interface Month {
+  key: string; // "2026-07"
+  label: string; // "Julio 2026"
+  kilns: KilnMonth[];
   revenue: number;
   kilnCosts: number;
   grossProfit: number;
   net: number;
+  partners: PartnerDebt[]; // owed this month, across all kilns
 }
 
 const monthKey = (ts: number): string => {
@@ -54,21 +75,39 @@ const monthLabel = (ts: number): string => {
   return s.charAt(0).toUpperCase() + s.slice(1); // "Julio 2026"
 };
 
+/** Resolve this firing's partner refs into cuts, keeping partner + tier identity. */
+function partnerCutsFor(rec: FiringRecord, grossProfit: number): PartnerCut[] {
+  const refs = rec.planner.partners ?? [];
+  const out: PartnerCut[] = [];
+  for (const ref of refs) {
+    const a = ref as unknown as { partnerId?: string; tierId?: string; name?: string; pct?: number };
+    if (a.partnerId && a.tierId) {
+      const p = settings.partners.find((x) => x.id === a.partnerId);
+      const t = p?.tiers.find((x) => x.id === a.tierId);
+      if (p && t) {
+        out.push({ partnerId: p.id, tierId: t.id, partner: p.name, tier: t.name, amount: round(grossProfit * t.pct) });
+        continue;
+      }
+    }
+    if (typeof a.pct === "number" && typeof a.name === "string") {
+      // Legacy shape without ids: key by name.
+      out.push({ partnerId: a.name, tierId: "", partner: a.name, tier: "", amount: round(grossProfit * a.pct) });
+    }
+  }
+  return out;
+}
+
 function rowFor(rec: FiringRecord): FiringRow {
-  const result = computeFiring(coreFiringFrom(rec.planner));
-  const a = result.accounting;
+  const core = coreFiringFrom(rec.planner);
+  const result = computeFiring(core);
   // Collected revenue mirrors the ticket/breakdown: each charged client rounded up.
-  const revenue = result.clients.reduce((s, c) => s + (c.charged ? roundUp50(c.price) : 0), 0);
-  const kilnCosts = a.kilnCosts;
-  const grossProfit = Math.round((revenue - kilnCosts) * 100) / 100;
-  const fuel = coreFiringFrom(rec.planner).costItems;
-  const fuelCost = fuel[0]?.amount ?? 0; // first cost item is the variable fuel line
-  const fixedCost = Math.round((kilnCosts - fuelCost) * 100) / 100;
-  const partnerCuts = a.partnerCuts.map((p) => ({
-    name: p.name,
-    amount: Math.round(grossProfit * p.pct * 100) / 100,
-  }));
-  const net = Math.round((grossProfit - partnerCuts.reduce((s, p) => s + p.amount, 0)) * 100) / 100;
+  const revenue = round(result.clients.reduce((s, c) => s + (c.charged ? roundUp50(c.price) : 0), 0));
+  const kilnCosts = result.accounting.kilnCosts;
+  const grossProfit = round(revenue - kilnCosts);
+  const fuelCost = core.costItems[0]?.amount ?? 0; // first cost item is the variable fuel line
+  const fixedCost = round(kilnCosts - fuelCost);
+  const partnerCuts = partnerCutsFor(rec, grossProfit);
+  const net = round(grossProfit - partnerCuts.reduce((s, p) => s + p.amount, 0));
   return {
     id: rec.id,
     title: rec.title || "Sin título",
@@ -84,59 +123,72 @@ function rowFor(rec: FiringRecord): FiringRow {
   };
 }
 
-/** Group closed firings by kiln → month, computing per-month partner debt. */
-export function costData(): KilnCosts[] {
+/** Closed firings grouped by month → kiln, with per-month partner debt. Newest first. */
+export function monthlyData(): Month[] {
   const closed = firings.list.filter((f) => f.status === "closed");
-  const byKiln = new Map<string, FiringRecord[]>();
+  const byMonth = new Map<string, FiringRow[]>();
+  const rowKiln = new Map<string, string>(); // firing id → kilnId (for grouping)
+
   for (const rec of closed) {
-    const k = rec.planner.kilnId || "unknown";
-    (byKiln.get(k) ?? byKiln.set(k, []).get(k)!).push(rec);
+    const row = rowFor(rec);
+    rowKiln.set(row.id, rec.planner.kilnId || "unknown");
+    const key = monthKey(row.at);
+    (byMonth.get(key) ?? byMonth.set(key, []).get(key)!).push(row);
   }
 
-  const out: KilnCosts[] = [];
-  for (const [kilnId, recs] of byKiln) {
-    const kilnName = kilnStore.list.find((k) => k.id === kilnId)?.name ?? "Horno eliminado";
-    const byMonth = new Map<string, FiringRow[]>();
-    for (const rec of recs) {
-      const row = rowFor(rec);
-      const key = monthKey(row.at);
-      (byMonth.get(key) ?? byMonth.set(key, []).get(key)!).push(row);
-    }
+  const kilnName = (id: string): string => kilnStore.list.find((k) => k.id === id)?.name ?? "Horno eliminado";
 
-    const months: MonthBlock[] = [];
-    for (const [key, rows] of byMonth) {
-      rows.sort((x, y) => y.at - x.at);
-      const revenue = round(rows.reduce((s, r) => s + r.revenue, 0));
-      const kilnCosts = round(rows.reduce((s, r) => s + r.kilnCosts, 0));
-      const grossProfit = round(rows.reduce((s, r) => s + r.grossProfit, 0));
-      const net = round(rows.reduce((s, r) => s + r.net, 0));
-      const debtMap = new Map<string, number>();
-      for (const r of rows) for (const pc of r.partnerCuts) debtMap.set(pc.name, round((debtMap.get(pc.name) ?? 0) + pc.amount));
-      months.push({
-        key,
-        label: monthLabel(rows[0]!.at),
-        firings: rows,
-        revenue,
-        kilnCosts,
-        grossProfit,
-        net,
-        partnerDebt: [...debtMap].map(([name, amount]) => ({ name, amount })),
-      });
-    }
-    months.sort((a, b) => (a.key < b.key ? 1 : -1)); // newest month first
+  const months: Month[] = [];
+  for (const [key, rows] of byMonth) {
+    rows.sort((x, y) => y.at - x.at);
+    const label = monthLabel(rows[0]!.at);
 
-    out.push({
+    // Per-kiln blocks within the month.
+    const byKiln = new Map<string, FiringRow[]>();
+    for (const r of rows) {
+      const kid = rowKiln.get(r.id)!;
+      (byKiln.get(kid) ?? byKiln.set(kid, []).get(kid)!).push(r);
+    }
+    const kilns: KilnMonth[] = [...byKiln].map(([kilnId, frs]) => ({
       kilnId,
-      kilnName,
-      months,
-      revenue: round(months.reduce((s, m) => s + m.revenue, 0)),
-      kilnCosts: round(months.reduce((s, m) => s + m.kilnCosts, 0)),
-      grossProfit: round(months.reduce((s, m) => s + m.grossProfit, 0)),
-      net: round(months.reduce((s, m) => s + m.net, 0)),
+      kilnName: kilnName(kilnId),
+      firings: frs,
+      revenue: round(frs.reduce((s, r) => s + r.revenue, 0)),
+      kilnCosts: round(frs.reduce((s, r) => s + r.kilnCosts, 0)),
+      grossProfit: round(frs.reduce((s, r) => s + r.grossProfit, 0)),
+      net: round(frs.reduce((s, r) => s + r.net, 0)),
+    }));
+    kilns.sort((a, b) => a.kilnName.localeCompare(b.kilnName));
+
+    // Partner debt for the month, aggregated by partner then broken down by tier.
+    const pMap = new Map<string, PartnerDebt>();
+    for (const r of rows)
+      for (const c of r.partnerCuts) {
+        let pd = pMap.get(c.partnerId);
+        if (!pd) {
+          pd = { partnerId: c.partnerId, name: c.partner, total: 0, tiers: [], paid: false };
+          pMap.set(c.partnerId, pd);
+        }
+        pd.total = round(pd.total + c.amount);
+        const tid = c.tierId || c.tier;
+        const tb = pd.tiers.find((t) => t.tierId === tid);
+        if (tb) tb.amount = round(tb.amount + c.amount);
+        else pd.tiers.push({ tierId: tid, tier: c.tier, amount: c.amount });
+      }
+    const partners = [...pMap.values()].map((pd) => ({ ...pd, paid: isPaid(key, pd.partnerId) }));
+    partners.sort((a, b) => a.name.localeCompare(b.name));
+
+    months.push({
+      key,
+      label,
+      kilns,
+      revenue: round(rows.reduce((s, r) => s + r.revenue, 0)),
+      kilnCosts: round(rows.reduce((s, r) => s + r.kilnCosts, 0)),
+      grossProfit: round(rows.reduce((s, r) => s + r.grossProfit, 0)),
+      net: round(rows.reduce((s, r) => s + r.net, 0)),
+      partners,
     });
   }
-  out.sort((a, b) => a.kilnName.localeCompare(b.kilnName));
-  return out;
+  months.sort((a, b) => (a.key < b.key ? 1 : -1)); // newest month first
+  return months;
 }
-
-const round = (n: number): number => Math.round(n * 100) / 100;

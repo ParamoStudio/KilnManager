@@ -1,24 +1,28 @@
 <script lang="ts">
-  import { costData } from "../lib/expenses.svelte";
+  import { monthlyData } from "../lib/expenses.svelte";
+  import { setPaid } from "../lib/payments.svelte";
   import { eur, fmtDay } from "../lib/format";
   import { outputs, isDesktop } from "../lib/storage";
 
-  const data = $derived(costData());
-  let selKiln = $state<string | null>(null);
-  const kiln = $derived(data.find((k) => k.kilnId === selKiln) ?? data[0] ?? null);
+  const months = $derived(monthlyData());
+  let selKey = $state<string | null>(null);
+  const month = $derived(months.find((m) => m.key === selKey) ?? months[0] ?? null);
 
-  let busy = $state(false);
-  let note = $state("");
-  let lastPath = $state<string | null>(null);
+  // Persist the workbooks whenever they might have changed (desktop only).
+  function syncWorkbooks(): void {
+    if (isDesktop) void outputs.saveCosts(JSON.parse(JSON.stringify(months)));
+  }
 
-  async function exportXlsx(): Promise<void> {
+  function togglePaid(partnerId: string, paid: boolean): void {
+    if (!month) return;
+    setPaid(month.key, partnerId, paid);
+    syncWorkbooks();
+  }
+
+  async function reveal(): Promise<void> {
     if (!isDesktop) return;
-    busy = true;
-    note = "";
-    const snap = JSON.parse(JSON.stringify(data)); // plain, serialisable
-    lastPath = await outputs.saveCosts(snap);
-    busy = false;
-    note = lastPath ? "KilnCosts.xlsx guardado ✓" : "Solo escritorio";
+    syncWorkbooks();
+    await outputs.openExpenses();
   }
 </script>
 
@@ -27,92 +31,110 @@
     <div>
       <span class="screen-title">Expenses</span>
       <p class="faint sub">
-        Los costes de cada horno, mes a mes — leídos de tus horneadas cerradas. Exporta a
-        <code>KilnCosts.xlsx</code> cuando quieras un libro que abrir en tu hoja de cálculo.
+        Los costes de cada horno, mes a mes — leídos de tus horneadas cerradas. Cada mes se guarda
+        como su propio <code>.xlsx</code> en la carpeta <code>Expenses Log</code>, actualizándose en
+        cada horneada.
       </p>
     </div>
-    <div class="actions">
-      <button class="xbtn" onclick={exportXlsx} disabled={!isDesktop || busy || data.length === 0}>
-        {busy ? "Exportando…" : "Exportar .xlsx"}
-      </button>
-      {#if lastPath}
-        <button class="xbtn ghost" onclick={() => outputs.reveal(lastPath!)}>Ver en Finder</button>
-      {/if}
-    </div>
+    <button class="xbtn" onclick={reveal} disabled={!isDesktop || months.length === 0}>Ver en Finder</button>
   </div>
-  {#if note}<span class="note">{note}{!isDesktop ? " — la exportación solo funciona en la app de escritorio." : ""}</span>{/if}
 
-  {#if data.length === 0}
+  {#if months.length === 0}
     <div class="empty">
       <p>Aún no hay horneadas cerradas.</p>
       <p class="faint">Cuando cierres una horneada, sus costes aparecerán aquí.</p>
     </div>
   {:else}
-    {#if data.length > 1}
-      <div class="chips">
-        {#each data as k (k.kilnId)}
-          <button class="chip" class:on={kiln?.kilnId === k.kilnId} onclick={() => (selKiln = k.kilnId)}>{k.kilnName}</button>
+    <div class="cols">
+      <!-- Month sidebar -->
+      <aside class="rail">
+        {#each months as m (m.key)}
+          <button class="mtab" class:on={month?.key === m.key} onclick={() => (selKey = m.key)}>
+            <span class="mtl">{m.label}</span>
+            <span class="mtn">{eur(m.net)}</span>
+          </button>
         {/each}
-      </div>
-    {/if}
+      </aside>
 
-    {#if kiln}
-      <div class="ktotals">
-        <div class="kt"><span class="ktl">Ingresos</span><span class="ktv">{eur(kiln.revenue)}</span></div>
-        <div class="kt"><span class="ktl">Costes</span><span class="ktv">{eur(kiln.kilnCosts)}</span></div>
-        <div class="kt"><span class="ktl">Bruto</span><span class="ktv">{eur(kiln.grossProfit)}</span></div>
-        <div class="kt strong"><span class="ktl">Neto acumulado</span><span class="ktv">{eur(kiln.net)}</span></div>
-      </div>
+      {#if month}
+        <div class="body">
+          <div class="ktotals">
+            <div class="kt"><span class="ktl">Ingresos</span><span class="ktv">{eur(month.revenue)}</span></div>
+            <div class="kt"><span class="ktl">Costes</span><span class="ktv">{eur(month.kilnCosts)}</span></div>
+            <div class="kt"><span class="ktl">Bruto</span><span class="ktv">{eur(month.grossProfit)}</span></div>
+            <div class="kt strong"><span class="ktl">Neto</span><span class="ktv">{eur(month.net)}</span></div>
+          </div>
 
-      <div class="months">
-        {#each kiln.months as m (m.key)}
-          <section class="month">
-            <div class="mhead">
-              <span class="mlabel">{m.label}</span>
-              <span class="mnet">{eur(m.net)}<span class="mnetl"> neto</span></span>
-            </div>
-
-            <div class="table">
-              <div class="tr th">
-                <span>Horneada</span>
-                <span class="r">Ingresos</span>
-                <span class="r">Coste</span>
-                <span class="r">Bruto</span>
-                <span class="r">Neto</span>
-              </div>
-              {#each m.firings as f (f.id)}
-                <div class="tr">
-                  <span class="cel">
-                    <span class="ft">{f.title}</span>
-                    <span class="fm">{fmtDay(f.at)}{f.clients.length ? " · " + f.clients.join(", ") : ""}</span>
-                  </span>
-                  <span class="r">{eur(f.revenue)}</span>
-                  <span class="r dim">{eur(f.kilnCosts)}</span>
-                  <span class="r">{eur(f.grossProfit)}</span>
-                  <span class="r net">{eur(f.net)}</span>
-                </div>
-              {/each}
-              <div class="tr total">
-                <span>Total del mes</span>
-                <span class="r">{eur(m.revenue)}</span>
-                <span class="r dim">{eur(m.kilnCosts)}</span>
-                <span class="r">{eur(m.grossProfit)}</span>
-                <span class="r net">{eur(m.net)}</span>
-              </div>
-            </div>
-
-            {#if m.partnerDebt.length}
-              <div class="debt">
-                <span class="dl">Debes este mes</span>
-                {#each m.partnerDebt as p (p.name)}
-                  <span class="dchip">{p.name} <b>{eur(p.amount)}</b></span>
+          <!-- Partner debt — prominent -->
+          {#if month.partners.length}
+            <section class="partners">
+              <span class="secl">Debes este mes</span>
+              <div class="pgrid">
+                {#each month.partners as p (p.partnerId)}
+                  <div class="pcard" class:paid={p.paid}>
+                    <div class="phead">
+                      <span class="pname">{p.name}</span>
+                      <span class="ptot">{eur(p.total)}</span>
+                    </div>
+                    {#if p.tiers.length}
+                      <div class="ptiers">
+                        {#each p.tiers as t (t.tierId)}
+                          <div class="ptier"><span>{t.tier || "—"}</span><span class="pt-amt">{eur(t.amount)}</span></div>
+                        {/each}
+                      </div>
+                    {/if}
+                    <label class="paid-toggle">
+                      <input type="checkbox" checked={p.paid} onchange={(e) => togglePaid(p.partnerId, e.currentTarget.checked)} />
+                      <span class="ptxt">{p.paid ? "Pagado" : "Pendiente"}</span>
+                    </label>
+                  </div>
                 {/each}
               </div>
-            {/if}
-          </section>
-        {/each}
-      </div>
-    {/if}
+            </section>
+          {/if}
+
+          <!-- Per-kiln firing tables -->
+          <div class="kilns">
+            {#each month.kilns as k (k.kilnId)}
+              <section class="kiln">
+                <div class="khead">
+                  <span class="kname">{k.kilnName}</span>
+                  <span class="knet">{eur(k.net)}<span class="knetl"> neto</span></span>
+                </div>
+                <div class="table">
+                  <div class="tr th">
+                    <span>Horneada</span>
+                    <span class="r">Ingresos</span>
+                    <span class="r">Coste</span>
+                    <span class="r">Bruto</span>
+                    <span class="r">Neto</span>
+                  </div>
+                  {#each k.firings as f (f.id)}
+                    <div class="tr">
+                      <span class="cel">
+                        <span class="ft">{f.title}</span>
+                        <span class="fm">{fmtDay(f.at)}{f.clients.length ? " · " + f.clients.join(", ") : ""}</span>
+                      </span>
+                      <span class="r">{eur(f.revenue)}</span>
+                      <span class="r dim">{eur(f.kilnCosts)}</span>
+                      <span class="r">{eur(f.grossProfit)}</span>
+                      <span class="r net">{eur(f.net)}</span>
+                    </div>
+                  {/each}
+                  <div class="tr total">
+                    <span>Total del mes</span>
+                    <span class="r">{eur(k.revenue)}</span>
+                    <span class="r dim">{eur(k.kilnCosts)}</span>
+                    <span class="r">{eur(k.grossProfit)}</span>
+                    <span class="r net">{eur(k.net)}</span>
+                  </div>
+                </div>
+              </section>
+            {/each}
+          </div>
+        </div>
+      {/if}
+    </div>
   {/if}
 </div>
 
@@ -138,7 +160,7 @@
   .sub {
     font-size: 13px;
     margin: 4px 0 0;
-    max-width: 60ch;
+    max-width: 66ch;
     line-height: 1.55;
   }
   .sub code {
@@ -147,33 +169,23 @@
     border-radius: 5px;
     padding: 1px 5px;
   }
-  .actions {
-    display: flex;
-    gap: 8px;
-    flex-shrink: 0;
-  }
   .xbtn {
-    background: var(--text);
-    color: var(--bg);
-    border: none;
-    border-radius: 9px;
-    padding: 9px 15px;
-    font-size: 13px;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  .xbtn:disabled {
-    opacity: 0.4;
-  }
-  .xbtn.ghost {
     background: var(--panel-2);
     color: var(--text-dim);
     border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 9px 15px;
+    font-size: 13px;
     font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
-  .note {
-    font-size: 12px;
-    color: var(--text-dim);
+  .xbtn:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--text-faint);
+  }
+  .xbtn:disabled {
+    opacity: 0.4;
   }
   .empty {
     margin: auto;
@@ -183,24 +195,63 @@
   .empty p {
     margin: 4px 0;
   }
-  .chips {
+  .cols {
+    display: grid;
+    grid-template-columns: 190px 1fr;
+    gap: 20px;
+    min-height: 0;
+    flex: 1;
+  }
+  /* Month sidebar */
+  .rail {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    flex-shrink: 0;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+    min-height: 0;
+    border-right: 1px solid var(--line-soft);
+    padding-right: 12px;
   }
-  .chip {
-    background: var(--panel-2);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 6px 14px;
+  .mtab {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    text-align: left;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 9px 12px;
     color: var(--text-dim);
-    font-size: 13px;
   }
-  .chip.on {
-    background: var(--text);
-    color: var(--bg);
-    border-color: var(--text);
+  .mtab:hover {
+    background: var(--panel);
+  }
+  .mtab.on {
+    background: var(--panel);
+    border-color: var(--line);
+    color: var(--text);
+  }
+  .mtl {
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+  .mtn {
+    font-size: 12px;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .mtab.on .mtn {
+    color: var(--text-dim);
+  }
+  /* Body */
+  .body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    min-height: 0;
+    padding-right: 4px;
   }
   .ktotals {
     display: grid;
@@ -212,7 +263,7 @@
     background: var(--panel);
     border: 1px solid var(--line-soft);
     border-radius: 12px;
-    padding: 12px 14px;
+    padding: 11px 14px;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -227,40 +278,119 @@
     color: var(--text-faint);
   }
   .ktv {
-    font-size: 19px;
+    font-size: 18px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
-  .months {
+  .secl {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    font-weight: 600;
+  }
+  .partners {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    overflow-y: auto;
-    min-height: 0;
-    padding-right: 4px;
+    gap: 10px;
   }
-  .month {
+  .pgrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+  }
+  .pcard {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .pcard.paid {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    background: color-mix(in srgb, var(--accent) 6%, var(--panel));
+  }
+  .phead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .pname {
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .ptot {
+    font-size: 20px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .ptiers {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .ptier {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .pt-amt {
+    color: var(--text);
+  }
+  .paid-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    margin-top: 2px;
+  }
+  .paid-toggle input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+  }
+  .ptxt {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+  .pcard.paid .ptxt {
+    color: var(--accent);
+  }
+  .kilns {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .kiln {
     background: var(--panel);
     border: 1px solid var(--line-soft);
     border-radius: 14px;
     padding: 14px 16px;
   }
-  .mhead {
+  .khead {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
-  .mlabel {
+  .kname {
     font-size: 15px;
     font-weight: 600;
   }
-  .mnet {
-    font-size: 16px;
+  .knet {
+    font-size: 15px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
-  .mnetl {
+  .knetl {
     font-size: 11px;
     color: var(--text-faint);
     font-weight: 400;
@@ -271,16 +401,16 @@
   }
   .tr {
     display: grid;
-    grid-template-columns: 1fr 96px 96px 96px 96px;
+    grid-template-columns: 1fr 92px 92px 92px 92px;
     align-items: center;
     gap: 8px;
-    padding: 9px 2px;
+    padding: 8px 2px;
     border-bottom: 1px solid var(--line-soft);
-    font-size: 14px;
+    font-size: 13.5px;
     font-variant-numeric: tabular-nums;
   }
   .tr.th {
-    font-size: 11px;
+    font-size: 10.5px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--text-faint);
@@ -318,32 +448,5 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-  .debt {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-    padding-top: 10px;
-    border-top: 1px solid var(--line-soft);
-  }
-  .dl {
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-faint);
-  }
-  .dchip {
-    font-size: 12.5px;
-    color: var(--text-dim);
-    background: var(--panel-2);
-    border: 1px solid var(--line-soft);
-    border-radius: 999px;
-    padding: 4px 11px;
-    font-variant-numeric: tabular-nums;
-  }
-  .dchip b {
-    color: var(--text);
   }
 </style>
