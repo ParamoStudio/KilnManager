@@ -59,6 +59,11 @@ function fileFor(key: string): string {
   return join(vaultPath, `${key}.json`);
 }
 
+/** The current vault folder (for outputs/exports), or null before onboarding. */
+export function getVaultPath(): string | null {
+  return vaultPath;
+}
+
 async function status(): Promise<{ configured: boolean; path: string | null; valid: boolean }> {
   const p = vaultPath ?? (await readPointer());
   if (!p) return { configured: false, path: null, valid: false };

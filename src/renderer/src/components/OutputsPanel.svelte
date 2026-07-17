@@ -1,16 +1,24 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import type { KilnModifier } from "@core";
   import { computeFiring, roundUp50 } from "@core";
-  import { firings, coreFiringFrom } from "../lib/firing.svelte";
+  import { app, firings, coreFiringFrom } from "../lib/firing.svelte";
   import { kilnStore } from "../lib/kilns.svelte";
-  import { fuelDefFor, fuelCostFor } from "../lib/settings.svelte";
+  import { settings, cx, fuelDefFor, fuelCostFor } from "../lib/settings.svelte";
   import { colorForIndex } from "../lib/colors";
   import { eur, pct, fmtFull } from "../lib/format";
+  import { buildTicketHtml, type TicketData, type TicketLine } from "../lib/ticket";
+  import { outputs, isDesktop } from "../lib/storage";
+  import wordmarkSvg from "../assets/paramo-wordmark.svg?raw";
+  import emblemSvg from "../assets/paramo-emblem.svg?raw";
 
   let { id, onclose }: { id: string; onclose: () => void } = $props();
 
-  type View = "firing" | "clients" | "partners" | "personal";
+  type View = "firing" | "clients" | "partners" | "personal" | "ticket";
   let view = $state<View>("firing");
+  let selClient = $state<string | null>(null);
+  let copied = $state(false);
+  let exportedNote = $state("");
 
   const rec = $derived(firings.list.find((f) => f.id === id) ?? null);
   const kiln = $derived(rec ? (kilnStore.list.find((k) => k.id === rec.planner.kilnId) ?? kilnStore.list[0]) : null);
@@ -48,7 +56,114 @@
     { id: "clients", label: "Clients" },
     { id: "partners", label: "Partners" },
     { id: "personal", label: "Personal" },
+    { id: "ticket", label: "Ticket" },
   ];
+
+  // ---- Client tickets ----
+  const chargedClients = $derived(result ? result.clients.filter((c) => c.charged) : []);
+  const isShared = $derived(chargedClients.length > 1);
+
+  const clientComplexity = (name: string): string => {
+    if (!rec) return "";
+    const seen: string[] = [];
+    for (const l of rec.planner.levels)
+      for (const s of l.segments) if (s?.contactName === name) {
+        const lbl = cx(s.complexity).label;
+        if (!seen.includes(lbl)) seen.push(lbl);
+      }
+    return seen.join(", ") || "—";
+  };
+
+  function ticketData(name: string): TicketData | null {
+    if (!rec || !kiln || !result || !service) return null;
+    const c = result.clients.find((x) => x.contactName === name);
+    if (!c) return null;
+    const base = result.totalKLU > 0 ? (result.serviceRevenue * c.klu) / result.totalKLU : 0;
+    const mods = clientMods(name);
+    const fixedSum = mods.reduce((a, m) => a + (m.family === "discount" ? -1 : 1) * (m.mode === "fixed" ? m.value : 0), 0);
+    const lines: TicketLine[] = [
+      { label: `${service.name} · ${isShared ? "shared" : "sole"} load`, value: eur(base) },
+    ];
+    for (const m of mods) {
+      const sign = m.family === "discount" ? -1 : 1;
+      const val = m.mode === "fixed" ? sign * m.value : sign * (base + fixedSum) * (m.value / 100);
+      const label = `${m.name} (${m.mode === "percent" ? `${m.value}%` : eur(m.value)})`;
+      lines.push({ label, value: `${val < 0 ? "−" : "+"}${eur(Math.abs(val))}` });
+    }
+    lines.push({ label: "TOTAL", value: eur(roundUp50(c.price)), strong: true });
+    return {
+      studioName: settings.studioName,
+      wordmarkSvg,
+      emblemSvg,
+      client: name,
+      date: rec.closedAt ? fmtFull(rec.closedAt) : fmtFull(rec.createdAt),
+      firingType: service.name,
+      load: isShared ? "Shared kiln load" : "Sole load",
+      complexity: clientComplexity(name),
+      sharePct: c.sharePct,
+      shape: kiln.shape,
+      extras: [],
+      lines,
+      total: eur(roundUp50(c.price)),
+      thanks: `Thank you for trusting ${settings.studioName} with your pieces.`,
+    };
+  }
+
+  const ticketHtml = $derived(selClient ? (buildTicketHtml(ticketData(selClient)!) ?? "") : "");
+  const messageFor = (name: string): string => {
+    const c = result?.clients.find((x) => x.contactName === name);
+    return settings.ticketMessage
+      .replace(/\{client\}/g, name)
+      .replace(/\{total\}/g, c ? eur(roundUp50(c.price)) : "");
+  };
+
+  const dateFolder = $derived(rec ? new Date(rec.closedAt ?? rec.createdAt).toISOString().slice(0, 10) : "");
+  const fileFor = (name: string): string => {
+    const c = result?.clients.find((x) => x.contactName === name);
+    const amount = c ? Math.round(roundUp50(c.price)) : 0;
+    return `${name}_${amount}eur_${dateFolder}.pdf`;
+  };
+
+  async function exportTicket(name: string): Promise<string | null> {
+    const d = ticketData(name);
+    if (!d || !kiln) return null;
+    return outputs.savePdf(buildTicketHtml(d), [kiln.name, dateFolder, fileFor(name)]);
+  }
+  async function doExport(): Promise<void> {
+    if (!selClient) return;
+    const p = await exportTicket(selClient);
+    exportedNote = p ? "Saved to outputs ✓" : "Desktop only";
+    setTimeout(() => (exportedNote = ""), 2000);
+  }
+  async function doShare(): Promise<void> {
+    if (!selClient) return;
+    const p = await exportTicket(selClient);
+    if (p) await outputs.share(p);
+  }
+  async function doReveal(): Promise<void> {
+    if (!selClient) return;
+    const p = await exportTicket(selClient);
+    if (p) await outputs.reveal(p);
+  }
+  async function copyMessage(): Promise<void> {
+    if (!selClient) return;
+    try {
+      await navigator.clipboard.writeText(messageFor(selClient));
+      copied = true;
+      setTimeout(() => (copied = false), 1600);
+    } catch {
+      copied = false;
+    }
+  }
+
+  onMount(() => {
+    // Auto-export every client's ticket once, right after closing the firing.
+    if (app.outputsAutoExport) {
+      app.outputsAutoExport = false;
+      if (isDesktop) for (const c of chargedClients) void exportTicket(c.contactName);
+    }
+    selClient = chargedClients[0]?.contactName ?? null;
+  });
 </script>
 
 <div class="scrim" role="presentation" onclick={onclose}></div>
@@ -142,7 +257,7 @@
         {:else}
           <p class="faint empty">No partners on this firing.</p>
         {/if}
-      {:else}
+      {:else if view === "personal"}
         <h2>Personal · in &amp; out</h2>
         <div class="block wide">
           <div class="row"><span class="muted">Collected (in)</span><span>{eur(roundedTotal)}</span></div>
@@ -155,6 +270,29 @@
           {/each}
           <div class="row total"><span>Net to you</span><span>{eur(result.accounting.netToYou)}</span></div>
         </div>
+      {:else}
+        <h2>Client ticket</h2>
+        {#if chargedClients.length === 0}
+          <p class="faint empty">No charged clients on this firing.</p>
+        {:else}
+          <div class="ticketpick">
+            {#each chargedClients as c (c.contactName)}
+              <button class="cpick" class:active={selClient === c.contactName} onclick={() => (selClient = c.contactName)}>{c.contactName}</button>
+            {/each}
+          </div>
+          <div class="ticketrow">
+            <div class="tprev"><iframe class="tframe" srcdoc={ticketHtml} title="Ticket preview"></iframe></div>
+            <div class="tactions">
+              <button class="tbtn primary" onclick={doExport} disabled={!isDesktop}>Export PDF</button>
+              <button class="tbtn" onclick={doShare} disabled={!isDesktop}>Share…</button>
+              <button class="tbtn" onclick={copyMessage}>{copied ? "Message copied ✓" : "Copy message"}</button>
+              <button class="tbtn" onclick={doReveal} disabled={!isDesktop}>Reveal in Finder</button>
+              {#if exportedNote}<span class="faint enote">{exportedNote}</span>{/if}
+              {#if !isDesktop}<span class="faint enote">PDF export is desktop-only.</span>{/if}
+              <div class="msgprev faint">“{messageFor(selClient ?? "")}”</div>
+            </div>
+          </div>
+        {/if}
       {/if}
     </section>
   {/if}
@@ -368,5 +506,87 @@
   }
   .empty {
     font-size: 13px;
+  }
+  .ticketpick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .cpick {
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 999px;
+    padding: 6px 12px;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+  .cpick:hover {
+    border-color: var(--text-faint);
+    color: var(--text);
+  }
+  .cpick.active {
+    border-color: var(--accent);
+    color: var(--text);
+    background: color-mix(in srgb, var(--accent) 10%, var(--panel-2));
+  }
+  .ticketrow {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  .tprev {
+    width: 300px;
+    height: 424px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+  }
+  .tframe {
+    width: 794px;
+    height: 1123px;
+    border: none;
+    transform: scale(0.378);
+    transform-origin: top left;
+  }
+  .tactions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .tbtn {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 13px;
+    color: var(--text);
+    font-size: 13px;
+    text-align: left;
+  }
+  .tbtn:hover:not(:disabled) {
+    border-color: var(--text-faint);
+  }
+  .tbtn.primary {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    font-weight: 600;
+  }
+  .tbtn.primary:hover:not(:disabled) {
+    border-color: var(--accent);
+  }
+  .tbtn:disabled {
+    opacity: 0.4;
+  }
+  .enote {
+    font-size: 11px;
+  }
+  .msgprev {
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line-soft);
+    font-size: 11.5px;
+    line-height: 1.5;
+    font-style: italic;
   }
 </style>

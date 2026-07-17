@@ -135,6 +135,20 @@
         {#if settings.partners.length === 0}<p class="faint none">No partners yet.</p>{/if}
       </div>
       <button class="add" onclick={addPartner}>+ Add partner</button>
+
+      <span class="side-title mt">Client ticket</span>
+      <p class="faint explain">
+        The studio name on the ticket and the message you copy when sending it.
+        Use <b>{"{client}"}</b> and <b>{"{total}"}</b> as placeholders.
+      </p>
+      <label class="field">
+        <span class="fl">Studio name</span>
+        <input bind:value={settings.studioName} onchange={persist} />
+      </label>
+      <label class="field">
+        <span class="fl">Message</span>
+        <textarea class="msg" rows="3" bind:value={settings.ticketMessage} onchange={persist}></textarea>
+      </label>
     </section>
   </div>
 </div>
@@ -208,6 +222,31 @@
     width: 100%;
   }
   input:focus {
+    outline: none;
+    border-color: var(--text-faint);
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+  .fl {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .msg {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 11px;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    resize: vertical;
+    line-height: 1.5;
+  }
+  .msg:focus {
     outline: none;
     border-color: var(--text-faint);
   }

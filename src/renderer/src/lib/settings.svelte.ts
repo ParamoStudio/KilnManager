@@ -43,7 +43,14 @@ export interface AppSettings {
   partners: PartnerDef[];
   fuels: Record<FuelKind, FuelDef>;
   priceHistory: PricePoint[];
+  /** Studio name printed on the client ticket. */
+  studioName: string;
+  /** WhatsApp/message template. Placeholders: {client} {total}. */
+  ticketMessage: string;
 }
+
+export const DEFAULT_TICKET_MESSAGE =
+  "¡Buenos días {client}! Ya tengo tus piezas en el horno, más o menos en un día podrás pasarte a buscarlas. Te adjunto el ticket. Nos vemos.";
 
 export const FUEL_KINDS: FuelKind[] = ["electricity", "propane", "butane", "wood", "other"];
 
@@ -61,6 +68,8 @@ function defaultSettings(): AppSettings {
   return {
     fuels: defaultFuels(),
     priceHistory: [],
+    studioName: "PÁRAMO Studio",
+    ticketMessage: DEFAULT_TICKET_MESSAGE,
     complexity: {
       simple: { ...COMPLEXITY.simple },
       medium: { ...COMPLEXITY.medium },
@@ -182,5 +191,7 @@ export async function loadSettings(): Promise<void> {
       FUEL_KINDS.map((k) => [k, { ...df[k], price: typeof sf[k]?.price === "number" ? sf[k]!.price : df[k].price }]),
     ) as Record<FuelKind, FuelDef>;
     settings.priceHistory = Array.isArray(saved.priceHistory) ? saved.priceHistory : [];
+    settings.studioName = typeof saved.studioName === "string" ? saved.studioName : "PÁRAMO Studio";
+    settings.ticketMessage = typeof saved.ticketMessage === "string" ? saved.ticketMessage : DEFAULT_TICKET_MESSAGE;
   }
 }

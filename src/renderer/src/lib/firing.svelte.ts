@@ -319,6 +319,8 @@ export const app = $state<{
   agendaOpen: boolean;
   /** Firing record id whose Outputs panel is open (on close, or from the log). */
   outputsFor: string | null;
+  /** True when the panel opened right after closing → auto-export tickets once. */
+  outputsAutoExport: boolean;
   /** When set, the agenda opens in add-mode and assigns the new client on save. */
   agendaAddFor: "assign" | null;
   /** Shown until the studio has at least one kiln. */
@@ -329,6 +331,7 @@ export const app = $state<{
   screen: "home",
   agendaOpen: false,
   outputsFor: null,
+  outputsAutoExport: false,
   agendaAddFor: null,
   firstKilnOpen: false,
   editKilnId: null,
@@ -436,6 +439,7 @@ export function closeActiveFiring(): void {
   // Go to Home in the background so the (now closed) firing screen isn't left
   // behind the panel — it's a log entry now, not a current firing.
   app.screen = "home";
+  app.outputsAutoExport = true; // export the client tickets once, on close
   app.outputsFor = rec.id; // open the Outputs panel for the just-closed firing
 }
 

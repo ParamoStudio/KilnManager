@@ -12,6 +12,12 @@ const kilnAPI = {
   vaultPick: (mode: "create" | "locate"): Promise<{ ok: boolean; reason?: string; path?: string }> =>
     ipcRenderer.invoke("vault:pick", mode),
   vaultReveal: (): Promise<void> => ipcRenderer.invoke("vault:reveal"),
+  // Outputs (client tickets)
+  savePdf: (html: string, relParts: string[]): Promise<string | null> =>
+    ipcRenderer.invoke("outputs:savePdf", html, relParts),
+  outputsReveal: (absPath: string): Promise<void> => ipcRenderer.invoke("outputs:reveal", absPath),
+  outputsShare: (absPath: string): Promise<void> => ipcRenderer.invoke("outputs:share", absPath),
+  outputsOpenFolder: (): Promise<void> => ipcRenderer.invoke("outputs:openFolder"),
 };
 
 contextBridge.exposeInMainWorld("kilnAPI", kilnAPI);
