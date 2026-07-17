@@ -11,6 +11,8 @@ export interface PartnerTier {
   id: string;
   name: string;
   pct: number; // fraction 0..1 of gross profit
+  /** Studio default: pre-applied on every new firing (only one tier can be it). */
+  default?: boolean;
 }
 export interface PartnerDef {
   id: string;
@@ -138,6 +140,24 @@ export function removeTier(partnerId: string, tierId: string): void {
     p.tiers = p.tiers.filter((t) => t.id !== tierId);
     saveSettings();
   }
+}
+
+/** Mark (or unmark) one tier as the studio default — exclusive across all. */
+export function setDefaultTier(partnerId: string, tierId: string): void {
+  for (const p of settings.partners)
+    for (const t of p.tiers) t.default = p.id === partnerId && t.id === tierId ? !t.default : false;
+  saveSettings();
+}
+export function defaultTierRef(): { partnerId: string; tierId: string } | null {
+  for (const p of settings.partners)
+    for (const t of p.tiers) if (t.default) return { partnerId: p.id, tierId: t.id };
+  return null;
+}
+/** Resolve a {partnerId,tierId} to a { name, pct } line for the engine. */
+export function resolvePartner(ref: { partnerId: string; tierId: string }): { name: string; pct: number } | null {
+  const p = settings.partners.find((x) => x.id === ref.partnerId);
+  const t = p?.tiers.find((x) => x.id === ref.tierId);
+  return p && t ? { name: `${p.name} · ${t.name}`, pct: t.pct } : null;
 }
 
 export function resetComplexity(): void {

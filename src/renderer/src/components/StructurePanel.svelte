@@ -15,11 +15,14 @@
     clearCustomDiscount,
     startClientMod,
     modSign,
+    partnerTierActive,
+    togglePartnerTier,
     activeFiring,
     setActiveTitle,
     closeActiveFiring,
   } from "../lib/firing.svelte";
-  import { eur } from "../lib/format";
+  import { settings } from "../lib/settings.svelte";
+  import { eur, pct } from "../lib/format";
   import PriceSummary from "./PriceSummary.svelte";
 
   let { result }: { result: FiringResult } = $props();
@@ -33,6 +36,7 @@
 
   let kilnOpen = $state(false);
   let clientOpen = $state(false);
+  let partnersOpen = $state(false);
   let customOpen = $state(false);
   let customVal = $state<number>(0);
   let customMode = $state<"percent" | "fixed">("percent");
@@ -139,6 +143,29 @@
         {/each}
         {#if clientScopeMods().length === 0}<span class="faint none">None defined for this kiln.</span>{/if}
         {#if ui.pendingClientMod}<span class="hint faint">Click a client's shelf in the kiln to apply.</span>{/if}
+      </div>
+    {/if}
+
+    <!-- Partners: pick a partner + tier (a cut of the gross profit) -->
+    <button class="acc-btn" onclick={() => (partnersOpen = !partnersOpen)}>
+      <span>Partners</span><span class="chev" class:open={partnersOpen}>⌄</span>
+    </button>
+    {#if partnersOpen}
+      <div class="acc-body">
+        {#each settings.partners as p (p.id)}
+          <div class="partner-row">
+            <span class="pname">{p.name}</span>
+            <div class="tierchips">
+              {#each p.tiers as t (t.id)}
+                <button class="tier" class:active={partnerTierActive(p.id, t.id)} onclick={() => togglePartnerTier(p.id, t.id)}>
+                  {t.name} <span class="tpct">{pct(t.pct)}</span>
+                </button>
+              {/each}
+              {#if p.tiers.length === 0}<span class="faint none">No tiers</span>{/if}
+            </div>
+          </div>
+        {/each}
+        {#if settings.partners.length === 0}<span class="faint none">No partners — add them in App Settings.</span>{/if}
       </div>
     {/if}
   </div>
@@ -316,6 +343,42 @@
   .none {
     font-size: 12px;
     padding: 2px 0;
+  }
+  .partner-row {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 4px 0;
+  }
+  .pname {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .tierchips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tier {
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+  .tier:hover {
+    border-color: var(--text-faint);
+    color: var(--text);
+  }
+  .tier.active {
+    border-color: var(--amber);
+    color: var(--text);
+    background: color-mix(in srgb, var(--amber) 12%, var(--panel-2));
+  }
+  .tpct {
+    font-variant-numeric: tabular-nums;
+    color: var(--text-faint);
   }
   .hint {
     font-size: 11px;

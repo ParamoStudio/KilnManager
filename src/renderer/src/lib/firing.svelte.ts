@@ -2,7 +2,7 @@ import type { Firing, Allocation, KilnProfile, FiringService, KilnModifier, Appl
 import { consumedHeightCm } from "@core";
 import { kilnStore, loadKilns } from "./kilns.svelte";
 import { type ComplexityKey } from "./complexity";
-import { cx, loadSettings, fuelCostFor, fuelDefFor } from "./settings.svelte";
+import { cx, loadSettings, fuelCostFor, fuelDefFor, resolvePartner, defaultTierRef } from "./settings.svelte";
 import { storage } from "./storage";
 
 // ---- Planner state (renderer-only, richer than the core Firing) -----------
@@ -30,7 +30,7 @@ export interface PlannerState {
   kilnMods: string[]; // active full-kiln modifier ids (surcharge or discount)
   customDiscount: { mode: "percent" | "fixed"; value: number } | null; // firing-wide failsafe
   clientMods: Record<string, string[]>; // client name → applied client-modifier ids
-  partners: { name: string; pct: number }[];
+  partners: { partnerId: string; tierId: string }[]; // applied partner + chosen tier
 }
 
 function initialState(): PlannerState {
@@ -42,7 +42,7 @@ function initialState(): PlannerState {
     kilnMods: [],
     customDiscount: null,
     clientMods: {},
-    partners: [{ name: "Studio", pct: 0.2 }],
+    partners: [],
   };
 }
 
@@ -198,6 +198,21 @@ export function applyPendingClientModAt(levelId: string, segIdx: number): void {
   }
   ui.pendingClientMod = null;
 }
+// ---- Partners (in the firing modifiers) ----
+export function partnerTierActive(partnerId: string, tierId: string): boolean {
+  return planner.partners.some((p) => p.partnerId === partnerId && p.tierId === tierId);
+}
+export function partnerActive(partnerId: string): boolean {
+  return planner.partners.some((p) => p.partnerId === partnerId);
+}
+/** Toggle a partner's tier: click active tier → off; another tier → switch. */
+export function togglePartnerTier(partnerId: string, tierId: string): void {
+  const i = planner.partners.findIndex((p) => p.partnerId === partnerId);
+  if (i < 0) planner.partners.push({ partnerId, tierId });
+  else if (planner.partners[i]!.tierId === tierId) planner.partners.splice(i, 1);
+  else planner.partners[i] = { partnerId, tierId };
+}
+
 export function removeClientMod(name: string, id: string): void {
   const list = planner.clientMods[name] ?? [];
   const next = list.filter((x) => x !== id);
@@ -237,7 +252,14 @@ export function coreFiringFrom(p: PlannerState): Firing {
     modifiers: resolveModifiers(kiln, p),
     clientModifiers: resolveClientModifiers(kiln, p),
     costItems: [fuelItem, ...kiln.defaultCostItems],
-    partners: p.partners,
+    partners: (p.partners ?? [])
+      .map((pp) => {
+        const a = pp as unknown as { name?: string; pct?: number; partnerId?: string; tierId?: string };
+        if (typeof a.pct === "number" && typeof a.name === "string") return { name: a.name, pct: a.pct }; // legacy shape
+        if (a.partnerId && a.tierId) return resolvePartner({ partnerId: a.partnerId, tierId: a.tierId });
+        return null;
+      })
+      .filter((x): x is { name: string; pct: number } => !!x),
     levels,
   };
 }
@@ -381,7 +403,10 @@ export function newFiring(kilnId: string): void {
       kilnMods: [],
       customDiscount: null,
       clientMods: {},
-      partners: [],
+      partners: (() => {
+        const d = defaultTierRef();
+        return d ? [d] : [];
+      })(),
     },
   };
   firings.list.push(rec);
@@ -408,6 +433,9 @@ export function closeActiveFiring(): void {
   rec.status = "closed";
   rec.closedAt = Date.now();
   saveApp();
+  // Go to Home in the background so the (now closed) firing screen isn't left
+  // behind the panel — it's a log entry now, not a current firing.
+  app.screen = "home";
   app.outputsFor = rec.id; // open the Outputs panel for the just-closed firing
 }
 

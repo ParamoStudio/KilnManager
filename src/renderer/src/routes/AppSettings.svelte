@@ -8,6 +8,7 @@
     removePartner,
     addTier,
     removeTier,
+    setDefaultTier,
     recordFuelPrice,
     FUEL_KINDS,
   } from "../lib/settings.svelte";
@@ -104,7 +105,8 @@
       <span class="side-title">Partners</span>
       <p class="faint explain">
         Collaborators who take an agreed cut of the gross profit, each with named tiers (e.g.
-        their client vs. your client). Shown only in your internal breakdown.
+        their client vs. your client). Shown only in your internal breakdown. Mark a tier with
+        ★ to apply it by default on every new firing (uncheck it per firing if needed).
       </p>
       <div class="partners">
         {#each settings.partners as p (p.id)}
@@ -121,6 +123,7 @@
                     <input type="number" min="0" max="100" step="1" value={Math.round(t.pct * 100)} onchange={(e) => setPct(t, e.currentTarget.value)} />
                     <span class="pct">%</span>
                   </div>
+                  <button class="star" class:on={t.default} onclick={() => setDefaultTier(p.id, t.id)} title="Apply by default on new firings">{t.default ? "★" : "☆"}</button>
                   <button class="x" onclick={() => removeTier(p.id, t.id)} aria-label="Remove tier">×</button>
                 </div>
               {/each}
@@ -348,6 +351,19 @@
   }
   .x:hover {
     color: #e88;
+  }
+  .star {
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-size: 15px;
+    padding: 0 2px;
+  }
+  .star.on {
+    color: var(--amber);
+  }
+  .star:hover {
+    color: var(--amber);
   }
   .add {
     align-self: flex-start;
