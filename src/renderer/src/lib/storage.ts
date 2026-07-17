@@ -32,6 +32,7 @@ declare global {
       vaultPick(mode: "create" | "locate"): Promise<VaultPickResult>;
       vaultReveal(): Promise<void>;
       savePdf(html: string, relParts: string[]): Promise<string | null>;
+      saveCosts(data: unknown): Promise<string | null>;
       outputsReveal(absPath: string): Promise<void>;
       outputsShare(absPath: string): Promise<void>;
       outputsOpenFolder(): Promise<void>;
@@ -91,6 +92,9 @@ export const vault = {
 export const outputs = {
   async savePdf(html: string, relParts: string[]): Promise<string | null> {
     return window.kilnAPI ? window.kilnAPI.savePdf(html, relParts) : null;
+  },
+  async saveCosts(data: unknown): Promise<string | null> {
+    return window.kilnAPI ? window.kilnAPI.saveCosts(data) : null;
   },
   async reveal(absPath: string): Promise<void> {
     await window.kilnAPI?.outputsReveal(absPath);

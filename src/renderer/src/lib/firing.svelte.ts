@@ -312,7 +312,7 @@ export function clientNames(): string[] {
 
 // ---- App navigation -------------------------------------------------------
 
-export type Screen = "home" | "firing" | "kilnProfiles" | "appSettings";
+export type Screen = "home" | "firing" | "kilnProfiles" | "expenses" | "appSettings";
 
 export const app = $state<{
   screen: Screen;

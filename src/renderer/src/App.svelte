@@ -6,6 +6,7 @@
   import Home from "./routes/Home.svelte";
   import FiringPlanner from "./routes/FiringPlanner.svelte";
   import KilnProfiles from "./routes/KilnProfiles.svelte";
+  import Expenses from "./routes/Expenses.svelte";
   import AppSettings from "./routes/AppSettings.svelte";
   import AgendaCard from "./components/AgendaCard.svelte";
   import OutputsPanel from "./components/OutputsPanel.svelte";
@@ -46,9 +47,10 @@
   }
 
   const inFiring = $derived(app.screen === "firing");
-  const tabs: { id: "home" | "kilnProfiles" | "appSettings"; label: string }[] = [
+  const tabs: { id: "home" | "kilnProfiles" | "expenses" | "appSettings"; label: string }[] = [
     { id: "home", label: "Home" },
     { id: "kilnProfiles", label: "Kiln Profiles" },
+    { id: "expenses", label: "Expenses" },
     { id: "appSettings", label: "App Settings" },
   ];
 
@@ -110,6 +112,8 @@
         <FiringPlanner />
       {:else if app.screen === "kilnProfiles"}
         <KilnProfiles />
+      {:else if app.screen === "expenses"}
+        <Expenses />
       {:else}
         <AppSettings />
       {/if}

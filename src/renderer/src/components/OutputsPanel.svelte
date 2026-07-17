@@ -8,6 +8,7 @@
   import { colorForIndex } from "../lib/colors";
   import { eur, pct, fmtFull } from "../lib/format";
   import { buildTicketHtml, type TicketData, type TicketLine } from "../lib/ticket";
+  import { costData } from "../lib/expenses.svelte";
   import { outputs, isDesktop } from "../lib/storage";
   import wordmarkSvg from "../assets/paramo-wordmark.svg?raw";
   import emblemSvg from "../assets/paramo-emblem.svg?raw";
@@ -142,10 +143,14 @@
   }
 
   onMount(() => {
-    // Auto-export every client's ticket once, right after closing the firing.
+    // Auto-export every client's ticket once, right after closing the firing,
+    // and refresh the KilnCosts workbook so the vault stays in sync.
     if (app.outputsAutoExport) {
       app.outputsAutoExport = false;
-      if (isDesktop) for (const c of chargedClients) void exportTicket(c.contactName);
+      if (isDesktop) {
+        for (const c of chargedClients) void exportTicket(c.contactName);
+        void outputs.saveCosts(JSON.parse(JSON.stringify(costData())));
+      }
     }
     selClient = chargedClients[0]?.contactName ?? null;
   });
