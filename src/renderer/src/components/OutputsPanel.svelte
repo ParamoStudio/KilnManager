@@ -4,7 +4,7 @@
   import { computeFiring, roundUp50 } from "@core";
   import { app, firings, coreFiringFrom } from "../lib/firing.svelte";
   import { kilnStore } from "../lib/kilns.svelte";
-  import { settings, cx, fuelDefFor, fuelCostFor } from "../lib/settings.svelte";
+  import { settings, fuelDefFor, fuelCostFor } from "../lib/settings.svelte";
   import { colorForIndex } from "../lib/colors";
   import { eur, pct, fmtFull } from "../lib/format";
   import { buildTicketHtml, type TicketData, type TicketLine } from "../lib/ticket";
@@ -61,18 +61,6 @@
 
   // ---- Client tickets ----
   const chargedClients = $derived(result ? result.clients.filter((c) => c.charged) : []);
-  const isShared = $derived(chargedClients.length > 1);
-
-  const clientComplexity = (name: string): string => {
-    if (!rec) return "";
-    const seen: string[] = [];
-    for (const l of rec.planner.levels)
-      for (const s of l.segments) if (s?.contactName === name) {
-        const lbl = cx(s.complexity).label;
-        if (!seen.includes(lbl)) seen.push(lbl);
-      }
-    return seen.join(", ") || "—";
-  };
 
   function ticketData(name: string): TicketData | null {
     if (!rec || !kiln || !result || !service) return null;
@@ -81,9 +69,7 @@
     const base = result.totalKLU > 0 ? (result.serviceRevenue * c.klu) / result.totalKLU : 0;
     const mods = clientMods(name);
     const fixedSum = mods.reduce((a, m) => a + (m.family === "discount" ? -1 : 1) * (m.mode === "fixed" ? m.value : 0), 0);
-    const lines: TicketLine[] = [
-      { label: `${service.name} · ${isShared ? "shared" : "sole"} load`, value: eur(base) },
-    ];
+    const lines: TicketLine[] = [{ label: service.name, value: eur(base) }];
     for (const m of mods) {
       const sign = m.family === "discount" ? -1 : 1;
       const val = m.mode === "fixed" ? sign * m.value : sign * (base + fixedSum) * (m.value / 100);
@@ -96,16 +82,15 @@
       wordmarkSvg,
       emblemSvg,
       client: name,
-      date: rec.closedAt ? fmtFull(rec.closedAt) : fmtFull(rec.createdAt),
+      date: new Date(rec.closedAt ?? rec.createdAt).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }),
       firingType: service.name,
-      load: isShared ? "Shared kiln load" : "Sole load",
-      complexity: clientComplexity(name),
+      firingTotal: eur(result.serviceRevenue),
       sharePct: c.sharePct,
       shape: kiln.shape,
       extras: [],
       lines,
       total: eur(roundUp50(c.price)),
-      thanks: `Thank you for trusting ${settings.studioName} with your pieces.`,
+      thanks: `Gracias por confiar en ${settings.studioName} con tus piezas.`,
     };
   }
 

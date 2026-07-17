@@ -15,11 +15,10 @@ export interface TicketData {
   client: string;
   date: string;
   firingType: string;
-  load: string; // "Shared kiln load" | "Sole load"
-  complexity: string;
+  firingTotal: string; // total price of the whole firing (this service/tier)
   sharePct: number; // 0..1 — the client's slice of the firing
   shape: "cylinder" | "box";
-  extras: { label: string; value: string }[]; // Cone / Pieces / Pickup (optional)
+  extras: { label: string; value: string }[]; // optional extra fields
   lines: TicketLine[]; // Service, surcharges, discounts
   total: string;
   thanks: string;
@@ -59,11 +58,14 @@ function miniKiln(shape: "cylinder" | "box", frac: number): string {
 
 export function buildTicketHtml(d: TicketData): string {
   const infoLeft = [
-    { k: "Client", v: d.client },
-    { k: "Date", v: d.date },
-    { k: "Firing type", v: d.firingType },
+    { k: "Cliente", v: d.client },
+    { k: "Fecha", v: d.date },
   ];
-  const infoRight = [{ k: "Load", v: d.load }, { k: "Complexity", v: d.complexity }, ...d.extras.map((e) => ({ k: e.label, v: e.value }))];
+  const infoRight = [
+    { k: "Tipo de horneada", v: d.firingType },
+    { k: "Total de la horneada", v: d.firingTotal },
+    ...d.extras.map((e) => ({ k: e.label, v: e.value })),
+  ];
 
   const infoCol = (items: { k: string; v: string }[]): string =>
     items.map((i) => `<div class="field"><div class="k">${esc(i.k)}</div><div class="v">${esc(i.v)}</div></div>`).join("");
@@ -103,7 +105,7 @@ export function buildTicketHtml(d: TicketData): string {
     .foot svg { width: 54px; height: auto; }
   </style></head><body><div class="page">
     <div class="top">
-      <div><h1>FIRING TICKET</h1><div class="sub">${esc(d.studioName)}</div></div>
+      <div><h1>TICKET DE HORNEADA</h1><div class="sub">${esc(d.studioName)}</div></div>
       <div class="wordmark">${d.wordmarkSvg}</div>
     </div>
     <div class="box info">
@@ -113,7 +115,7 @@ export function buildTicketHtml(d: TicketData): string {
     <div class="box items">${lineRows}</div>
     <div class="share">
       ${miniKiln(d.shape, d.sharePct)}
-      <div class="txt">Your pieces filled <span class="pctbig">${Math.round(d.sharePct * 100)}%</span><br/>of this firing.</div>
+      <div class="txt">Tus piezas ocuparon el <span class="pctbig">${Math.round(d.sharePct * 100)}%</span><br/>de esta horneada.</div>
     </div>
     <div class="thanks">${esc(d.thanks)}</div>
     <div class="foot">${d.emblemSvg}</div>

@@ -68,7 +68,7 @@ function defaultSettings(): AppSettings {
   return {
     fuels: defaultFuels(),
     priceHistory: [],
-    studioName: "PÁRAMO Studio",
+    studioName: "Ranxo Taller",
     ticketMessage: DEFAULT_TICKET_MESSAGE,
     complexity: {
       simple: { ...COMPLEXITY.simple },
@@ -191,7 +191,7 @@ export async function loadSettings(): Promise<void> {
       FUEL_KINDS.map((k) => [k, { ...df[k], price: typeof sf[k]?.price === "number" ? sf[k]!.price : df[k].price }]),
     ) as Record<FuelKind, FuelDef>;
     settings.priceHistory = Array.isArray(saved.priceHistory) ? saved.priceHistory : [];
-    settings.studioName = typeof saved.studioName === "string" ? saved.studioName : "PÁRAMO Studio";
+    settings.studioName = typeof saved.studioName === "string" ? saved.studioName : "Ranxo Taller";
     settings.ticketMessage = typeof saved.ticketMessage === "string" ? saved.ticketMessage : DEFAULT_TICKET_MESSAGE;
   }
 }

@@ -138,12 +138,13 @@
 
       <span class="side-title mt">Client ticket</span>
       <p class="faint explain">
-        The studio name on the ticket and the message you copy when sending it.
+        The name that heads the ticket and the message you copy when sending it.
         Use <b>{"{client}"}</b> and <b>{"{total}"}</b> as placeholders.
       </p>
       <label class="field">
-        <span class="fl">Studio name</span>
-        <input bind:value={settings.studioName} onchange={persist} />
+        <span class="fl">Studio / workshop name</span>
+        <input bind:value={settings.studioName} onchange={persist} placeholder="Ranxo Taller" />
+        <span class="hint">Where you fire. If you fire at a communal or shared workshop, put its name here.</span>
       </label>
       <label class="field">
         <span class="fl">Message</span>
@@ -234,6 +235,11 @@
   .fl {
     font-size: 12px;
     color: var(--text-dim);
+  }
+  .hint {
+    font-size: 11px;
+    color: var(--text-faint);
+    line-height: 1.5;
   }
   .msg {
     background: var(--panel-2);
