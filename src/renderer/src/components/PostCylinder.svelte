@@ -1,7 +1,7 @@
 <script lang="ts">
   // A tiny line-art cylinder whose body height scales with the post height, so
   // short/medium/tall/very-tall posts read at a glance.
-  let { cm }: { cm: number } = $props();
+  let { cm, w = 30 }: { cm: number; w?: number } = $props();
 
   const BOTTOM = 42;
   const RX = 11;
@@ -10,7 +10,7 @@
   const topY = $derived(BOTTOM - bodyH);
 </script>
 
-<svg viewBox="0 0 30 46" class="post" aria-hidden="true">
+<svg viewBox="0 0 30 46" class="post" style="width:{w}px;height:{(w * 46) / 30}px" aria-hidden="true">
   <!-- body -->
   <path
     d="M 4 {topY} L 4 {BOTTOM} A {RX} {RY} 0 0 0 26 {BOTTOM} L 26 {topY}"
@@ -24,8 +24,6 @@
 
 <style>
   .post {
-    width: 30px;
-    height: 46px;
     display: block;
   }
   .body {

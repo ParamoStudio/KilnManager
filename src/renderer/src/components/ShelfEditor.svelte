@@ -10,6 +10,7 @@
     roomForNewShelf,
     closeShelfEditor,
   } from "../lib/firing.svelte";
+  import PostCylinder from "./PostCylinder.svelte";
 
   const kiln = $derived(currentKiln());
   const isNew = $derived(ui.shelfEditor === "new");
@@ -110,6 +111,8 @@
     <button class="x" onclick={closeShelfEditor} aria-label="Close">×</button>
   </div>
 
+  <div class="postpreview"><PostCylinder cm={support} w={26} /></div>
+
   <span class="label center">Shelf height</span>
   <div class="presets">
     {#each kiln.standardPostHeightsCm as p (p)}
@@ -166,6 +169,11 @@
 </div>
 
 <style>
+  .postpreview {
+    display: flex;
+    justify-content: center;
+    margin: 2px 0 8px;
+  }
   .catch {
     position: fixed;
     inset: 0;
