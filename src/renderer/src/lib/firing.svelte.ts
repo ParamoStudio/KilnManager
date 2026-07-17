@@ -295,7 +295,8 @@ export type Screen = "home" | "firing" | "kilnProfiles" | "appSettings";
 export const app = $state<{
   screen: Screen;
   agendaOpen: boolean;
-  exportOpen: boolean;
+  /** Firing record id whose Outputs panel is open (on close, or from the log). */
+  outputsFor: string | null;
   /** When set, the agenda opens in add-mode and assigns the new client on save. */
   agendaAddFor: "assign" | null;
   /** Shown until the studio has at least one kiln. */
@@ -305,7 +306,7 @@ export const app = $state<{
 }>({
   screen: "home",
   agendaOpen: false,
-  exportOpen: false,
+  outputsFor: null,
   agendaAddFor: null,
   firstKilnOpen: false,
   editKilnId: null,
@@ -407,6 +408,7 @@ export function closeActiveFiring(): void {
   rec.status = "closed";
   rec.closedAt = Date.now();
   saveApp();
+  app.outputsFor = rec.id; // open the Outputs panel for the just-closed firing
 }
 
 export function deleteFiring(id: string): void {

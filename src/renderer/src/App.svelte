@@ -8,7 +8,7 @@
   import KilnProfiles from "./routes/KilnProfiles.svelte";
   import AppSettings from "./routes/AppSettings.svelte";
   import AgendaCard from "./components/AgendaCard.svelte";
-  import ExportCard from "./components/ExportCard.svelte";
+  import OutputsPanel from "./components/OutputsPanel.svelte";
   import VaultOnboarding from "./components/VaultOnboarding.svelte";
   import FirstKilnPrompt from "./components/FirstKilnPrompt.svelte";
 
@@ -59,7 +59,9 @@
       if (app.agendaOpen) {
         app.agendaOpen = false;
         app.agendaAddFor = null;
-      } else if (!app.exportOpen) {
+      } else if (app.outputsFor) {
+        app.outputsFor = null;
+      } else {
         go("home");
       }
       return;
@@ -129,8 +131,8 @@
     }}
   />
 {/if}
-{#if app.exportOpen}
-  <ExportCard />
+{#if app.outputsFor}
+  <OutputsPanel id={app.outputsFor} onclose={() => (app.outputsFor = null)} />
 {/if}
 
 <style>

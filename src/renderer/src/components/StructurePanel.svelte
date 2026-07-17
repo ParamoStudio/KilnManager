@@ -52,8 +52,7 @@
     }
     clearTimeout(timer);
     confirming = false;
-    closeActiveFiring();
-    app.exportOpen = true;
+    closeActiveFiring(); // opens the Outputs panel for the closed firing
   }
 </script>
 

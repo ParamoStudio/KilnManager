@@ -15,14 +15,12 @@
   import { eur, fmtDay, fmtFull } from "../lib/format";
   import KilnThumb from "../components/KilnThumb.svelte";
   import FuelPricePanel from "../components/FuelPricePanel.svelte";
-  import LogDetailCard from "../components/LogDetailCard.svelte";
 
   const current = $derived(currentFirings());
   const closed = $derived(closedFirings());
 
   let picking = $state(false);
   let confirmDelete = $state<string | null>(null);
-  let logId = $state<string | null>(null);
 
   const kilnOf = (rec: FiringRecord) => kilnStore.list.find((k) => k.id === rec.planner.kilnId) ?? kilnStore.list[0]!;
   const energyLabel = (k: (typeof kilnStore.list)[number]): string =>
@@ -125,7 +123,7 @@
         {@const k = kilnOf(rec)}
         {@const s = summary(rec)}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <div class="log-row" role="button" tabindex="0" onclick={() => (logId = rec.id)}>
+        <div class="log-row" role="button" tabindex="0" onclick={() => (app.outputsFor = rec.id)}>
           <KilnThumb shape={k.shape} size={30} />
           <div class="info">
             <div class="kiln">{rec.title || k.name}</div>
@@ -137,9 +135,6 @@
   </section>
 </div>
 
-{#if logId}
-  <LogDetailCard id={logId} onclose={() => (logId = null)} />
-{/if}
 
 <style>
   .home {
