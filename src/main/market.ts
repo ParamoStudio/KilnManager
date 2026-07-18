@@ -78,6 +78,39 @@ async function electricity(zone: string): Promise<RefResult> {
   return { ok: false };
 }
 
+// ---- Propane / butane reference -------------------------------------------
+// No open API gives reliable RETAIL €/kg per region, so this is a *maintained*
+// reference (dated), not a live fetch — clearly labelled as such in the UI. The
+// truth remains what the user pays (the bottle calculator uses their own price).
+// Structured as a source chain so a live endpoint (e.g. CNMC for ES) can slot in
+// front of the bundled table later without touching the renderer.
+export interface PropaneRef {
+  ok: true;
+  region: string; // ISO-2 country
+  butaneKg?: number; // €/kg
+  propaneKg?: number; // €/kg
+  asOf: string; // "YYYY-MM"
+  source: string;
+}
+type PropaneResult = PropaneRef | { ok: false };
+
+// Bundled reference table (update periodically; contributors can extend it).
+const PROPANE_TABLE: Record<string, Omit<PropaneRef, "ok" | "region">> = {
+  ES: {
+    butaneKg: 1.25, // regulated 12.5 kg bottle ≈ 15.6 € (CNMC/BOE)
+    propaneKg: 1.8, // typical bottled propane
+    asOf: "2026-07",
+    source: "Reference: regulated bottle (CNMC/BOE) + typical bottled propane",
+  },
+};
+
+async function propane(region: string): Promise<PropaneResult> {
+  const key = (region || "ES").slice(0, 2).toUpperCase();
+  const row = PROPANE_TABLE[key];
+  return row ? { ok: true, region: key, ...row } : { ok: false };
+}
+
 export function registerMarket(): void {
   ipcMain.handle("market:electricity", async (_e, zone: string) => electricity(zone || "ES"));
+  ipcMain.handle("market:propane", async (_e, region: string) => propane(region));
 }

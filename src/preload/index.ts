@@ -23,6 +23,7 @@ const kilnAPI = {
   outputsOpenFolder: (): Promise<void> => ipcRenderer.invoke("outputs:openFolder"),
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke("app:openExternal", url),
   marketElectricity: (zone: string): Promise<unknown> => ipcRenderer.invoke("market:electricity", zone),
+  marketPropane: (region: string): Promise<unknown> => ipcRenderer.invoke("market:propane", region),
 };
 
 contextBridge.exposeInMainWorld("kilnAPI", kilnAPI);

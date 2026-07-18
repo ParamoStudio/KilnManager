@@ -3,7 +3,7 @@
   import type { FuelKind } from "@core";
   import { kilnStore } from "../lib/kilns.svelte";
   import { settings, recordFuelPrice, fuelKeyForKiln, BIDDING_ZONES, setBiddingZone } from "../lib/settings.svelte";
-  import { market, isDesktop, type ElectricityRef } from "../lib/storage";
+  import { market, isDesktop, type ElectricityRef, type PropaneRef } from "../lib/storage";
   import { eur, num, fmtDay } from "../lib/format";
 
   // Only the fuels the studio actually burns (across its kilns).
@@ -36,6 +36,7 @@
   function onZone(e: Event): void {
     setBiddingZone((e.currentTarget as HTMLSelectElement).value);
     void loadElec();
+    void loadGasRef();
   }
   const fmtAsOf = (unix: number): string =>
     new Date(unix * 1000).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -47,7 +48,18 @@
     return f.bottleKg && f.bottleKg > 0 ? f.price / f.bottleKg : 0;
   };
 
-  onMount(loadElec);
+  // Propane/butane market reference (maintained, dated — not a live fetch).
+  let gasRef = $state<PropaneRef | { ok: false } | null>(null);
+  const refFor = (fk: FuelKind): number | undefined =>
+    gasRef && gasRef.ok ? (fk === "butane" ? gasRef.butaneKg : gasRef.propaneKg) : undefined;
+  async function loadGasRef(): Promise<void> {
+    gasRef = isDesktop ? await market.propane(settings.biddingZone.slice(0, 2)) : { ok: false };
+  }
+
+  onMount(() => {
+    void loadElec();
+    void loadGasRef();
+  });
 </script>
 
 <div class="fuel">
@@ -125,14 +137,21 @@
           <span class="mkname">Bottle estimate</span>
           {#each gasFuels as fk (fk)}
             {@const k = perKg(fk)}
+            {@const ref = refFor(fk)}
             <div class="botrow">
-              <span class="botlabel">{settings.fuels[fk].label} · {num(k, 2)} €/kg</span>
+              <span class="botlabel">{settings.fuels[fk].label} · {num(k, 2)} €/kg <span class="yours">(yours)</span></span>
               <span class="botest">
                 {#each BOTTLES as kg (kg)}<span class="bot">{kg} kg ≈ {eur(k * kg)}</span>{/each}
               </span>
+              {#if ref !== undefined && gasRef && gasRef.ok}
+                <span class="refline">Market ref · {num(ref, 2)} €/kg · {gasRef.region} {gasRef.asOf}</span>
+              {/if}
             </div>
           {/each}
-          <p class="caveat">From what you last paid. Bottle sizes and content vary by supplier.</p>
+          <p class="caveat">
+            “Yours” is what you last paid (bottle sizes/content vary by supplier). Market ref is an
+            orientative published figure — check your own supplier/contract.
+          </p>
         </div>
       {/if}
 
@@ -378,5 +397,15 @@
     font-size: 12.5px;
     font-variant-numeric: tabular-nums;
     color: var(--text);
+  }
+  .yours {
+    color: var(--text-faint);
+    font-weight: 400;
+  }
+  .refline {
+    font-size: 11.5px;
+    color: var(--amber);
+    font-variant-numeric: tabular-nums;
+    margin-top: 1px;
   }
 </style>
