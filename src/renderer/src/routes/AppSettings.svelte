@@ -143,7 +143,7 @@
       </p>
       <label class="field">
         <span class="fl">Studio / workshop name</span>
-        <input bind:value={settings.studioName} onchange={persist} placeholder="Ranxo Taller" />
+        <input bind:value={settings.studioName} onchange={persist} placeholder="Example Guest Studio" />
         <span class="hint">Where you fire. If you fire at a communal or shared workshop, put its name here.</span>
       </label>
       <label class="field">

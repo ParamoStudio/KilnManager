@@ -56,7 +56,7 @@
     { id: "firing", label: "Firing" },
     { id: "clients", label: "Clients" },
     { id: "partners", label: "Partners" },
-    { id: "personal", label: "Personal" },
+    { id: "personal", label: "Expenses" },
   ];
 
   // ---- Client tickets ----
@@ -114,11 +114,15 @@
     if (!d || !kiln) return null;
     return outputs.savePdf(buildTicketHtml(d), [kiln.name, dateFolder, fileFor(name)]);
   }
-  async function doExport(): Promise<void> {
+  async function doOpen(): Promise<void> {
     if (!selClient) return;
+    // The PDF was already generated on close; regenerate to be safe, then open it.
     const p = await exportTicket(selClient);
-    exportedNote = p ? "Saved to outputs ✓" : "Desktop only";
-    setTimeout(() => (exportedNote = ""), 2000);
+    if (p) await outputs.openFile(p);
+    else {
+      exportedNote = "Desktop only";
+      setTimeout(() => (exportedNote = ""), 2000);
+    }
   }
   async function doShare(): Promise<void> {
     if (!selClient) return;
@@ -168,7 +172,7 @@
           <button class="rbtn" class:active={view === v.id} onclick={() => (view = v.id)}>{v.label}</button>
         {/each}
       </nav>
-      <button class="sendbtn" class:active={view === "ticket"} onclick={() => (view = "ticket")}>Send Tickets To…</button>
+      <button class="sendbtn" class:active={view === "ticket"} onclick={() => (view = "ticket")}>Send Tickets</button>
     </aside>
 
     <section class="body">
@@ -247,7 +251,7 @@
           <p class="faint empty">No partners on this firing.</p>
         {/if}
       {:else if view === "personal"}
-        <h2>Personal · in &amp; out</h2>
+        <h2>Expenses · in &amp; out</h2>
         <div class="block wide">
           <div class="row"><span class="muted">Collected (in)</span><span>{eur(roundedTotal)}</span></div>
           <div class="row"><span class="muted">Fuel — {fuel?.label}</span><span class="neg">−{eur(fuelCost)}</span></div>
@@ -272,12 +276,12 @@
           <div class="ticketrow">
             <div class="tprev"><iframe class="tframe" srcdoc={ticketHtml} title="Ticket preview"></iframe></div>
             <div class="tactions">
-              <button class="tbtn primary" onclick={doExport} disabled={!isDesktop}>Export PDF</button>
+              <button class="tbtn primary" onclick={doOpen} disabled={!isDesktop}>Open PDF</button>
               <button class="tbtn" onclick={doShare} disabled={!isDesktop}>Share…</button>
               <button class="tbtn" onclick={copyMessage}>{copied ? "Message copied ✓" : "Copy message"}</button>
               <button class="tbtn" onclick={doReveal} disabled={!isDesktop}>Reveal in Finder</button>
               {#if exportedNote}<span class="faint enote">{exportedNote}</span>{/if}
-              {#if !isDesktop}<span class="faint enote">PDF export is desktop-only.</span>{/if}
+              {#if !isDesktop}<span class="faint enote">Opening the PDF is desktop-only.</span>{/if}
               <div class="msgprev faint">“{messageFor(selClient ?? "")}”</div>
             </div>
           </div>
@@ -336,25 +340,31 @@
   .rnav {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
   }
   .rbtn {
     text-align: left;
-    background: none;
-    border: 1px solid transparent;
-    border-radius: 8px;
-    padding: 9px 11px;
+    background: var(--panel);
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+    padding: 13px 14px;
     color: var(--text-dim);
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 500;
+    transition:
+      border-color 0.12s,
+      color 0.12s,
+      background 0.12s;
   }
   .rbtn:hover {
     color: var(--text);
-    background: var(--panel-2);
+    border-color: var(--text-faint);
   }
   .rbtn.active {
     color: var(--text);
-    border-color: var(--line);
+    border-color: var(--text-faint);
     background: var(--panel-2);
+    font-weight: 600;
   }
   .sendbtn {
     margin-top: auto;

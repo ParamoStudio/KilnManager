@@ -35,6 +35,7 @@ declare global {
       saveCosts(data: unknown): Promise<string | null>;
       openExpenses(): Promise<void>;
       outputsReveal(absPath: string): Promise<void>;
+      outputsOpenFile(absPath: string): Promise<void>;
       outputsShare(absPath: string): Promise<void>;
       outputsOpenFolder(): Promise<void>;
     };
@@ -102,6 +103,9 @@ export const outputs = {
   },
   async reveal(absPath: string): Promise<void> {
     await window.kilnAPI?.outputsReveal(absPath);
+  },
+  async openFile(absPath: string): Promise<void> {
+    await window.kilnAPI?.outputsOpenFile(absPath);
   },
   async share(absPath: string): Promise<void> {
     await window.kilnAPI?.outputsShare(absPath);

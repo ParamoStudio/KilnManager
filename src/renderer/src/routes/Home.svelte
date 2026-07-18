@@ -2,6 +2,7 @@
   import { computeFiring, roundUp50 } from "@core";
   import {
     app,
+    go,
     currentFirings,
     closedFirings,
     coreFiringFrom,
@@ -84,6 +85,7 @@
               <span class="pending">pending</span>
             </div>
             <div class="title">{k.name} <span class="energy">· {energyLabel(k)}</span></div>
+            {#if k.location}<div class="faint loc">{k.location}</div>{/if}
             <div class="faint meta">
               {#if titled}{fmtFull(rec.createdAt)} · {/if}{s.clients} client{s.clients === 1 ? "" : "s"} · {eur(s.rounded)}
             </div>
@@ -133,20 +135,6 @@
   <section class="col panel">
     <span class="col-title">Firing log</span>
 
-    <!-- Month review: running total this month -->
-    <div class="review">
-      <div class="rv-top">
-        <span class="rv-month">{monthName}</span>
-        <span class="rv-days">{daysLeft === 0 ? "último día" : `${daysLeft} días restantes`}</span>
-      </div>
-      <div class="rv-net">{eur(review?.net ?? 0)}<span class="rv-netl"> neto</span></div>
-      <div class="rv-stats">
-        <span>{monthFirings} {monthFirings === 1 ? "horneada" : "horneadas"}</span>
-        <span class="dot">·</span>
-        <span>{eur(review?.revenue ?? 0)} facturado</span>
-      </div>
-    </div>
-
     <div class="list">
       {#if closed.length === 0}
         <p class="faint empty">Closed firings will appear here.</p>
@@ -159,11 +147,26 @@
           <KilnThumb shape={k.shape} size={30} />
           <div class="info">
             <div class="kiln">{rec.title || k.name}</div>
+            {#if k.location}<div class="faint loc">{k.location}</div>{/if}
             <div class="faint meta">{fmt(rec.closedAt ?? rec.createdAt)} · {s.clients} · {eur(s.rounded)} <span class="real">({eur(s.real)})</span></div>
           </div>
         </div>
       {/each}
     </div>
+
+    <!-- Month review: running total this month, anchored at the bottom -->
+    <button class="review" onclick={() => go("expenses")} title="Ver Expenses">
+      <div class="rv-top">
+        <span class="rv-month">{monthName}</span>
+        <span class="rv-days">{daysLeft === 0 ? "último día" : `${daysLeft} días restantes`}</span>
+      </div>
+      <div class="rv-net">{eur(review?.net ?? 0)}<span class="rv-netl"> neto</span></div>
+      <div class="rv-stats">
+        <span>{monthFirings} {monthFirings === 1 ? "horneada" : "horneadas"}</span>
+        <span class="dot">·</span>
+        <span>{eur(review?.revenue ?? 0)} facturado</span>
+      </div>
+    </button>
   </section>
 </div>
 
@@ -198,14 +201,24 @@
     text-align: center;
   }
   .review {
+    margin-top: auto; /* anchored at the bottom of the log column */
     background: var(--panel-2);
     border: 1px solid var(--line);
     border-radius: 12px;
-    padding: 12px 14px;
+    padding: 13px 15px;
     display: flex;
     flex-direction: column;
     gap: 4px;
     flex-shrink: 0;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      border-color 0.12s,
+      background 0.12s;
+  }
+  .review:hover {
+    border-color: var(--text-faint);
+    background: var(--panel);
   }
   .rv-top {
     display: flex;
@@ -249,6 +262,7 @@
     gap: 10px;
     overflow-y: auto;
     min-height: 0;
+    flex: 1;
     padding-right: 2px;
   }
   .empty {
@@ -298,6 +312,14 @@
     font-size: 13px;
     color: var(--text-dim);
     margin: 2px 0;
+  }
+  .loc {
+    font-size: 11.5px;
+    margin-bottom: 1px;
+  }
+  .loc::before {
+    content: "📍 ";
+    opacity: 0.6;
   }
   .meta {
     font-size: 12px;

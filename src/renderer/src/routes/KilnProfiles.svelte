@@ -124,6 +124,7 @@
         <div class="kcard" role="button" tabindex="0" onclick={() => (editingId = k.id)}>
           <div class="kthumb"><KilnThumb shape={k.shape} size={58} /></div>
           <div class="kname">{k.name}</div>
+          {#if k.location}<div class="faint kloc">{k.location}</div>{/if}
           <div class="faint kmeta">{dimsLabel(k)} · {k.usableHeightCm} cm · {energyLabel(k)}</div>
           <div class="kvol">{kilnVolumeL(k).toFixed(1)} L</div>
           <div class="kservices">
@@ -351,6 +352,14 @@
   }
   .kmeta {
     font-size: 12px;
+  }
+  .kloc {
+    font-size: 11.5px;
+    margin-top: 1px;
+  }
+  .kloc::before {
+    content: "📍 ";
+    opacity: 0.6;
   }
   .kvol {
     font-size: 13px;

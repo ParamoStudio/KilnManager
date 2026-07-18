@@ -238,6 +238,11 @@ export function registerOutputs(): void {
     if (absPath) shell.showItemInFolder(absPath);
   });
 
+  // Open a file in its default app (e.g. the ticket PDF in Preview).
+  ipcMain.handle("outputs:openFile", async (_e, absPath: string) => {
+    if (absPath) await shell.openPath(absPath);
+  });
+
   ipcMain.handle("outputs:openFolder", async () => {
     const vault = getVaultPath();
     if (vault) await shell.openPath(join(vault, "outputs"));
