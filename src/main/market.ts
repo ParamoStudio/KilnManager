@@ -31,6 +31,18 @@ async function getJson(url: string): Promise<unknown> {
   return res.json();
 }
 
+async function getText(url: string): Promise<string> {
+  const res = await fetch(url, {
+    signal: AbortSignal.timeout(7000),
+    headers: {
+      accept: "text/html",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125 Safari/537.36",
+    },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.text();
+}
+
 /** Primary: energy-charts.info day-ahead price (EUR/MWh, hourly/quarter-hourly). */
 async function fromEnergyCharts(zone: string): Promise<ElectricityRef> {
   const j = (await getJson(`https://api.energy-charts.info/price?bzn=${encodeURIComponent(zone)}`)) as {
@@ -79,11 +91,11 @@ async function electricity(zone: string): Promise<RefResult> {
 }
 
 // ---- Propane / butane reference -------------------------------------------
-// No open API gives reliable RETAIL €/kg per region, so this is a *maintained*
-// reference (dated), not a live fetch — clearly labelled as such in the UI. The
-// truth remains what the user pays (the bottle calculator uses their own price).
-// Structured as a source chain so a live endpoint (e.g. CNMC for ES) can slot in
-// front of the bundled table later without touching the renderer.
+// Spain: scraped from a published Repsol tariff (real bottled €/kg). Other
+// countries: a maintained *approximate* table (no open pan-EU retail LPG API
+// exists) — flagged `approx` so the UI can mark it clearly. The truth remains
+// what the user pays; this is only a benchmark. Source chain: live scrape →
+// bundled table → unavailable.
 export interface PropaneRef {
   ok: true;
   region: string; // ISO-2 country
@@ -91,23 +103,63 @@ export interface PropaneRef {
   propaneKg?: number; // €/kg
   asOf: string; // "YYYY-MM"
   source: string;
+  approx?: boolean; // true = maintained estimate, not a live/published exact figure
 }
 type PropaneResult = PropaneRef | { ok: false };
 
-// Bundled reference table (update periodically; contributors can extend it).
+const propaneCache = new Map<string, { at: number; data: PropaneRef }>();
+const thisMonth = (): string => new Date().toISOString().slice(0, 7);
+
+/** Scrape the Repsol bottled tariff (Spain) → €/kg. Static HTML, no key. */
+async function scrapeComercialEs(): Promise<PropaneRef> {
+  const html = await getText("https://www.comercialdeenergia.es/tarifa-precios-compra-bombona-butano-propano/");
+  const grab = (re: RegExp): number | undefined => {
+    const m = html.match(re);
+    return m ? parseFloat(m[1]!.replace(/\./g, "").replace(",", ".")) : undefined;
+  };
+  const propano11 = grab(/Propano\s+Envasado\s*\(11\s*Kg\)[\s\S]{0,160}?(\d{1,3},\d{2})\s*€/i);
+  const butano125 = grab(/Butano\s+Envasado\s*\(12,5\s*Kg\)[\s\S]{0,160}?(\d{1,3},\d{2})\s*€/i);
+  if (propano11 === undefined && butano125 === undefined) throw new Error("no prices parsed");
+  return {
+    ok: true,
+    region: "ES",
+    propaneKg: propano11 !== undefined ? Math.round((propano11 / 11) * 100) / 100 : undefined,
+    butaneKg: butano125 !== undefined ? Math.round((butano125 / 12.5) * 100) / 100 : undefined,
+    asOf: thisMonth(),
+    source: "Repsol tariff · comercialdeenergia.es",
+  };
+}
+
+// Maintained approximate €/kg for bottled LPG by country (rough benchmarks).
 const PROPANE_TABLE: Record<string, Omit<PropaneRef, "ok" | "region">> = {
-  ES: {
-    butaneKg: 1.25, // regulated 12.5 kg bottle ≈ 15.6 € (CNMC/BOE)
-    propaneKg: 1.8, // typical bottled propane
-    asOf: "2026-07",
-    source: "Reference: regulated bottle (CNMC/BOE) + typical bottled propane",
-  },
+  ES: { butaneKg: 1.3, propaneKg: 1.39, asOf: "2026-07", source: "Approx. bottled LPG", approx: true },
+  PT: { propaneKg: 1.85, asOf: "2026-07", source: "Approx. bottled LPG", approx: true },
+  FR: { butaneKg: 2.9, propaneKg: 2.7, asOf: "2026-07", source: "Approx. bottled LPG", approx: true },
+  DE: { propaneKg: 2.5, asOf: "2026-07", source: "Approx. bottled LPG", approx: true },
+  IT: { propaneKg: 2.5, asOf: "2026-07", source: "Approx. bottled LPG", approx: true },
 };
 
 async function propane(region: string): Promise<PropaneResult> {
   const key = (region || "ES").slice(0, 2).toUpperCase();
+  const hit = propaneCache.get(key);
+  if (hit && Date.now() - hit.at < 6 * 60 * 60 * 1000) return hit.data;
+  // Spain: try the live scrape first.
+  if (key === "ES") {
+    try {
+      const data = await scrapeComercialEs();
+      propaneCache.set(key, { at: Date.now(), data });
+      return data;
+    } catch {
+      /* fall through to the table */
+    }
+  }
   const row = PROPANE_TABLE[key];
-  return row ? { ok: true, region: key, ...row } : { ok: false };
+  if (row) {
+    const data: PropaneRef = { ok: true, region: key, ...row };
+    propaneCache.set(key, { at: Date.now(), data });
+    return data;
+  }
+  return { ok: false };
 }
 
 export function registerMarket(): void {

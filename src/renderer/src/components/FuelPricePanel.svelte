@@ -123,9 +123,8 @@
             <span class="faint small">Loading…</span>
           {:else if elec && elec.ok}
             <div class="mkval">{num(elec.currentKwh, 3)} <span class="unit">€/kWh now</span></div>
-            <span class="faint small">Day avg {num(elec.avgKwh, 3)} €/kWh · {fmtAsOf(elec.asOf)}</span>
-            <p class="caveat">Wholesale reference — retail ≈ this + taxes & fees. Check your contract/bill for what you actually pay.</p>
-            <span class="src">{elec.source}</span>
+            <span class="faint small">Day avg {num(elec.avgKwh, 3)} · {fmtAsOf(elec.asOf)} · {elec.source}</span>
+            <p class="caveat">Wholesale — retail adds taxes & fees; check your bill.</p>
           {:else}
             <span class="faint small">Reference unavailable right now.</span>
           {/if}
@@ -144,14 +143,11 @@
                 {#each BOTTLES as kg (kg)}<span class="bot">{kg} kg ≈ {eur(k * kg)}</span>{/each}
               </span>
               {#if ref !== undefined && gasRef && gasRef.ok}
-                <span class="refline">Market ref · {num(ref, 2)} €/kg · {gasRef.region} {gasRef.asOf}</span>
+                <span class="refline">Market ref · {gasRef.approx ? "~" : ""}{num(ref, 2)} €/kg · {gasRef.region} {gasRef.asOf}{gasRef.approx ? " · approx" : ""}</span>
               {/if}
             </div>
           {/each}
-          <p class="caveat">
-            “Yours” is what you last paid (bottle sizes/content vary by supplier). Market ref is an
-            orientative published figure — check your own supplier/contract.
-          </p>
+          <p class="caveat">“Yours” = what you paid. Market ref is orientative — check your supplier.</p>
         </div>
       {/if}
 
@@ -352,7 +348,8 @@
     font: inherit;
     font-size: 11.5px;
     padding: 3px 6px;
-    max-width: 48%;
+    width: 118px;
+    max-width: 45%;
   }
   .mkval {
     font-size: 18px;
@@ -372,10 +369,6 @@
     font-size: 11px;
     line-height: 1.5;
     color: var(--text-dim);
-  }
-  .src {
-    font-size: 10px;
-    color: var(--text-faint);
   }
   .botrow {
     display: flex;

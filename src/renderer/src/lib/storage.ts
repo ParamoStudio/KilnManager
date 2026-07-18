@@ -140,6 +140,7 @@ export interface PropaneRef {
   propaneKg?: number;
   asOf: string;
   source: string;
+  approx?: boolean;
 }
 
 /** Live/reference market data (desktop only; web returns unavailable). */

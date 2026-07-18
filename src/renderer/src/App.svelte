@@ -106,17 +106,22 @@
         </svg>
         Client Book
       </button>
-      <button class="iconlink" onclick={() => openLink(GITHUB)} title="GitHub" aria-label="GitHub">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <path fill="currentColor" d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.85 9.73.5.09.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.79.62-3.38-1.37-3.38-1.37-.46-1.19-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.9 1.56 2.36 1.11 2.94.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05a9.3 9.3 0 0 1 2.5-.34c.85 0 1.71.12 2.5.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.59.69.49A10.03 10.03 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/>
-        </svg>
-      </button>
-      <button class="iconlink" onclick={() => openLink(WEBSITE)} title="Website" aria-label="Website">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5" />
-          <path d="M3 12h18 M12 3c2.5 2.5 2.5 15 0 18 M12 3c-2.5 2.5-2.5 15 0 18" fill="none" stroke="currentColor" stroke-width="1.5" />
-        </svg>
-      </button>
+      <div class="extras">
+        <div class="extra-row">
+          <button class="iconlink" onclick={() => openLink(GITHUB)} title="GitHub" aria-label="GitHub">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path fill="currentColor" d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.85 9.73.5.09.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.79.62-3.38-1.37-3.38-1.37-.46-1.19-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.9 1.56 2.36 1.11 2.94.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05a9.3 9.3 0 0 1 2.5-.34c.85 0 1.71.12 2.5.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.59.69.49A10.03 10.03 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/>
+            </svg>
+          </button>
+          <button class="iconlink" onclick={() => openLink(WEBSITE)} title="Website" aria-label="Website">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5" />
+              <path d="M3 12h18 M12 3c2.5 2.5 2.5 15 0 18 M12 3c-2.5 2.5-2.5 15 0 18" fill="none" stroke="currentColor" stroke-width="1.5" />
+            </svg>
+          </button>
+        </div>
+        <button class="toolsbtn" title="Coming soon" aria-label="Ceramic Lab Tools">Ceramic Lab Tools</button>
+      </div>
     </div>
   </header>
 
@@ -197,22 +202,22 @@
      dismissing it never reshuffles the layout. */
   .kofi {
     position: absolute;
-    top: 54px;
+    top: 70px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 30;
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    padding: 6px 8px 6px 14px;
-    border: 1px solid color-mix(in srgb, var(--amber) 38%, transparent);
-    background: color-mix(in srgb, var(--amber) 12%, var(--panel));
+    padding: 7px 9px 7px 16px;
+    border: 1px solid color-mix(in srgb, #ff9d42 55%, transparent);
+    background: color-mix(in srgb, #ff9d42 16%, var(--panel));
     border-radius: 999px;
     font-size: 12px;
-    color: var(--text-dim);
+    color: var(--text);
     white-space: nowrap;
     max-width: 92%;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.38);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   }
   .kofi-txt {
     text-align: center;
@@ -223,7 +228,7 @@
     background: none;
     border: none;
     padding: 0;
-    color: var(--amber);
+    color: #ffab5c;
     font: inherit;
     font-weight: 600;
     text-decoration: underline;
@@ -265,8 +270,17 @@
     right: 10px;
     top: -6px;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
+  }
+  .extras {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .extra-row {
+    display: flex;
+    gap: 6px;
   }
   .iconlink {
     display: inline-flex;
@@ -280,6 +294,19 @@
     color: var(--text-faint);
   }
   .iconlink:hover {
+    color: var(--text);
+    border-color: var(--text-faint);
+  }
+  .toolsbtn {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 6px 10px;
+    color: var(--text-faint);
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+  .toolsbtn:hover {
     color: var(--text);
     border-color: var(--text-faint);
   }
