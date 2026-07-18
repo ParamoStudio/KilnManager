@@ -18,9 +18,10 @@ const kilnAPI = {
   saveCosts: (data: unknown): Promise<string | null> => ipcRenderer.invoke("outputs:saveCosts", data),
   openExpenses: (): Promise<void> => ipcRenderer.invoke("outputs:openExpenses"),
   outputsReveal: (absPath: string): Promise<void> => ipcRenderer.invoke("outputs:reveal", absPath),
-  outputsOpenFile: (absPath: string): Promise<void> => ipcRenderer.invoke("outputs:openFile", absPath),
+  outputsOpenFile: (absPath: string): Promise<string> => ipcRenderer.invoke("outputs:openFile", absPath),
   outputsShare: (absPath: string): Promise<void> => ipcRenderer.invoke("outputs:share", absPath),
   outputsOpenFolder: (): Promise<void> => ipcRenderer.invoke("outputs:openFolder"),
+  openExternal: (url: string): Promise<void> => ipcRenderer.invoke("app:openExternal", url),
 };
 
 contextBridge.exposeInMainWorld("kilnAPI", kilnAPI);

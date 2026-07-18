@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { app, go, loadApp } from "./lib/firing.svelte";
-  import { vault } from "./lib/storage";
+  import { vault, openLink } from "./lib/storage";
   import { kilnStore } from "./lib/kilns.svelte";
   import Home from "./routes/Home.svelte";
   import FiringPlanner from "./routes/FiringPlanner.svelte";
@@ -16,6 +16,9 @@
   let ready = $state(false);
   let needsVault = $state(false);
   let vaultConfigured = $state(false);
+  // Ko-fi support nudge — subtle, dismissable, reappears next launch (no persist).
+  let showKofi = $state(true);
+  const KOFI = "https://ko-fi.com/paramostudio";
 
   onMount(async () => {
     // Local-first: data lives in a folder the user owns. Make sure it's there
@@ -83,16 +86,27 @@
       <span class="wordmark">PÁRAMO</span> <span class="title">KILN MANAGER</span>
     </h1>
 
-    <button class="agenda-tab" onclick={() => (app.agendaOpen = true)} title="Client agenda (A)">
+    <button class="agenda-tab" onclick={() => (app.agendaOpen = true)} title="Client Book (A)">
       <svg viewBox="0 0 24 24" width="23" height="23" aria-hidden="true" class="ag-ic">
         <rect x="4" y="3.5" width="15" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.4" />
         <line x1="8" y1="3.5" x2="8" y2="20.5" stroke="currentColor" stroke-width="1.4" />
         <line x1="11" y1="8.5" x2="16" y2="8.5" stroke="currentColor" stroke-width="1.4" />
         <line x1="11" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="1.4" />
       </svg>
-      Agenda
+      Client Book
     </button>
   </header>
+
+  {#if showKofi}
+    <div class="kofi" role="note">
+      <span class="kofi-txt">
+        Enjoying Kiln Manager? If it's useful to you, you can
+        <button class="kofi-link" onclick={() => openLink(KOFI)}>support it on Ko-fi</button>
+        — entirely optional.
+      </span>
+      <button class="kofi-x" onclick={() => (showKofi = false)} aria-label="Dismiss">×</button>
+    </div>
+  {/if}
 
   <nav class="tabs">
     {#if inFiring}
@@ -155,6 +169,47 @@
     justify-content: center;
     flex-shrink: 0;
     min-height: 40px;
+  }
+  /* Ko-fi nudge: a discreet accent strip under the title. */
+  .kofi {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 7px 14px;
+    border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
+    background: color-mix(in srgb, var(--amber) 8%, transparent);
+    border-radius: 10px;
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+  .kofi-txt {
+    text-align: center;
+  }
+  .kofi-link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--amber);
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+  .kofi-x {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-size: 17px;
+    line-height: 1;
+    padding: 0 2px;
+    cursor: pointer;
+  }
+  .kofi-x:hover {
+    color: var(--text);
   }
   .brand {
     margin: 0;

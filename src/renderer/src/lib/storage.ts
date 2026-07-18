@@ -35,9 +35,10 @@ declare global {
       saveCosts(data: unknown): Promise<string | null>;
       openExpenses(): Promise<void>;
       outputsReveal(absPath: string): Promise<void>;
-      outputsOpenFile(absPath: string): Promise<void>;
+      outputsOpenFile(absPath: string): Promise<string>;
       outputsShare(absPath: string): Promise<void>;
       outputsOpenFolder(): Promise<void>;
+      openExternal(url: string): Promise<void>;
     };
   }
 }
@@ -104,8 +105,9 @@ export const outputs = {
   async reveal(absPath: string): Promise<void> {
     await window.kilnAPI?.outputsReveal(absPath);
   },
-  async openFile(absPath: string): Promise<void> {
-    await window.kilnAPI?.outputsOpenFile(absPath);
+  /** Opens a file in its default app. Returns "" on success, else an error. */
+  async openFile(absPath: string): Promise<string> {
+    return window.kilnAPI ? window.kilnAPI.outputsOpenFile(absPath) : "not-desktop";
   },
   async share(absPath: string): Promise<void> {
     await window.kilnAPI?.outputsShare(absPath);
@@ -114,3 +116,9 @@ export const outputs = {
     await window.kilnAPI?.outputsOpenFolder();
   },
 };
+
+/** Open an external https link (Electron: system browser; web: new tab). */
+export function openLink(url: string): void {
+  if (window.kilnAPI) void window.kilnAPI.openExternal(url);
+  else window.open(url, "_blank", "noopener");
+}

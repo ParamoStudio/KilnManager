@@ -118,11 +118,13 @@
     if (!selClient) return;
     // The PDF was already generated on close; regenerate to be safe, then open it.
     const p = await exportTicket(selClient);
-    if (p) await outputs.openFile(p);
-    else {
+    if (!p) {
       exportedNote = "Desktop only";
       setTimeout(() => (exportedNote = ""), 2000);
+      return;
     }
+    const err = await outputs.openFile(p);
+    if (err) await outputs.reveal(p); // fall back to showing it in Finder
   }
   async function doShare(): Promise<void> {
     if (!selClient) return;

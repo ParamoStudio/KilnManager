@@ -1,6 +1,7 @@
 import { ipcMain, BrowserWindow, shell } from "electron";
 import { promises as fs } from "node:fs";
 import { dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
 import ExcelJS from "exceljs";
 import { getVaultPath } from "./storage.js";
 
@@ -239,8 +240,24 @@ export function registerOutputs(): void {
   });
 
   // Open a file in its default app (e.g. the ticket PDF in Preview).
+  // Returns "" on success, or an error string so the renderer can fall back.
   ipcMain.handle("outputs:openFile", async (_e, absPath: string) => {
-    if (absPath) await shell.openPath(absPath);
+    if (!absPath) return "no-path";
+    const err = await shell.openPath(absPath); // "" on success
+    if (err) {
+      try {
+        await shell.openExternal(pathToFileURL(absPath).href);
+        return "";
+      } catch {
+        return err;
+      }
+    }
+    return "";
+  });
+
+  // Open an external https link in the user's browser (e.g. the Ko-fi page).
+  ipcMain.handle("app:openExternal", async (_e, url: string) => {
+    if (typeof url === "string" && /^https?:\/\//.test(url)) await shell.openExternal(url);
   });
 
   ipcMain.handle("outputs:openFolder", async () => {

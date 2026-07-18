@@ -87,9 +87,9 @@
 </script>
 
 <div class="scrim" role="presentation" onclick={onclose}></div>
-<div class="card" role="dialog" aria-label="Agenda">
+<div class="card" role="dialog" aria-label="Client Book">
   <div class="head">
-    <h3>Client agenda</h3>
+    <h3>Client Book</h3>
     <div class="hactions">
       <button class="export" onclick={exportCsv} disabled={contacts.list.length === 0} title="Export the agenda as a CSV file">Export CSV</button>
       <button class="x" onclick={onclose} aria-label="Close">×</button>

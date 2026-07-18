@@ -94,9 +94,9 @@
             class="del"
             class:armed={confirmDelete === rec.id}
             aria-label="Delete firing"
+            title={confirmDelete === rec.id ? "Click again to delete" : "Delete firing"}
             onclick={(e) => { e.stopPropagation(); if (confirmDelete === rec.id) { deleteFiring(rec.id); confirmDelete = null; } else confirmDelete = rec.id; }}
           >
-            {#if confirmDelete === rec.id}<span class="sure">Sure?</span>{/if}
             ×
           </button>
         </div>
@@ -325,34 +325,32 @@
     font-size: 12px;
   }
   .del {
-    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
     background: none;
     border: none;
+    border-radius: 999px;
     color: var(--text-faint);
     font-size: 18px;
     line-height: 1;
-    padding: 2px 6px;
     flex-shrink: 0;
+    transition:
+      transform 0.12s,
+      background 0.12s,
+      color 0.12s;
   }
   .del:hover {
     color: #ff6b6b;
   }
-  /* Armed = aggressive red ×; the "Sure?" floats to its left so the card layout
-     never shifts. */
+  /* Armed = the × grows into a red circular pill, cueing the confirming
+     second click without a colliding "Sure?" label. */
   .del.armed {
     color: #ff4d4d;
-  }
-  .sure {
-    position: absolute;
-    right: 100%;
-    top: 50%;
-    transform: translateY(-50%);
-    margin-right: 3px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #ff4d4d;
-    white-space: nowrap;
-    pointer-events: none;
+    background: rgba(255, 77, 77, 0.16);
+    transform: scale(1.22);
   }
 
   .newcol {
