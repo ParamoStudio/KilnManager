@@ -110,15 +110,15 @@ type PropaneResult = PropaneRef | { ok: false };
 const propaneCache = new Map<string, { at: number; data: PropaneRef }>();
 const thisMonth = (): string => new Date().toISOString().slice(0, 7);
 
-/** Scrape the Repsol bottled tariff (Spain) → €/kg. Static HTML, no key. */
-async function scrapeComercialEs(): Promise<PropaneRef> {
-  const html = await getText("https://www.comercialdeenergia.es/tarifa-precios-compra-bombona-butano-propano/");
+// Parse a Repsol-style bottled-gas tariff page (handles "Envasado" and "Recarga"
+// wording and 11 / 11,00 / 12,5 / 12,50 kg formats) → €/kg for propane & butane.
+function parseBottleTariff(html: string, sourceHost: string): PropaneRef {
   const grab = (re: RegExp): number | undefined => {
     const m = html.match(re);
     return m ? parseFloat(m[1]!.replace(/\./g, "").replace(",", ".")) : undefined;
   };
-  const propano11 = grab(/Propano\s+Envasado\s*\(11\s*Kg\)[\s\S]{0,160}?(\d{1,3},\d{2})\s*€/i);
-  const butano125 = grab(/Butano\s+Envasado\s*\(12,5\s*Kg\)[\s\S]{0,160}?(\d{1,3},\d{2})\s*€/i);
+  const propano11 = grab(/Propano[^(]{0,24}\(\s*11(?:[.,]\d+)?\s*Kg\)[\s\S]{0,180}?(\d{1,3},\d{2})\s*€/i);
+  const butano125 = grab(/Butano[^(]{0,24}\(\s*12[.,]5(?:0)?\s*Kg\)[\s\S]{0,180}?(\d{1,3},\d{2})\s*€/i);
   if (propano11 === undefined && butano125 === undefined) throw new Error("no prices parsed");
   return {
     ok: true,
@@ -126,8 +126,26 @@ async function scrapeComercialEs(): Promise<PropaneRef> {
     propaneKg: propano11 !== undefined ? Math.round((propano11 / 11) * 100) / 100 : undefined,
     butaneKg: butano125 !== undefined ? Math.round((butano125 / 12.5) * 100) / 100 : undefined,
     asOf: thisMonth(),
-    source: "Repsol tariff · comercialdeenergia.es",
+    source: `Repsol tariff · ${sourceHost}`,
   };
+}
+
+// Spanish bottled-tariff sources, tried in order (both static HTML, no key).
+const ES_TARIFF_SOURCES: { url: string; host: string }[] = [
+  { url: "https://www.comercialdeenergia.es/tarifa-precios-compra-bombona-butano-propano/", host: "comercialdeenergia.es" },
+  { url: "https://www.clavelgas.es/tarifa-precios-compra-bombona-butano-propano/", host: "clavelgas.es" },
+];
+
+async function scrapeEsTariff(): Promise<PropaneRef> {
+  let lastErr: unknown;
+  for (const s of ES_TARIFF_SOURCES) {
+    try {
+      return parseBottleTariff(await getText(s.url), s.host);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr ?? new Error("no ES tariff source");
 }
 
 // Maintained approximate €/kg for bottled LPG by country (rough benchmarks).
@@ -143,10 +161,10 @@ async function propane(region: string): Promise<PropaneResult> {
   const key = (region || "ES").slice(0, 2).toUpperCase();
   const hit = propaneCache.get(key);
   if (hit && Date.now() - hit.at < 6 * 60 * 60 * 1000) return hit.data;
-  // Spain: try the live scrape first.
+  // Spain: try the live scrape sources first.
   if (key === "ES") {
     try {
-      const data = await scrapeComercialEs();
+      const data = await scrapeEsTariff();
       propaneCache.set(key, { at: Date.now(), data });
       return data;
     } catch {

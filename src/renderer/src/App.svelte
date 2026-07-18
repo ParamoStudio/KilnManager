@@ -268,10 +268,10 @@
   .topright {
     position: absolute;
     right: 10px;
-    top: -6px;
+    top: 0;
     display: flex;
-    align-items: flex-start;
-    gap: 8px;
+    align-items: center;
+    gap: 16px;
   }
   .extras {
     display: flex;

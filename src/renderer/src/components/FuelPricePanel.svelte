@@ -183,7 +183,7 @@
   }
   .fcols {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 2fr;
     gap: 22px;
   }
   @media (max-width: 900px) {
