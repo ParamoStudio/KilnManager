@@ -57,7 +57,6 @@
     { id: "clients", label: "Clients" },
     { id: "partners", label: "Partners" },
     { id: "personal", label: "Personal" },
-    { id: "ticket", label: "Ticket" },
   ];
 
   // ---- Client tickets ----
@@ -169,7 +168,7 @@
           <button class="rbtn" class:active={view === v.id} onclick={() => (view = v.id)}>{v.label}</button>
         {/each}
       </nav>
-      <div class="rfoot faint">Exports (ticket / share) arrive next.</div>
+      <button class="sendbtn" class:active={view === "ticket"} onclick={() => (view = "ticket")}>Send Tickets To…</button>
     </aside>
 
     <section class="body">
@@ -357,10 +356,24 @@
     border-color: var(--line);
     background: var(--panel-2);
   }
-  .rfoot {
+  .sendbtn {
     margin-top: auto;
-    font-size: 10.5px;
-    line-height: 1.5;
+    background: var(--text);
+    color: var(--bg);
+    border: 1px solid var(--text);
+    border-radius: 10px;
+    padding: 13px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+  }
+  .sendbtn:hover {
+    opacity: 0.9;
+  }
+  .sendbtn.active {
+    background: var(--panel-2);
+    color: var(--text);
+    border-color: var(--text-faint);
   }
   .body {
     position: relative;

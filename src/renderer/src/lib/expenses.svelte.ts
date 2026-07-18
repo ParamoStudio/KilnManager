@@ -11,7 +11,7 @@ import { computeFiring, roundUp50 } from "@core";
 import { firings, coreFiringFrom, type FiringRecord } from "./firing.svelte";
 import { kilnStore } from "./kilns.svelte";
 import { settings } from "./settings.svelte";
-import { isPaid } from "./payments.svelte";
+import { isPaid, paidAt } from "./payments.svelte";
 
 const round = (n: number): number => Math.round(n * 100) / 100;
 
@@ -53,6 +53,7 @@ export interface PartnerDebt {
   total: number;
   tiers: { tierId: string; tier: string; amount: number }[]; // breakdown
   paid: boolean;
+  paidAt: string | null; // ISO date (YYYY-MM-DD) it was marked paid
 }
 
 export interface Month {
@@ -166,7 +167,7 @@ export function monthlyData(): Month[] {
       for (const c of r.partnerCuts) {
         let pd = pMap.get(c.partnerId);
         if (!pd) {
-          pd = { partnerId: c.partnerId, name: c.partner, total: 0, tiers: [], paid: false };
+          pd = { partnerId: c.partnerId, name: c.partner, total: 0, tiers: [], paid: false, paidAt: null };
           pMap.set(c.partnerId, pd);
         }
         pd.total = round(pd.total + c.amount);
@@ -175,7 +176,11 @@ export function monthlyData(): Month[] {
         if (tb) tb.amount = round(tb.amount + c.amount);
         else pd.tiers.push({ tierId: tid, tier: c.tier, amount: c.amount });
       }
-    const partners = [...pMap.values()].map((pd) => ({ ...pd, paid: isPaid(key, pd.partnerId) }));
+    const partners = [...pMap.values()].map((pd) => ({
+      ...pd,
+      paid: isPaid(key, pd.partnerId),
+      paidAt: paidAt(key, pd.partnerId),
+    }));
     partners.sort((a, b) => a.name.localeCompare(b.name));
 
     months.push({

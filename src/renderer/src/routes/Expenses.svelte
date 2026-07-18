@@ -8,14 +8,25 @@
   let selKey = $state<string | null>(null);
   const month = $derived(months.find((m) => m.key === selKey) ?? months[0] ?? null);
 
+  let confirmUncheck = $state<string | null>(null); // partnerId awaiting confirm
+
+  const fmtPaid = (iso: string): string =>
+    iso ? new Date(iso + "T12:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" }) : "";
+
   // Persist the workbooks whenever they might have changed (desktop only).
   function syncWorkbooks(): void {
     if (isDesktop) void outputs.saveCosts(JSON.parse(JSON.stringify(months)));
   }
 
-  function togglePaid(partnerId: string, paid: boolean): void {
+  function markPaid(partnerId: string): void {
     if (!month) return;
-    setPaid(month.key, partnerId, paid);
+    setPaid(month.key, partnerId, true);
+    syncWorkbooks();
+  }
+  function markPending(partnerId: string): void {
+    if (!month) return;
+    setPaid(month.key, partnerId, false);
+    confirmUncheck = null;
     syncWorkbooks();
   }
 
@@ -83,10 +94,23 @@
                         {/each}
                       </div>
                     {/if}
-                    <label class="paid-toggle">
-                      <input type="checkbox" checked={p.paid} onchange={(e) => togglePaid(p.partnerId, e.currentTarget.checked)} />
-                      <span class="ptxt">{p.paid ? "Pagado" : "Pendiente"}</span>
-                    </label>
+
+                    {#if !p.paid}
+                      <button class="markbtn" onclick={() => markPaid(p.partnerId)}>Marcar como pagado</button>
+                    {:else if confirmUncheck === p.partnerId}
+                      <div class="confirm">
+                        <span class="ctxt">¿Marcar como pendiente?</span>
+                        <div class="crow">
+                          <button class="cbtn yes" onclick={() => markPending(p.partnerId)}>Sí</button>
+                          <button class="cbtn" onclick={() => (confirmUncheck = null)}>No</button>
+                        </div>
+                      </div>
+                    {:else}
+                      <button class="paidrow" onclick={() => (confirmUncheck = p.partnerId)} title="Deshacer">
+                        <span class="pcheck">✓</span>
+                        <span class="ptxt">Pagado{p.paidAt ? ` · ${fmtPaid(p.paidAt)}` : ""}</span>
+                      </button>
+                    {/if}
                   </div>
                 {/each}
               </div>
@@ -344,25 +368,77 @@
   .pt-amt {
     color: var(--text);
   }
-  .paid-toggle {
+  .markbtn {
+    align-self: flex-start;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 7px 13px;
+    color: var(--text-dim);
+    font-size: 12.5px;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  .markbtn:hover {
+    color: var(--text);
+    border-color: var(--text-faint);
+  }
+  .paidrow {
     display: flex;
     align-items: center;
     gap: 8px;
-    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 2px 0;
     margin-top: 2px;
+    align-self: flex-start;
   }
-  .paid-toggle input {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--accent);
+  .pcheck {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    background: var(--accent);
+    color: var(--bg);
+    font-size: 12px;
+    font-weight: 700;
   }
   .ptxt {
     font-size: 13px;
-    color: var(--text-dim);
+    color: var(--accent);
     font-weight: 500;
   }
-  .pcard.paid .ptxt {
-    color: var(--accent);
+  .confirm {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-top: 2px;
+  }
+  .ctxt {
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+  .crow {
+    display: flex;
+    gap: 6px;
+  }
+  .cbtn {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 5px 14px;
+    color: var(--text-dim);
+    font-size: 12.5px;
+  }
+  .cbtn.yes {
+    background: color-mix(in srgb, #e07a5f 22%, var(--panel-2));
+    border-color: color-mix(in srgb, #e07a5f 45%, var(--line));
+    color: var(--text);
+  }
+  .cbtn:hover {
+    border-color: var(--text-faint);
   }
   .kilns {
     display: flex;

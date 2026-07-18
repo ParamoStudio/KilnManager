@@ -12,12 +12,29 @@
   } from "../lib/firing.svelte";
   import { kilnStore } from "../lib/kilns.svelte";
   import { fuelDefFor } from "../lib/settings.svelte";
+  import { monthlyData } from "../lib/expenses.svelte";
   import { eur, fmtDay, fmtFull } from "../lib/format";
   import KilnThumb from "../components/KilnThumb.svelte";
   import FuelPricePanel from "../components/FuelPricePanel.svelte";
 
   const current = $derived(currentFirings());
   const closed = $derived(closedFirings());
+
+  // Month review — a simple running summary of the current month for the log.
+  const nowMonthKey = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  })();
+  const review = $derived(monthlyData().find((m) => m.key === nowMonthKey) ?? null);
+  const monthName = (() => {
+    const s = new Date().toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  })();
+  const daysLeft = (() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() - d.getDate();
+  })();
+  const monthFirings = $derived(review ? review.kilns.reduce((s, k) => s + k.firings.length, 0) : 0);
 
   let picking = $state(false);
   let confirmDelete = $state<string | null>(null);
@@ -115,6 +132,21 @@
   <!-- Firing log -->
   <section class="col panel">
     <span class="col-title">Firing log</span>
+
+    <!-- Month review: running total this month -->
+    <div class="review">
+      <div class="rv-top">
+        <span class="rv-month">{monthName}</span>
+        <span class="rv-days">{daysLeft === 0 ? "último día" : `${daysLeft} días restantes`}</span>
+      </div>
+      <div class="rv-net">{eur(review?.net ?? 0)}<span class="rv-netl"> neto</span></div>
+      <div class="rv-stats">
+        <span>{monthFirings} {monthFirings === 1 ? "horneada" : "horneadas"}</span>
+        <span class="dot">·</span>
+        <span>{eur(review?.revenue ?? 0)} facturado</span>
+      </div>
+    </div>
+
     <div class="list">
       {#if closed.length === 0}
         <p class="faint empty">Closed firings will appear here.</p>
@@ -164,6 +196,52 @@
     color: var(--text);
     font-weight: 600;
     text-align: center;
+  }
+  .review {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .rv-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .rv-month {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .rv-days {
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+  .rv-net {
+    font-size: 22px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .rv-netl {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-faint);
+  }
+  .rv-stats {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .rv-stats .dot {
+    color: var(--text-faint);
   }
   .list {
     display: flex;

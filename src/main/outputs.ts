@@ -31,6 +31,7 @@ interface CostPartner {
   total: number;
   tiers: { tier: string; amount: number }[];
   paid: boolean;
+  paidAt: string | null; // ISO date (YYYY-MM-DD)
 }
 interface CostMonth {
   key: string; // "2026-07"
@@ -49,6 +50,11 @@ const RULE = "FFDDDDDD";
 const GREEN = "FF1B7A3D";
 const AMBER = "FFB56A00";
 const eur = "#,##0.00 €";
+
+const isoToDMY = (iso: string): string => {
+  const [y, m, d] = iso.split("-");
+  return y && m && d ? `${d}/${m}/${y}` : iso;
+};
 
 /** One workbook for a single month: a sheet per kiln + a "Socios" sheet. */
 function buildMonthWorkbook(m: CostMonth): ExcelJS.Workbook {
@@ -126,7 +132,7 @@ function buildMonthWorkbook(m: CostMonth): ExcelJS.Workbook {
 
   // Partners sheet: what you owe each partner this month + tier breakdown + status.
   const ps = wb.addWorksheet("Socios");
-  ps.columns = [{ width: 26 }, { width: 22 }, { width: 15 }, { width: 14 }];
+  ps.columns = [{ width: 26 }, { width: 22 }, { width: 15 }, { width: 24 }];
   let r = 1;
   const t = ps.getCell(r, 1);
   t.value = `Socios · ${m.label}`;
@@ -149,7 +155,8 @@ function buildMonthWorkbook(m: CostMonth): ExcelJS.Workbook {
     totalCell.font = { bold: true, size: 12, color: { argb: INK } };
     totalCell.alignment = { horizontal: "right" };
     const statusCell = hrow.getCell(4);
-    statusCell.value = p.paid ? "PAGADO" : "PENDIENTE";
+    const paidDate = p.paid && p.paidAt ? isoToDMY(p.paidAt) : "";
+    statusCell.value = p.paid ? (paidDate ? `PAGADO · ${paidDate}` : "PAGADO") : "PENDIENTE";
     statusCell.font = { bold: true, color: { argb: p.paid ? GREEN : AMBER } };
     statusCell.alignment = { horizontal: "right" };
     r += 1;
@@ -212,7 +219,7 @@ export function registerOutputs(): void {
     const dir = join(vault, "Expenses Log");
     await fs.mkdir(dir, { recursive: true });
     for (const m of months) {
-      const abs = join(dir, `${safe(`${m.key} ${m.label}`)}.xlsx`);
+      const abs = join(dir, `${safe(m.label.replace(/\s+/g, "-"))}.xlsx`); // "Julio-2026.xlsx"
       await buildMonthWorkbook(m).xlsx.writeFile(abs);
     }
     return dir;
