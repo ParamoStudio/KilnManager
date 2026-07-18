@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { app, go, loadApp } from "./lib/firing.svelte";
   import { vault, openLink } from "./lib/storage";
+  import { settings, markKofiSupported } from "./lib/settings.svelte";
   import { kilnStore } from "./lib/kilns.svelte";
   import Home from "./routes/Home.svelte";
   import FiringPlanner from "./routes/FiringPlanner.svelte";
@@ -16,9 +17,18 @@
   let ready = $state(false);
   let needsVault = $state(false);
   let vaultConfigured = $state(false);
-  // Ko-fi support nudge — subtle, dismissable, reappears next launch (no persist).
-  let showKofi = $state(true);
+  // Ko-fi support nudge — floating, dismissable. A session × hides it until next
+  // launch; opening the Ko-fi page marks it supported and hides it for good.
+  let kofiDismissed = $state(false);
+  const showKofi = $derived(ready && !settings.kofiSupported && !kofiDismissed);
   const KOFI = "https://ko-fi.com/paramostudio";
+  // External links (placeholders — swap for the real URLs).
+  const GITHUB = "https://github.com/ParamoStudio";
+  const WEBSITE = "https://paramo.studio";
+  function openKofi(): void {
+    openLink(KOFI);
+    markKofiSupported();
+  }
 
   onMount(async () => {
     // Local-first: data lives in a folder the user owns. Make sure it's there
@@ -86,24 +96,37 @@
       <span class="wordmark">PÁRAMO</span> <span class="title">KILN MANAGER</span>
     </h1>
 
-    <button class="agenda-tab" onclick={() => (app.agendaOpen = true)} title="Client Book (A)">
-      <svg viewBox="0 0 24 24" width="23" height="23" aria-hidden="true" class="ag-ic">
-        <rect x="4" y="3.5" width="15" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.4" />
-        <line x1="8" y1="3.5" x2="8" y2="20.5" stroke="currentColor" stroke-width="1.4" />
-        <line x1="11" y1="8.5" x2="16" y2="8.5" stroke="currentColor" stroke-width="1.4" />
-        <line x1="11" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="1.4" />
-      </svg>
-      Client Book
-    </button>
+    <div class="topright">
+      <button class="agenda-tab" onclick={() => (app.agendaOpen = true)} title="Client Book (A)">
+        <svg viewBox="0 0 24 24" width="23" height="23" aria-hidden="true" class="ag-ic">
+          <rect x="4" y="3.5" width="15" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.4" />
+          <line x1="8" y1="3.5" x2="8" y2="20.5" stroke="currentColor" stroke-width="1.4" />
+          <line x1="11" y1="8.5" x2="16" y2="8.5" stroke="currentColor" stroke-width="1.4" />
+          <line x1="11" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="1.4" />
+        </svg>
+        Client Book
+      </button>
+      <button class="iconlink" onclick={() => openLink(GITHUB)} title="GitHub" aria-label="GitHub">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path fill="currentColor" d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.85 9.73.5.09.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.79.62-3.38-1.37-3.38-1.37-.46-1.19-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.9 1.56 2.36 1.11 2.94.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05a9.3 9.3 0 0 1 2.5-.34c.85 0 1.71.12 2.5.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.59.69.49A10.03 10.03 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/>
+        </svg>
+      </button>
+      <button class="iconlink" onclick={() => openLink(WEBSITE)} title="Website" aria-label="Website">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.5" />
+          <path d="M3 12h18 M12 3c2.5 2.5 2.5 15 0 18 M12 3c-2.5 2.5-2.5 15 0 18" fill="none" stroke="currentColor" stroke-width="1.5" />
+        </svg>
+      </button>
+    </div>
   </header>
 
   {#if showKofi}
     <div class="kofi" role="note">
       <span class="kofi-txt">
         This program is open source and free to use. Enjoying it?
-        <button class="kofi-link" onclick={() => openLink(KOFI)}>Support me if you feel like it</button>.
+        <button class="kofi-link" onclick={openKofi}>Support me if you feel like it</button>.
       </span>
-      <button class="kofi-x" onclick={() => (showKofi = false)} aria-label="Dismiss">×</button>
+      <button class="kofi-x" onclick={() => (kofiDismissed = true)} aria-label="Dismiss">×</button>
     </div>
   {/if}
 
@@ -154,6 +177,7 @@
 
 <style>
   .app {
+    position: relative;
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -169,22 +193,31 @@
     flex-shrink: 0;
     min-height: 40px;
   }
-  /* Ko-fi nudge: a discreet accent strip under the title. */
+  /* Ko-fi nudge: a floating pill under the title — narrow, out of flow so
+     dismissing it never reshuffles the layout. */
   .kofi {
-    flex-shrink: 0;
-    display: flex;
+    position: absolute;
+    top: 54px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
     gap: 10px;
-    padding: 7px 14px;
-    border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
-    background: color-mix(in srgb, var(--amber) 8%, transparent);
-    border-radius: 10px;
-    font-size: 12.5px;
+    padding: 6px 8px 6px 14px;
+    border: 1px solid color-mix(in srgb, var(--amber) 38%, transparent);
+    background: color-mix(in srgb, var(--amber) 12%, var(--panel));
+    border-radius: 999px;
+    font-size: 12px;
     color: var(--text-dim);
+    white-space: nowrap;
+    max-width: 92%;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.38);
   }
   .kofi-txt {
     text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .kofi-link {
     background: none;
@@ -210,10 +243,45 @@
   .kofi-x:hover {
     color: var(--text);
   }
+  .kofi-x {
+    border-radius: 999px;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .kofi-x:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
   .brand {
     margin: 0;
     text-align: center;
     font-weight: 400;
+  }
+  /* Top-right cluster: Client Book + subtle external links. */
+  .topright {
+    position: absolute;
+    right: 10px;
+    top: -6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .iconlink {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    color: var(--text-faint);
+  }
+  .iconlink:hover {
+    color: var(--text);
+    border-color: var(--text-faint);
   }
   .wordmark {
     font-size: 21px;
@@ -228,9 +296,6 @@
     margin-left: 6px;
   }
   .agenda-tab {
-    position: absolute;
-    right: 10px;
-    top: -6px;
     display: flex;
     align-items: center;
     gap: 10px;

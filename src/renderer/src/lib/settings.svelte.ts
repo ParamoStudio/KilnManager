@@ -53,6 +53,8 @@ export interface AppSettings {
   electricityHigh: number; // €/kWh (adaptive)
   /** ENTSO-E bidding zone for the live wholesale reference. */
   biddingZone: string;
+  /** Set once the user opens the Ko-fi page — the support nudge stops showing. */
+  kofiSupported: boolean;
 }
 
 /** ENTSO-E bidding zones offered in the selector (code → label). */
@@ -101,6 +103,7 @@ function defaultSettings(): AppSettings {
     electricityLow: 0.1,
     electricityHigh: 0.2,
     biddingZone: "ES",
+    kofiSupported: false,
     complexity: {
       simple: { ...COMPLEXITY.simple },
       medium: { ...COMPLEXITY.medium },
@@ -228,7 +231,14 @@ export async function loadSettings(): Promise<void> {
     settings.electricityLow = typeof saved.electricityLow === "number" ? saved.electricityLow : 0.1;
     settings.electricityHigh = typeof saved.electricityHigh === "number" ? saved.electricityHigh : 0.2;
     settings.biddingZone = typeof saved.biddingZone === "string" ? saved.biddingZone : "ES";
+    settings.kofiSupported = saved.kofiSupported === true;
   }
+}
+
+/** Remember that the user visited Ko-fi (intent is enough) → hide the nudge for good. */
+export function markKofiSupported(): void {
+  settings.kofiSupported = true;
+  saveSettings();
 }
 
 /** In adaptive mode the working €/kWh is the midpoint of the low/high band. */
