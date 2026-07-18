@@ -10,9 +10,11 @@
     removeTier,
     setDefaultTier,
     recordFuelPrice,
+    setElectricityMode,
+    setElectricityBounds,
     FUEL_KINDS,
   } from "../lib/settings.svelte";
-  import { eur, fmtDay } from "../lib/format";
+  import { eur, num, fmtDay } from "../lib/format";
   import { vault, isDesktop } from "../lib/storage";
   import { onMount } from "svelte";
 
@@ -82,6 +84,29 @@
             <span class="hitem">{settings.fuels[h.fuel].label} {eur(h.price)} · {fmtDay(h.at)}</span>
           {/each}
         </div>
+      {/if}
+
+      <span class="side-title mt">Electricity pricing</span>
+      <p class="faint explain">
+        Adaptive tariffs change through the day, so we can't be exact — pick how you price it. The
+        result feeds every electric kiln. For the truest figure, take it from your bill.
+      </p>
+      <div class="segmented">
+        <button class:on={settings.electricityMode === "fixed"} onclick={() => setElectricityMode("fixed")}>Fixed</button>
+        <button class:on={settings.electricityMode === "adaptive"} onclick={() => setElectricityMode("adaptive")}>Adaptive average</button>
+      </div>
+      {#if settings.electricityMode === "adaptive"}
+        <div class="band">
+          <label class="bandf"><span>Low</span>
+            <input type="number" min="0" step="0.01" value={settings.electricityLow}
+              onchange={(e) => setElectricityBounds(parseFloat(e.currentTarget.value), settings.electricityHigh)} /></label>
+          <label class="bandf"><span>High</span>
+            <input type="number" min="0" step="0.01" value={settings.electricityHigh}
+              onchange={(e) => setElectricityBounds(settings.electricityLow, parseFloat(e.currentTarget.value))} /></label>
+          <span class="mid">≈ {num(settings.fuels.electricity.price, 3)} €/kWh</span>
+        </div>
+      {:else}
+        <p class="faint small">Set the €/kWh directly in the fuel table above (from your bill).</p>
       {/if}
 
       {#if isDesktop}
@@ -240,6 +265,52 @@
     font-size: 11px;
     color: var(--text-faint);
     line-height: 1.5;
+  }
+  .segmented {
+    display: flex;
+    gap: 6px;
+  }
+  .segmented button {
+    flex: 1;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .segmented button.on {
+    color: var(--text);
+    border-color: var(--text-faint);
+    background: var(--panel);
+    font-weight: 600;
+  }
+  .band {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .bandf {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .bandf input {
+    width: 90px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .mid {
+    font-size: 13px;
+    color: var(--amber);
+    font-variant-numeric: tabular-nums;
+    padding-bottom: 9px;
+  }
+  .small {
+    font-size: 11.5px;
   }
   .msg {
     background: var(--panel-2);

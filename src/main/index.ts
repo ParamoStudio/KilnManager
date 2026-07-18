@@ -3,6 +3,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { registerStorage } from "./storage.js";
 import { registerOutputs } from "./outputs.js";
+import { registerMarket } from "./market.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -46,6 +47,7 @@ app.whenReady().then(() => {
   }
   registerStorage();
   registerOutputs();
+  registerMarket();
   createWindow();
 
   app.on("activate", () => {

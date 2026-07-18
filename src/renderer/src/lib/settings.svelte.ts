@@ -47,7 +47,34 @@ export interface AppSettings {
   studioName: string;
   /** WhatsApp/message template. Placeholders: {client} {total}. */
   ticketMessage: string;
+  /** Electricity pricing mode: a single fixed €/kWh, or a low/high average. */
+  electricityMode: "fixed" | "adaptive";
+  electricityLow: number; // €/kWh (adaptive)
+  electricityHigh: number; // €/kWh (adaptive)
+  /** ENTSO-E bidding zone for the live wholesale reference. */
+  biddingZone: string;
 }
+
+/** ENTSO-E bidding zones offered in the selector (code → label). */
+export const BIDDING_ZONES: { code: string; label: string }[] = [
+  { code: "ES", label: "Spain" },
+  { code: "PT", label: "Portugal" },
+  { code: "FR", label: "France" },
+  { code: "DE-LU", label: "Germany · Luxembourg" },
+  { code: "IT-North", label: "Italy (North)" },
+  { code: "NL", label: "Netherlands" },
+  { code: "BE", label: "Belgium" },
+  { code: "AT", label: "Austria" },
+  { code: "CH", label: "Switzerland" },
+  { code: "GB", label: "Great Britain" },
+  { code: "IE", label: "Ireland" },
+  { code: "DK1", label: "Denmark (West)" },
+  { code: "DK2", label: "Denmark (East)" },
+  { code: "NO2", label: "Norway (South)" },
+  { code: "SE3", label: "Sweden (Stockholm)" },
+  { code: "FI", label: "Finland" },
+  { code: "PL", label: "Poland" },
+];
 
 export const DEFAULT_TICKET_MESSAGE =
   "¡Buenos días {client}! Ya tengo tus piezas en el horno, más o menos en un día podrás pasarte a buscarlas. Te adjunto el ticket. Nos vemos.";
@@ -70,6 +97,10 @@ function defaultSettings(): AppSettings {
     priceHistory: [],
     studioName: "Example Guest Studio",
     ticketMessage: DEFAULT_TICKET_MESSAGE,
+    electricityMode: "fixed",
+    electricityLow: 0.1,
+    electricityHigh: 0.2,
+    biddingZone: "ES",
     complexity: {
       simple: { ...COMPLEXITY.simple },
       medium: { ...COMPLEXITY.medium },
@@ -193,5 +224,33 @@ export async function loadSettings(): Promise<void> {
     settings.priceHistory = Array.isArray(saved.priceHistory) ? saved.priceHistory : [];
     settings.studioName = typeof saved.studioName === "string" ? saved.studioName : "Example Guest Studio";
     settings.ticketMessage = typeof saved.ticketMessage === "string" ? saved.ticketMessage : DEFAULT_TICKET_MESSAGE;
+    settings.electricityMode = saved.electricityMode === "adaptive" ? "adaptive" : "fixed";
+    settings.electricityLow = typeof saved.electricityLow === "number" ? saved.electricityLow : 0.1;
+    settings.electricityHigh = typeof saved.electricityHigh === "number" ? saved.electricityHigh : 0.2;
+    settings.biddingZone = typeof saved.biddingZone === "string" ? saved.biddingZone : "ES";
   }
+}
+
+/** In adaptive mode the working €/kWh is the midpoint of the low/high band. */
+export function recomputeElectricity(): void {
+  if (settings.electricityMode === "adaptive") {
+    const lo = settings.electricityLow || 0;
+    const hi = settings.electricityHigh || 0;
+    settings.fuels.electricity.price = Math.round(((lo + hi) / 2) * 10000) / 10000;
+  }
+}
+export function setElectricityMode(mode: "fixed" | "adaptive"): void {
+  settings.electricityMode = mode;
+  recomputeElectricity();
+  saveSettings();
+}
+export function setElectricityBounds(low: number, high: number): void {
+  settings.electricityLow = Math.max(0, low || 0);
+  settings.electricityHigh = Math.max(0, high || 0);
+  recomputeElectricity();
+  saveSettings();
+}
+export function setBiddingZone(zone: string): void {
+  settings.biddingZone = zone;
+  saveSettings();
 }

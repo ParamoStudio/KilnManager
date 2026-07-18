@@ -100,9 +100,8 @@
   {#if showKofi}
     <div class="kofi" role="note">
       <span class="kofi-txt">
-        Enjoying Kiln Manager? If it's useful to you, you can
-        <button class="kofi-link" onclick={() => openLink(KOFI)}>support it on Ko-fi</button>
-        — entirely optional.
+        This program is open source and free to use. Enjoying it?
+        <button class="kofi-link" onclick={() => openLink(KOFI)}>Support me if you feel like it</button>.
       </span>
       <button class="kofi-x" onclick={() => (showKofi = false)} aria-label="Dismiss">×</button>
     </div>

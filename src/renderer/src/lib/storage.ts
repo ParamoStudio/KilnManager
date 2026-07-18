@@ -39,6 +39,7 @@ declare global {
       outputsShare(absPath: string): Promise<void>;
       outputsOpenFolder(): Promise<void>;
       openExternal(url: string): Promise<void>;
+      marketElectricity(zone: string): Promise<ElectricityRef | { ok: false }>;
     };
   }
 }
@@ -122,3 +123,19 @@ export function openLink(url: string): void {
   if (window.kilnAPI) void window.kilnAPI.openExternal(url);
   else window.open(url, "_blank", "noopener");
 }
+
+export interface ElectricityRef {
+  ok: true;
+  currentKwh: number;
+  avgKwh: number;
+  asOf: number;
+  zone: string;
+  source: string;
+}
+
+/** Live market references (desktop only; web returns unavailable). */
+export const market = {
+  async electricity(zone: string): Promise<ElectricityRef | { ok: false }> {
+    return window.kilnAPI ? window.kilnAPI.marketElectricity(zone) : { ok: false };
+  },
+};
