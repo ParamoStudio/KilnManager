@@ -10,8 +10,9 @@ export interface TicketLine {
 }
 export interface TicketData {
   studioName: string;
-  wordmarkSvg: string; // inline SVG markup
-  emblemSvg: string; // inline SVG markup
+  logoTop?: string; // data URI (optional) — shown in the header
+  logoBottom?: string; // data URI (optional) — shown in the footer
+  note?: string; // free note/message printed on the ticket (optional)
   client: string;
   date: string;
   firingType: string;
@@ -27,6 +28,7 @@ export interface TicketData {
 function esc(s: string): string {
   return s.replace(/[&<>]/g, (c) => (c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;"));
 }
+const escBr = (s: string): string => esc(s).replace(/\n/g, "<br/>");
 
 /** A small line-art kiln filled to the client's share (materiality, amiable). */
 function miniKiln(shape: "cylinder" | "box", frac: number): string {
@@ -85,8 +87,7 @@ export function buildTicketHtml(d: TicketData): string {
     .top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 22px; }
     h1 { font-size: 30px; font-weight: 600; letter-spacing: 0.02em; margin: 0; }
     .sub { font-size: 15px; color:#555; margin-top: 4px; }
-    .wordmark { width: 210px; }
-    .wordmark svg { width: 100%; height: auto; display:block; }
+    .logo-top { max-width: 210px; max-height: 96px; object-fit: contain; display:block; }
     .box { border: 1.5px solid #111; border-radius: 16px; padding: 20px 24px; }
     .info { display:grid; grid-template-columns: 1fr 1fr; gap: 8px 40px; margin-bottom: 18px; }
     .field { margin-bottom: 10px; }
@@ -100,13 +101,14 @@ export function buildTicketHtml(d: TicketData): string {
     .share { display:flex; align-items:center; gap: 16px; margin: 6px 2px 26px; }
     .share .txt { font-size: 13px; color:#444; line-height:1.5; }
     .share .pctbig { font-size: 20px; font-weight:700; color:#111; }
+    .note { font-size: 14px; color:#222; margin: 2px 2px 18px; line-height:1.6; white-space: pre-line; }
     .thanks { font-size: 14px; color:#333; margin: 4px 2px 0; line-height:1.6; }
     .foot { margin-top: 40px; padding-top: 16px; border-top: 1.5px solid #111; text-align:center; }
-    .foot svg { width: 54px; height: auto; }
+    .foot img { max-width: 130px; max-height: 72px; object-fit: contain; display:inline-block; }
   </style></head><body><div class="page">
     <div class="top">
       <div><h1>TICKET DE HORNEADA</h1><div class="sub">${esc(d.studioName)}</div></div>
-      <div class="wordmark">${d.wordmarkSvg}</div>
+      ${d.logoTop ? `<img class="logo-top" src="${d.logoTop}" alt=""/>` : ""}
     </div>
     <div class="box info">
       <div>${infoCol(infoLeft)}</div>
@@ -117,7 +119,8 @@ export function buildTicketHtml(d: TicketData): string {
       ${miniKiln(d.shape, d.sharePct)}
       <div class="txt">Tus piezas ocuparon el <span class="pctbig">${Math.round(d.sharePct * 100)}%</span><br/>de esta horneada.</div>
     </div>
+    ${d.note ? `<div class="note">${escBr(d.note)}</div>` : ""}
     <div class="thanks">${esc(d.thanks)}</div>
-    <div class="foot">${d.emblemSvg}</div>
+    ${d.logoBottom ? `<div class="foot"><img src="${d.logoBottom}" alt=""/></div>` : ""}
   </div></body></html>`;
 }

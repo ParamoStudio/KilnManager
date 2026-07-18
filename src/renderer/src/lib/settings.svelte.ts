@@ -47,6 +47,11 @@ export interface AppSettings {
   studioName: string;
   /** WhatsApp/message template. Placeholders: {client} {total}. */
   ticketMessage: string;
+  /** A short note/message printed on the ticket itself (optional). */
+  ticketNote: string;
+  /** Optional logos (data URIs): top of the ticket header, bottom footer. */
+  logoTop: string;
+  logoBottom: string;
   /** Electricity pricing mode: a single fixed €/kWh, or a low/high average. */
   electricityMode: "fixed" | "adaptive";
   electricityLow: number; // €/kWh (adaptive)
@@ -97,8 +102,11 @@ function defaultSettings(): AppSettings {
   return {
     fuels: defaultFuels(),
     priceHistory: [],
-    studioName: "Example Guest Studio",
+    studioName: "My Studio",
     ticketMessage: DEFAULT_TICKET_MESSAGE,
+    ticketNote: "",
+    logoTop: "",
+    logoBottom: "",
     electricityMode: "fixed",
     electricityLow: 0.1,
     electricityHigh: 0.2,
@@ -112,7 +120,7 @@ function defaultSettings(): AppSettings {
     partners: [
       {
         id: "studio",
-        name: "Guest studio",
+        name: "Example Guest Studio",
         tiers: [
           { id: "their-client", name: "Their client", pct: 0.3 },
           { id: "my-client", name: "My client", pct: 0.15 },
@@ -225,8 +233,11 @@ export async function loadSettings(): Promise<void> {
       FUEL_KINDS.map((k) => [k, { ...df[k], price: typeof sf[k]?.price === "number" ? sf[k]!.price : df[k].price }]),
     ) as Record<FuelKind, FuelDef>;
     settings.priceHistory = Array.isArray(saved.priceHistory) ? saved.priceHistory : [];
-    settings.studioName = typeof saved.studioName === "string" ? saved.studioName : "Example Guest Studio";
+    settings.studioName = typeof saved.studioName === "string" ? saved.studioName : "My Studio";
     settings.ticketMessage = typeof saved.ticketMessage === "string" ? saved.ticketMessage : DEFAULT_TICKET_MESSAGE;
+    settings.ticketNote = typeof saved.ticketNote === "string" ? saved.ticketNote : "";
+    settings.logoTop = typeof saved.logoTop === "string" ? saved.logoTop : "";
+    settings.logoBottom = typeof saved.logoBottom === "string" ? saved.logoBottom : "";
     settings.electricityMode = saved.electricityMode === "adaptive" ? "adaptive" : "fixed";
     settings.electricityLow = typeof saved.electricityLow === "number" ? saved.electricityLow : 0.1;
     settings.electricityHigh = typeof saved.electricityHigh === "number" ? saved.electricityHigh : 0.2;

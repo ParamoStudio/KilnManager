@@ -10,8 +10,6 @@
   import { buildTicketHtml, type TicketData, type TicketLine } from "../lib/ticket";
   import { monthlyData } from "../lib/expenses.svelte";
   import { outputs, isDesktop } from "../lib/storage";
-  import wordmarkSvg from "../assets/paramo-wordmark.svg?raw";
-  import emblemSvg from "../assets/paramo-emblem.svg?raw";
 
   let { id, onclose }: { id: string; onclose: () => void } = $props();
 
@@ -79,8 +77,9 @@
     lines.push({ label: "TOTAL", value: eur(roundUp50(c.price)), strong: true });
     return {
       studioName: settings.studioName,
-      wordmarkSvg,
-      emblemSvg,
+      logoTop: settings.logoTop || undefined,
+      logoBottom: settings.logoBottom || undefined,
+      note: settings.ticketNote || undefined,
       client: name,
       date: new Date(rec.closedAt ?? rec.createdAt).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }),
       firingType: service.name,

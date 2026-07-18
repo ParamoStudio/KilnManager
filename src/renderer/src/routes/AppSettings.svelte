@@ -17,6 +17,9 @@
   import { eur, num, fmtDay } from "../lib/format";
   import { vault, isDesktop } from "../lib/storage";
   import { onMount } from "svelte";
+  import CustomizeTicket from "../components/CustomizeTicket.svelte";
+
+  let customizing = $state(false);
 
   const persist = (): void => saveSettings();
 
@@ -163,21 +166,17 @@
 
       <span class="side-title mt">Client ticket</span>
       <p class="faint explain">
-        The name that heads the ticket and the message you copy when sending it.
-        Use <b>{"{client}"}</b> and <b>{"{total}"}</b> as placeholders.
+        Your logos, workshop name, a printed note and the message you send — with a live preview
+        of the ticket your clients receive.
       </p>
-      <label class="field">
-        <span class="fl">Studio / workshop name</span>
-        <input bind:value={settings.studioName} onchange={persist} placeholder="Example Guest Studio" />
-        <span class="hint">Where you fire. If you fire at a communal or shared workshop, put its name here.</span>
-      </label>
-      <label class="field">
-        <span class="fl">Message</span>
-        <textarea class="msg" rows="3" bind:value={settings.ticketMessage} onchange={persist}></textarea>
-      </label>
+      <button class="customize" onclick={() => (customizing = true)}>Customize Client Ticket…</button>
     </section>
   </div>
 </div>
+
+{#if customizing}
+  <CustomizeTicket onclose={() => (customizing = false)} />
+{/if}
 
 <style>
   .wrap {
@@ -251,20 +250,18 @@
     outline: none;
     border-color: var(--text-faint);
   }
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    margin-bottom: 8px;
+  .customize {
+    align-self: flex-start;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    border-radius: 9px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
   }
-  .fl {
-    font-size: 12px;
-    color: var(--text-dim);
-  }
-  .hint {
-    font-size: 11px;
-    color: var(--text-faint);
-    line-height: 1.5;
+  .customize:hover {
+    opacity: 0.9;
   }
   .segmented {
     display: flex;
@@ -311,21 +308,6 @@
   }
   .small {
     font-size: 11.5px;
-  }
-  .msg {
-    background: var(--panel-2);
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 9px 11px;
-    color: var(--text);
-    font: inherit;
-    font-size: 13px;
-    resize: vertical;
-    line-height: 1.5;
-  }
-  .msg:focus {
-    outline: none;
-    border-color: var(--text-faint);
   }
   .fac {
     display: flex;

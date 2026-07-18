@@ -358,8 +358,18 @@
     margin-top: 1px;
   }
   .kloc::before {
-    content: "📍 ";
-    opacity: 0.6;
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 10px;
+    margin-right: 4px;
+    vertical-align: -1px;
+    background-color: currentColor;
+    opacity: 0.7;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2016%2016'%3E%3Cpath%20d='M8%201C5.24%201%203%203.24%203%206c0%203.5%205%208.5%205%208.5s5-5%205-8.5c0-2.76-2.24-5-5-5zm0%206.75A1.75%201.75%200%201%201%208%204.25a1.75%201.75%200%200%201%200%203.5z'/%3E%3C/svg%3E")
+      no-repeat center / contain;
+    mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2016%2016'%3E%3Cpath%20d='M8%201C5.24%201%203%203.24%203%206c0%203.5%205%208.5%205%208.5s5-5%205-8.5c0-2.76-2.24-5-5-5zm0%206.75A1.75%201.75%200%201%201%208%204.25a1.75%201.75%200%200%201%200%203.5z'/%3E%3C/svg%3E")
+      no-repeat center / contain;
   }
   .kvol {
     font-size: 13px;
