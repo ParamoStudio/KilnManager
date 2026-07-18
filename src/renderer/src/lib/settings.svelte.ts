@@ -84,7 +84,12 @@ export const BIDDING_ZONES: { code: string; label: string }[] = [
 ];
 
 export const DEFAULT_TICKET_MESSAGE =
-  "¡Buenos días {client}! Ya tengo tus piezas en el horno, más o menos en un día podrás pasarte a buscarlas. Te adjunto el ticket. Nos vemos.";
+  "Hi {client}! Your pieces are in the kiln — they'll be ready to pick up in about a day. I've attached your ticket. See you!";
+
+// Prior Spanish defaults, migrated to the new English default when untouched.
+const LEGACY_TICKET_MESSAGES = [
+  "¡Buenos días {client}! Ya tengo tus piezas en el horno, más o menos en un día podrás pasarte a buscarlas. Te adjunto el ticket. Nos vemos.",
+];
 
 export const FUEL_KINDS: FuelKind[] = ["electricity", "propane", "butane", "wood", "other"];
 
@@ -234,7 +239,10 @@ export async function loadSettings(): Promise<void> {
     ) as Record<FuelKind, FuelDef>;
     settings.priceHistory = Array.isArray(saved.priceHistory) ? saved.priceHistory : [];
     settings.studioName = typeof saved.studioName === "string" ? saved.studioName : "My Studio";
-    settings.ticketMessage = typeof saved.ticketMessage === "string" ? saved.ticketMessage : DEFAULT_TICKET_MESSAGE;
+    settings.ticketMessage =
+      typeof saved.ticketMessage === "string" && !LEGACY_TICKET_MESSAGES.includes(saved.ticketMessage.trim())
+        ? saved.ticketMessage
+        : DEFAULT_TICKET_MESSAGE;
     settings.ticketNote = typeof saved.ticketNote === "string" ? saved.ticketNote : "";
     settings.logoTop = typeof saved.logoTop === "string" ? saved.logoTop : "";
     settings.logoBottom = typeof saved.logoBottom === "string" ? saved.logoBottom : "";

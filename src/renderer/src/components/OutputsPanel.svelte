@@ -81,7 +81,7 @@
       logoBottom: settings.logoBottom || undefined,
       note: settings.ticketNote || undefined,
       client: name,
-      date: new Date(rec.closedAt ?? rec.createdAt).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" }),
+      date: new Date(rec.closedAt ?? rec.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }),
       firingType: service.name,
       firingTotal: eur(result.serviceRevenue),
       sharePct: c.sharePct,
@@ -89,7 +89,7 @@
       extras: [],
       lines,
       total: eur(roundUp50(c.price)),
-      thanks: `Gracias por confiar en ${settings.studioName} con tus piezas.`,
+      thanks: `Thank you for trusting ${settings.studioName} with your pieces.`,
     };
   }
 

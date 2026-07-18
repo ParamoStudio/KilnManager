@@ -60,12 +60,12 @@ function miniKiln(shape: "cylinder" | "box", frac: number): string {
 
 export function buildTicketHtml(d: TicketData): string {
   const infoLeft = [
-    { k: "Cliente", v: d.client },
-    { k: "Fecha", v: d.date },
+    { k: "Client", v: d.client },
+    { k: "Date", v: d.date },
   ];
   const infoRight = [
-    { k: "Tipo de horneada", v: d.firingType },
-    { k: "Total de la horneada", v: d.firingTotal },
+    { k: "Firing type", v: d.firingType },
+    { k: "Firing total", v: d.firingTotal },
     ...d.extras.map((e) => ({ k: e.label, v: e.value })),
   ];
 
@@ -107,7 +107,7 @@ export function buildTicketHtml(d: TicketData): string {
     .foot img { max-width: 130px; max-height: 72px; object-fit: contain; display:inline-block; }
   </style></head><body><div class="page">
     <div class="top">
-      <div><h1>TICKET DE HORNEADA</h1><div class="sub">${esc(d.studioName)}</div></div>
+      <div><h1>FIRING TICKET</h1><div class="sub">${esc(d.studioName)}</div></div>
       ${d.logoTop ? `<img class="logo-top" src="${d.logoTop}" alt=""/>` : ""}
     </div>
     <div class="box info">
@@ -117,10 +117,9 @@ export function buildTicketHtml(d: TicketData): string {
     <div class="box items">${lineRows}</div>
     <div class="share">
       ${miniKiln(d.shape, d.sharePct)}
-      <div class="txt">Tus piezas ocuparon el <span class="pctbig">${Math.round(d.sharePct * 100)}%</span><br/>de esta horneada.</div>
+      <div class="txt">Your pieces filled <span class="pctbig">${Math.round(d.sharePct * 100)}%</span><br/>of this firing.</div>
     </div>
-    ${d.note ? `<div class="note">${escBr(d.note)}</div>` : ""}
-    <div class="thanks">${esc(d.thanks)}</div>
+    <div class="thanks">${escBr(d.note || d.thanks)}</div>
     ${d.logoBottom ? `<div class="foot"><img src="${d.logoBottom}" alt=""/></div>` : ""}
   </div></body></html>`;
 }

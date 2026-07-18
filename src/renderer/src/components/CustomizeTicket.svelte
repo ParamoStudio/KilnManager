@@ -28,8 +28,8 @@
     logoTop: logoTop || undefined,
     logoBottom: logoBottom || undefined,
     note: ticketNote || undefined,
-    client: "María",
-    date: "17 de julio de 2026",
+    client: "Sample client",
+    date: "17 July 2026",
     firingType: "High Reduction",
     firingTotal: "100,00 €",
     sharePct: 0.47,
@@ -40,10 +40,10 @@
       { label: "TOTAL", value: "47,00 €", strong: true },
     ],
     total: "47,00 €",
-    thanks: `Gracias por confiar en ${studioName || "…"} con tus piezas.`,
+    thanks: `Thank you for trusting ${studioName || "…"} with your pieces.`,
   });
   const previewHtml = $derived(buildTicketHtml(previewData));
-  const msgPreview = $derived(ticketMessage.replace(/\{client\}/g, "María").replace(/\{total\}/g, "47,00 €"));
+  const msgPreview = $derived(ticketMessage.replace(/\{client\}/g, "Sample client").replace(/\{total\}/g, "47,00 €"));
 
   function save(): void {
     settings.studioName = studioName.trim() || "My Studio";
@@ -106,6 +106,7 @@
     <label class="field">
       <span class="fl">Note printed on the ticket</span>
       <textarea class="msg" rows="3" bind:value={ticketNote} placeholder="e.g. Handle glazed pieces with care for 24h."></textarea>
+      <span class="hint">Replaces the default “Thank you for trusting …” line. Leave empty to keep the default.</span>
     </label>
 
     <label class="field">
@@ -144,7 +145,7 @@
     inset: 4vh 5vw;
     z-index: 51;
     display: grid;
-    grid-template-columns: 1fr 420px;
+    grid-template-columns: 1fr 1fr;
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 18px;
@@ -307,8 +308,9 @@
     align-self: flex-start;
   }
   .pframe {
-    width: 360px;
-    height: 509px;
+    width: 520px;
+    max-width: 100%;
+    height: 736px;
     overflow: hidden;
     border: 1px solid var(--line);
     border-radius: 8px;
@@ -319,7 +321,7 @@
     width: 794px;
     height: 1123px;
     border: none;
-    transform: scale(0.453);
+    transform: scale(0.655);
     transform-origin: top left;
   }
   .close {
