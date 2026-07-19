@@ -10,17 +10,21 @@
  */
 import { storage } from "./storage";
 import { en, type Dictionary } from "./i18n/en";
+import { es } from "./i18n/es";
 
-export type Locale = "en"; // extend as languages are added, e.g. "en" | "es"
+export type Locale = "en" | "es";
 export type Currency = "EUR" | "USD";
 
-export const LOCALES: { code: Locale; label: string }[] = [{ code: "en", label: "English" }];
+export const LOCALES: { code: Locale; label: string }[] = [
+  { code: "en", label: "English" },
+  { code: "es", label: "Español" },
+];
 export const CURRENCIES: { code: Currency; symbol: string; label: string }[] = [
   { code: "EUR", symbol: "€", label: "Euro (€)" },
   { code: "USD", symbol: "$", label: "US Dollar ($)" },
 ];
 
-const DICTS: Record<Locale, Dictionary> = { en };
+const DICTS: Record<Locale, Dictionary> = { en, es };
 
 const state = $state<{ locale: Locale; currency: Currency }>({ locale: "en", currency: "EUR" });
 
