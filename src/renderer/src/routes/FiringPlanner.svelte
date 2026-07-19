@@ -1,6 +1,7 @@
 <script lang="ts">
   import { computeFiring } from "@core";
   import { ui, toCoreFiring, clearSelection, clientScopeMods, cancelClientMod } from "../lib/firing.svelte";
+  import { t } from "../lib/i18n.svelte";
   import KilnSvg from "../components/KilnSvg.svelte";
   import StructurePanel from "../components/StructurePanel.svelte";
   import AssignPanel from "../components/AssignPanel.svelte";
@@ -25,8 +26,8 @@
     <section class="stage" role="presentation" onclick={stageClick}>
       {#if pendingMod}
         <div class="pick-banner">
-          <span class="ptext">Pick an assigned shelf to apply:&nbsp;<b>{pendingMod.name}</b>&nbsp;to that client</span>
-          <button class="pcancel" onclick={(e) => { e.stopPropagation(); cancelClientMod(); }}>Cancel</button>
+          <span class="ptext">{t.firingPlanner.pickPrefix}&nbsp;<b>{pendingMod.name}</b>&nbsp;{t.firingPlanner.pickSuffix}</span>
+          <button class="pcancel" onclick={(e) => { e.stopPropagation(); cancelClientMod(); }}>{t.firingPlanner.cancel}</button>
         </div>
       {/if}
       <KilnSvg />

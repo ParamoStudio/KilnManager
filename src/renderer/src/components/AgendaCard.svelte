@@ -8,6 +8,7 @@
     assignSelectionTo,
     type Contact,
   } from "../lib/firing.svelte";
+  import { t } from "../lib/i18n.svelte";
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -87,18 +88,18 @@
 </script>
 
 <div class="scrim" role="presentation" onclick={onclose}></div>
-<div class="card" role="dialog" aria-label="Client Book">
+<div class="card" role="dialog" aria-label={t.agenda.title}>
   <div class="head">
-    <h3>Client Book</h3>
+    <h3>{t.agenda.title}</h3>
     <div class="hactions">
-      <button class="export" onclick={exportCsv} disabled={contacts.list.length === 0} title="Export the agenda as a CSV file">Export CSV</button>
-      <button class="x" onclick={onclose} aria-label="Close">×</button>
+      <button class="export" onclick={exportCsv} disabled={contacts.list.length === 0} title={t.agenda.exportCsvTitle}>{t.agenda.exportCsv}</button>
+      <button class="x" onclick={onclose} aria-label={t.common.close}>×</button>
     </div>
   </div>
 
   <div class="body">
     <div class="list">
-      <button class="add" class:active={sel === "new"} onclick={() => (sel = "new")}>+ New client</button>
+      <button class="add" class:active={sel === "new"} onclick={() => (sel = "new")}>{t.agenda.newClient}</button>
       {#each contacts.list as c (c.id)}
         <button class="item" class:active={sel === c.id} onclick={() => (sel = c.id)}>
           <span class="nm">{fullName(c)}</span>
@@ -106,21 +107,21 @@
         </button>
       {/each}
       {#if contacts.list.length === 0}
-        <p class="faint empty">No clients yet.</p>
+        <p class="faint empty">{t.agenda.noClientsYet}</p>
       {/if}
     </div>
 
     <div class="form">
-      <label>Name<input bind:value={name} placeholder="First name" /></label>
-      <label>Surname<input bind:value={surname} placeholder="Surname" /></label>
-      <label>Phone<input bind:value={phone} placeholder="Phone" /></label>
-      <label>Notes<textarea bind:value={notes} maxlength="240" rows="3" placeholder="Notes about this client"></textarea></label>
+      <label>{t.agenda.fieldName}<input bind:value={name} placeholder={t.agenda.fieldNamePlaceholder} /></label>
+      <label>{t.agenda.fieldSurname}<input bind:value={surname} placeholder={t.agenda.fieldSurnamePlaceholder} /></label>
+      <label>{t.agenda.fieldPhone}<input bind:value={phone} placeholder={t.agenda.fieldPhonePlaceholder} /></label>
+      <label>{t.agenda.fieldNotes}<textarea bind:value={notes} maxlength="240" rows="3" placeholder={t.agenda.fieldNotesPlaceholder}></textarea></label>
 
       <div class="actions">
         {#if editing}
-          <button class="del" class:confirm={confirmDel} onclick={remove}>{confirmDel ? "Confirm delete" : "Delete"}</button>
+          <button class="del" class:confirm={confirmDel} onclick={remove}>{confirmDel ? t.agenda.confirmDelete : t.agenda.delete}</button>
         {/if}
-        <button class="save" onclick={save} disabled={!name.trim()}>{editing ? "Save" : "Add client"}</button>
+        <button class="save" onclick={save} disabled={!name.trim()}>{editing ? t.agenda.save : t.agenda.addClient}</button>
       </div>
     </div>
   </div>

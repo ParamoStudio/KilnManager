@@ -19,6 +19,7 @@
     clientHasMods,
   } from "../lib/firing.svelte";
   import { cx } from "../lib/settings.svelte";
+  import { t } from "../lib/i18n.svelte";
   import { colorForIndex } from "../lib/colors";
 
   const kiln = $derived(currentKiln());
@@ -95,7 +96,7 @@
   </defs>
 
   <!-- Diameter dimension: value centred on the line, with a gap -->
-  <text x={CX} y="20" text-anchor="middle" class="lbl">USABLE DIAMETER</text>
+  <text x={CX} y="20" text-anchor="middle" class="lbl">{t.kilnSvg.usableDiameter}</text>
   <line x1={X0} y1="40" x2={CX - 52} y2="40" class="dim" marker-start="url(#arrow)" />
   <line x1={CX + 52} y1="40" x2={X1} y2="40" class="dim" marker-end="url(#arrow)" />
   <text x={CX} y="45" text-anchor="middle" class="val">
@@ -103,7 +104,7 @@
   </text>
 
   <!-- Height ruler — sits close to the kiln body, bright enough to read. -->
-  <text x="130" y={yTopInner - 34} text-anchor="end" class="lbl">USABLE H.</text>
+  <text x="130" y={yTopInner - 34} text-anchor="end" class="lbl">{t.kilnSvg.usableHeight}</text>
   <text x="130" y={yTopInner - 14} text-anchor="end" class="val">{kiln.usableHeightCm} cm</text>
   <line x1="132" y1={yTopInner} x2="132" y2={yBotInner} class="dim-soft" />
   {#each ticks as t (t)}
@@ -136,13 +137,13 @@
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <g class="add" role="button" tabindex="-1" onclick={(e) => { e.stopPropagation(); openShelfEditor("new", { x: e.clientX, y: e.clientY }); }}>
       <rect x={CX - 86} y={cy - 20} width="172" height="40" rx="9" class="add-rect" />
-      <text x={CX} y={cy + 5} text-anchor="middle" class="add-lbl">+ Add shelf</text>
+      <text x={CX} y={cy + 5} text-anchor="middle" class="add-lbl">{t.kilnSvg.addShelf}</text>
     </g>
     {#if showRem}
-      <text x={CX} y={cy + 36} text-anchor="middle" class="rem-lbl">({fmtCm(remaining)} cm remaining)</text>
+      <text x={CX} y={cy + 36} text-anchor="middle" class="rem-lbl">{t.kilnSvg.remainingParen(fmtCm(remaining))}</text>
     {/if}
   {:else if remaining > 0.5}
-    <text x={CX} y={(TOPY + RY + 20 + yRemBottom) / 2} text-anchor="middle" class="rem-lbl">{fmtCm(remaining)} cm remaining</text>
+    <text x={CX} y={(TOPY + RY + 20 + yRemBottom) / 2} text-anchor="middle" class="rem-lbl">{t.kilnSvg.remaining(fmtCm(remaining))}</text>
   {/if}
 
   <!-- Shelves -->
@@ -221,7 +222,7 @@
           {/if}
         {:else if bandH > 24}
           <text x={zx + colW / 2} y={(row.ySpaceTop + row.yPlate) / 2 + 4} text-anchor="middle" class="zfrac" style="font-size:{Math.max(8, Math.min(11, colW * 0.1))}px">
-            {row.div === 1 ? "FULL" : `1/${row.div}`}
+            {row.div === 1 ? t.kilnSvg.full : `1/${row.div}`}
           </text>
         {/if}
       </g>

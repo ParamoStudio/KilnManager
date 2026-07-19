@@ -2,6 +2,7 @@
   import type { FiringResult, KilnModifier } from "@core";
   import { roundUp50 } from "@core";
   import { planner, currentService, occupiedVolumeFraction, fullKilnMods, modSign } from "../lib/firing.svelte";
+  import { t } from "../lib/i18n.svelte";
   import { eur, pct } from "../lib/format";
 
   let { result }: { result: FiringResult } = $props();
@@ -18,18 +19,18 @@
 </script>
 
 <div class="summary">
-  <div class="row"><span class="muted">Base · {service.name}</span><span>{eur(service.basePrice)}</span></div>
+  <div class="row"><span class="muted">{t.priceSummary.base(service.name)}</span><span>{eur(service.basePrice)}</span></div>
   {#each activeKilnMods as m (m.id)}
     <div class="row"><span class="muted">{m.name}</span><span class:disc={modSign(m) < 0}>{modSign(m) > 0 ? "+" : "−"}{fmtMod(m)}</span></div>
   {/each}
   {#if planner.customDiscount}
-    <div class="row"><span class="muted">Custom discount</span><span class="disc">−{planner.customDiscount.mode === "percent" ? `${planner.customDiscount.value}%` : eur(planner.customDiscount.value)}</span></div>
+    <div class="row"><span class="muted">{t.priceSummary.customDiscount}</span><span class="disc">−{planner.customDiscount.mode === "percent" ? `${planner.customDiscount.value}%` : eur(planner.customDiscount.value)}</span></div>
   {/if}
   {#if hasClientMods}
-    <div class="row"><span class="muted">Client modifiers</span><span class="muted">applied</span></div>
+    <div class="row"><span class="muted">{t.priceSummary.clientModifiers}</span><span class="muted">{t.priceSummary.applied}</span></div>
   {/if}
-  <div class="row"><span class="muted">Occupancy</span><span class="muted">{pct(occFill)} loaded</span></div>
-  <div class="row total"><span>Total firing</span><span>{eur(roundedTotal)} <span class="real">({eur(result.accounting.revenue)})</span></span></div>
+  <div class="row"><span class="muted">{t.priceSummary.occupancy}</span><span class="muted">{pct(occFill)} {t.priceSummary.loaded}</span></div>
+  <div class="row total"><span>{t.priceSummary.totalFiring}</span><span>{eur(roundedTotal)} <span class="real">({eur(result.accounting.revenue)})</span></span></div>
 </div>
 
 <style>

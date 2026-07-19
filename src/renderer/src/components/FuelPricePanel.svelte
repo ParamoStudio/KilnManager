@@ -4,6 +4,7 @@
   import { kilnStore } from "../lib/kilns.svelte";
   import { settings, recordFuelPrice, fuelKeyForKiln, BIDDING_ZONES, setBiddingZone } from "../lib/settings.svelte";
   import { market, isDesktop, type ElectricityRef, type PropaneRef } from "../lib/storage";
+  import { t, localeTag } from "../lib/i18n.svelte";
   import { eur, num, fmtDay } from "../lib/format";
 
   // Only the fuels the studio actually burns (across its kilns).
@@ -39,7 +40,7 @@
     void loadGasRef();
   }
   const fmtAsOf = (unix: number): string =>
-    new Date(unix * 1000).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    new Date(unix * 1000).toLocaleString(localeTag(), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
   // Typical bottle estimates from the user's own €/kg (price per bottle ÷ kg).
   const BOTTLES = [11, 35];
@@ -64,13 +65,13 @@
 
 <div class="fuel">
   <div class="fhead">
-    <span class="ftitle">Fuel control</span>
+    <span class="ftitle">{t.fuelPanel.title}</span>
   </div>
 
   <div class="fcols">
     <!-- Left: log what you last paid -->
     <section class="fcol">
-      <span class="csub">Log what you last paid — updates every kiln on that fuel</span>
+      <span class="csub">{t.fuelPanel.logHeader}</span>
       <div class="rows">
         {#each usedFuels as fk (fk)}
           {@const f = settings.fuels[fk]}
@@ -84,11 +85,11 @@
                 type="number"
                 min="0"
                 step="0.5"
-                placeholder="just paid…"
+                placeholder={t.fuelPanel.justPaidPlaceholder}
                 bind:value={draft[fk]}
                 onkeydown={(e) => { if (e.key === "Enter") apply(fk); }}
               />
-              <button onclick={() => apply(fk)} disabled={!draft[fk]}>Save</button>
+              <button onclick={() => apply(fk)} disabled={!draft[fk]}>{t.fuelPanel.save}</button>
             </div>
           </div>
         {/each}
@@ -105,54 +106,54 @@
     <!-- Right: live market reference (context only — not what you actually pay) -->
     <section class="fcol market">
       <div class="mkhead">
-        <span class="csub">Market reference · live</span>
+        <span class="csub">{t.fuelPanel.marketReferenceLive}</span>
         {#if usesElectricity}
-          <button class="refresh" onclick={loadElec} disabled={loadingElec} title="Refresh">↻</button>
+          <button class="refresh" onclick={loadElec} disabled={loadingElec} title={t.fuelPanel.refresh}>↻</button>
         {/if}
       </div>
 
       {#if usesElectricity}
         <div class="mkblock">
           <div class="mkrow">
-            <span class="mkname">Electricity · wholesale</span>
+            <span class="mkname">{t.fuelPanel.electricityWholesale}</span>
             <select class="zonesel" value={settings.biddingZone} onchange={onZone}>
               {#each BIDDING_ZONES as z (z.code)}<option value={z.code}>{z.label}</option>{/each}
             </select>
           </div>
           {#if loadingElec && !elec}
-            <span class="faint small">Loading…</span>
+            <span class="faint small">{t.fuelPanel.loading}</span>
           {:else if elec && elec.ok}
-            <div class="mkval">{num(elec.currentKwh, 3)} <span class="unit">€/kWh now</span></div>
-            <span class="faint small">Day avg {num(elec.avgKwh, 3)} · {fmtAsOf(elec.asOf)} · {elec.source}</span>
-            <p class="caveat">Wholesale — retail adds taxes & fees; check your bill.</p>
+            <div class="mkval">{num(elec.currentKwh, 3)} <span class="unit">{t.fuelPanel.kwhNow}</span></div>
+            <span class="faint small">{t.fuelPanel.dayAvg(num(elec.avgKwh, 3), fmtAsOf(elec.asOf), elec.source)}</span>
+            <p class="caveat">{t.fuelPanel.wholesaleCaveat}</p>
           {:else}
-            <span class="faint small">Reference unavailable right now.</span>
+            <span class="faint small">{t.fuelPanel.referenceUnavailable}</span>
           {/if}
         </div>
       {/if}
 
       {#if gasFuels.length}
         <div class="mkblock">
-          <span class="mkname">Bottle estimate</span>
+          <span class="mkname">{t.fuelPanel.bottleEstimate}</span>
           {#each gasFuels as fk (fk)}
             {@const k = perKg(fk)}
             {@const ref = refFor(fk)}
             <div class="botrow">
-              <span class="botlabel">{settings.fuels[fk].label} · {num(k, 2)} €/kg <span class="yours">(yours)</span></span>
+              <span class="botlabel">{settings.fuels[fk].label} · {num(k, 2)} €/kg <span class="yours">({t.fuelPanel.yours})</span></span>
               <span class="botest">
                 {#each BOTTLES as kg (kg)}<span class="bot">{kg} kg ≈ {eur(k * kg)}</span>{/each}
               </span>
               {#if ref !== undefined && gasRef && gasRef.ok}
-                <span class="refline">Market ref · {gasRef.approx ? "~" : ""}{num(ref, 2)} €/kg · {gasRef.region} {gasRef.asOf}{gasRef.approx ? " · approx" : ""}</span>
+                <span class="refline">{t.fuelPanel.marketRef(gasRef.approx ? "~" : "", num(ref, 2), gasRef.region, gasRef.asOf, gasRef.approx ? t.fuelPanel.approxSuffix : "")}</span>
               {/if}
             </div>
           {/each}
-          <p class="caveat">“Yours” = what you paid. Market ref is orientative — check your supplier.</p>
+          <p class="caveat">{t.fuelPanel.bottleCaveat}</p>
         </div>
       {/if}
 
       {#if !usesElectricity && gasFuels.length === 0}
-        <p class="faint small">No live references for your fuels (wood prices are local — enter what you pay).</p>
+        <p class="faint small">{t.fuelPanel.noLiveReferences}</p>
       {/if}
     </section>
   </div>

@@ -25,6 +25,7 @@
   } from "../lib/firing.svelte";
   import { complexityKeys, type ComplexityKey } from "../lib/complexity";
   import { cx } from "../lib/settings.svelte";
+  import { t } from "../lib/i18n.svelte";
   import { colorForIndex } from "../lib/colors";
   import { eur } from "../lib/format";
 
@@ -67,36 +68,36 @@
 </script>
 
 <div class="rail">
-  <span class="rail-title">Assign</span>
+  <span class="rail-title">{t.assignPanel.title}</span>
 
   {#if count === 0}
-    <p class="faint hint">Click shelves in the kiln to select them. Click a client's shelf to edit all of theirs.</p>
+    <p class="faint hint">{t.assignPanel.hintNoSelection}</p>
 
   {:else if owner}
     <!-- Client-edit mode -->
     <div class="pill">
       <span class="dot" style="--z:{colorForIndex(clientNames().indexOf(owner))}"></span>
       <span class="pn">{owner}</span>
-      <span class="faint">{count} {count === 1 ? "shelf" : "shelves"}</span>
+      <span class="faint">{t.assignPanel.shelvesCount(count)}</span>
     </div>
 
     <!-- Reassign — now directly under the client name -->
     <div class="block">
       {#if !reassignOpen}
-        <button class="collapsed" onclick={() => (reassignOpen = true)}>Assign to another client ▾</button>
+        <button class="collapsed" onclick={() => (reassignOpen = true)}>{t.assignPanel.assignToAnotherClient}</button>
       {:else}
         <button class="collapsed open" onclick={() => { reassignOpen = false; pending = null; }}>
-          Assign to another client ▴
+          {t.assignPanel.assignToAnotherClientOpen}
         </button>
         {#if pending}
           <div class="choice">
-            <span class="move-h">Move to {pending}</span>
-            <button class="mini" onclick={() => reassignTo(pending!, "primary")}>Only selected {primaryLabel}</button>
-            <button class="mini" onclick={() => reassignTo(pending!, "all")}>Move all of {owner} to {pending}</button>
-            <button class="backpill" onclick={() => (pending = null)}>← back</button>
+            <span class="move-h">{t.assignPanel.moveTo(pending)}</span>
+            <button class="mini" onclick={() => reassignTo(pending!, "primary")}>{t.assignPanel.onlySelected(primaryLabel)}</button>
+            <button class="mini" onclick={() => reassignTo(pending!, "all")}>{t.assignPanel.moveAllOfTo(owner, pending)}</button>
+            <button class="backpill" onclick={() => (pending = null)}>{t.assignPanel.back}</button>
           </div>
         {:else}
-          <input class="search" bind:value={query} placeholder="Search clients…" />
+          <input class="search" bind:value={query} placeholder={t.assignPanel.searchClientsPlaceholder} />
           <div class="results">
             {#each results as c (c.id)}
               {#if c.name !== owner}
@@ -107,14 +108,14 @@
               {/if}
             {/each}
           </div>
-          <button class="new" onclick={newClientForAssign}>+ New client</button>
-          <button class="self" onclick={assignSelectionToSelf}>Assign to myself</button>
+          <button class="new" onclick={newClientForAssign}>{t.assignPanel.newClient}</button>
+          <button class="self" onclick={assignSelectionToSelf}>{t.assignPanel.assignToMyself}</button>
         {/if}
       {/if}
     </div>
 
     <div class="block">
-      <span class="label">Complexity per zone</span>
+      <span class="label">{t.assignPanel.complexityPerZone}</span>
       <div class="boxes">
         {#each ui.selection as z (z.levelId + ":" + z.segIdx)}
           {@const s = segOf(z)}
@@ -145,13 +146,13 @@
 
     {#if modsForClient(owner).length > 0}
       <div class="block">
-        <span class="label">Modifiers · {owner}</span>
+        <span class="label">{t.assignPanel.modifiersFor(owner)}</span>
         <div class="cmods">
           {#each modsForClient(owner) as m (m.id)}
             <div class="cmrow">
               <span class="cmname">{m.name}</span>
               <span class="cmval" class:disc={modSign(m) < 0}>{modSign(m) > 0 ? "+" : "−"}{m.mode === "percent" ? `${m.value}%` : eur(m.value)}</span>
-              <button class="cmx" onclick={() => removeClientMod(owner, m.id)} aria-label="Remove modifier">×</button>
+              <button class="cmx" onclick={() => removeClientMod(owner, m.id)} aria-label={t.assignPanel.removeModifier}>×</button>
             </div>
           {/each}
         </div>
@@ -159,12 +160,12 @@
     {/if}
 
     <div class="block">
-      <span class="label">Note · {owner}</span>
+      <span class="label">{t.assignPanel.noteFor(owner)}</span>
       <textarea
         class="note"
         maxlength="240"
         rows="2"
-        placeholder="Optional note for this firing"
+        placeholder={t.assignPanel.notePlaceholder}
         value={note}
         oninput={(e) => setClientNote(owner!, e.currentTarget.value)}
       ></textarea>
@@ -172,17 +173,17 @@
 
     <div class="actions col">
       <button class="ghost danger" onclick={clearPrimaryZone} disabled={!ui.primaryZone}>
-        Empty selection ({primaryLabel})
+        {t.assignPanel.emptySelection(primaryLabel)}
       </button>
-      <button class="ghost danger" onclick={clearSelectedZones}>Empty all of {owner}</button>
+      <button class="ghost danger" onclick={clearSelectedZones}>{t.assignPanel.emptyAllOf(owner)}</button>
     </div>
 
   {:else}
     <!-- Free shelves → assign directly -->
-    <div class="sel"><span class="sel-n">{count} {count === 1 ? "shelf" : "shelves"} selected</span><span class="faint">Currently free</span></div>
+    <div class="sel"><span class="sel-n">{t.assignPanel.shelvesSelected(count)}</span><span class="faint">{t.assignPanel.currentlyFree}</span></div>
 
     <div class="block">
-      <span class="label">Complexity</span>
+      <span class="label">{t.assignPanel.complexity}</span>
       <div class="cx wide">
         {#each complexityKeys as key (key)}
           <button class="cx-btn" class:active={ui.complexity === key} onclick={() => applyComplexityToSelection(key)}>
@@ -193,8 +194,8 @@
     </div>
 
     <div class="block">
-      <span class="label">Assign to</span>
-      <input class="search" bind:value={query} placeholder="Search clients…" />
+      <span class="label">{t.assignPanel.assignTo}</span>
+      <input class="search" bind:value={query} placeholder={t.assignPanel.searchClientsPlaceholder} />
       <div class="results">
         {#each results as c (c.id)}
           <button class="client" onclick={() => assignSelectionTo(c.name)}>
@@ -202,10 +203,10 @@
             <span class="cn">{c.name}{c.surname ? ` ${c.surname}` : ""}</span>
           </button>
         {/each}
-        {#if results.length === 0}<p class="faint none">No match.</p>{/if}
+        {#if results.length === 0}<p class="faint none">{t.assignPanel.noMatch}</p>{/if}
       </div>
-      <button class="new" onclick={newClientForAssign}>+ New client</button>
-      <button class="self" onclick={assignSelectionToSelf}>Assign to myself</button>
+      <button class="new" onclick={newClientForAssign}>{t.assignPanel.newClient}</button>
+      <button class="self" onclick={assignSelectionToSelf}>{t.assignPanel.assignToMyself}</button>
     </div>
   {/if}
 </div>

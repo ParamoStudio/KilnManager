@@ -1,6 +1,7 @@
 <script lang="ts">
   import { settings, saveSettings } from "../lib/settings.svelte";
   import { buildTicketHtml, type TicketData } from "../lib/ticket";
+  import { t } from "../lib/i18n.svelte";
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -16,7 +17,7 @@
     if (!file) return;
     if (!file.type.startsWith("image/")) return;
     if (file.size > 1_500_000) {
-      sizeWarn = "That image is large (>1.5 MB) — a smaller PNG/SVG keeps the file light.";
+      sizeWarn = t.customizeTicket.imageTooLarge;
     }
     const reader = new FileReader();
     reader.onload = () => set(String(reader.result));
@@ -24,11 +25,11 @@
   }
 
   const previewData = $derived<TicketData>({
-    studioName: studioName || "Your studio",
+    studioName: studioName || t.customizeTicket.workshopNamePlaceholder,
     logoTop: logoTop || undefined,
     logoBottom: logoBottom || undefined,
     note: ticketNote || undefined,
-    client: "Sample client",
+    client: t.customizeTicket.previewClient,
     date: "17 July 2026",
     firingType: "High Reduction",
     firingTotal: "100,00 €",
@@ -37,13 +38,13 @@
     extras: [],
     lines: [
       { label: "High Reduction", value: "46,51 €" },
-      { label: "TOTAL", value: "47,00 €", strong: true },
+      { label: t.ticket.total, value: "47,00 €", strong: true },
     ],
     total: "47,00 €",
-    thanks: `Thank you for trusting ${studioName || "…"} with your pieces.`,
+    thanks: t.ticket.defaultThanks(studioName || "…"),
   });
   const previewHtml = $derived(buildTicketHtml(previewData));
-  const msgPreview = $derived(ticketMessage.replace(/\{client\}/g, "Sample client").replace(/\{total\}/g, "47,00 €"));
+  const msgPreview = $derived(ticketMessage.replace(/\{client\}/g, t.customizeTicket.previewClient).replace(/\{total\}/g, "47,00 €"));
 
   function save(): void {
     settings.studioName = studioName.trim() || "My Studio";
@@ -57,80 +58,80 @@
 </script>
 
 <div class="scrim" role="presentation" onclick={onclose}></div>
-<div class="panel" role="dialog" aria-label="Customize client ticket">
+<div class="panel" role="dialog" aria-label={t.customizeTicket.ariaLabel}>
   <!-- Left: the form -->
   <section class="form">
     <div class="fhead">
-      <h2>Customize Client Ticket</h2>
-      <p class="faint">What your clients receive. Everything here is optional but logos and a note make it yours.</p>
+      <h2>{t.customizeTicket.title}</h2>
+      <p class="faint">{t.customizeTicket.subtitle}</p>
     </div>
 
     <label class="field">
-      <span class="fl">Workshop / studio name</span>
-      <input bind:value={studioName} placeholder="My Studio" />
-      <span class="hint">Where you fire — e.g. a communal or shared workshop.</span>
+      <span class="fl">{t.customizeTicket.workshopName}</span>
+      <input bind:value={studioName} placeholder={t.customizeTicket.workshopNamePlaceholder} />
+      <span class="hint">{t.customizeTicket.workshopNameHint}</span>
     </label>
 
     <div class="field">
-      <span class="fl">Logo — top of ticket</span>
+      <span class="fl">{t.customizeTicket.logoTop}</span>
       <div class="logo">
         {#if logoTop}
           <img class="thumb" src={logoTop} alt="Top logo" />
-          <button class="link" onclick={() => (logoTop = "")}>Remove</button>
+          <button class="link" onclick={() => (logoTop = "")}>{t.customizeTicket.remove}</button>
         {:else}
           <label class="upload">
-            Upload…
+            {t.customizeTicket.upload}
             <input type="file" accept="image/*" onchange={(e) => readImage(e.currentTarget.files?.[0], (v) => (logoTop = v))} />
           </label>
-          <span class="hint">Recommended. PNG or SVG with transparent background.</span>
+          <span class="hint">{t.customizeTicket.logoTopHint}</span>
         {/if}
       </div>
     </div>
 
     <div class="field">
-      <span class="fl">Logo — footer</span>
+      <span class="fl">{t.customizeTicket.logoBottom}</span>
       <div class="logo">
         {#if logoBottom}
           <img class="thumb" src={logoBottom} alt="Footer logo" />
-          <button class="link" onclick={() => (logoBottom = "")}>Remove</button>
+          <button class="link" onclick={() => (logoBottom = "")}>{t.customizeTicket.remove}</button>
         {:else}
           <label class="upload">
-            Upload…
+            {t.customizeTicket.upload}
             <input type="file" accept="image/*" onchange={(e) => readImage(e.currentTarget.files?.[0], (v) => (logoBottom = v))} />
           </label>
-          <span class="hint">Optional — a small emblem/stamp for the bottom.</span>
+          <span class="hint">{t.customizeTicket.logoBottomHint}</span>
         {/if}
       </div>
     </div>
 
     <label class="field">
-      <span class="fl">Note printed on the ticket</span>
-      <textarea class="msg" rows="3" bind:value={ticketNote} placeholder="e.g. Handle glazed pieces with care for 24h."></textarea>
-      <span class="hint">Replaces the default “Thank you for trusting …” line. Leave empty to keep the default.</span>
+      <span class="fl">{t.customizeTicket.noteLabel}</span>
+      <textarea class="msg" rows="3" bind:value={ticketNote} placeholder={t.customizeTicket.notePlaceholder}></textarea>
+      <span class="hint">{t.customizeTicket.noteHint}</span>
     </label>
 
     <label class="field">
-      <span class="fl">Message you send with the ticket</span>
+      <span class="fl">{t.customizeTicket.messageLabel}</span>
       <textarea class="msg" rows="3" bind:value={ticketMessage}></textarea>
-      <span class="hint">Use <b>{"{client}"}</b> and <b>{"{total}"}</b> as placeholders.</span>
+      <span class="hint">{@html t.customizeTicket.messageHint("{client}", "{total}")}</span>
       <span class="msgprev">“{msgPreview}”</span>
     </label>
 
     {#if sizeWarn}<span class="warn">{sizeWarn}</span>{/if}
 
     <div class="actions">
-      <button class="save" onclick={save}>Save</button>
-      <button class="cancel" onclick={onclose}>Cancel</button>
+      <button class="save" onclick={save}>{t.customizeTicket.save}</button>
+      <button class="cancel" onclick={onclose}>{t.customizeTicket.cancel}</button>
     </div>
   </section>
 
   <!-- Right: live ticket preview -->
   <section class="preview">
-    <span class="plabel">Live preview</span>
+    <span class="plabel">{t.customizeTicket.livePreview}</span>
     <div class="pframe"><iframe class="tframe" srcdoc={previewHtml} title="Ticket preview"></iframe></div>
   </section>
 
-  <button class="close" onclick={onclose} aria-label="Close">×</button>
+  <button class="close" onclick={onclose} aria-label={t.common.close}>×</button>
 </div>
 
 <style>

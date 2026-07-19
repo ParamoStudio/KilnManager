@@ -12,12 +12,22 @@ import { storage } from "./storage";
 import { en, type Dictionary } from "./i18n/en";
 
 export type Locale = "en"; // extend as languages are added, e.g. "en" | "es"
+export type Currency = "EUR" | "USD";
 
 export const LOCALES: { code: Locale; label: string }[] = [{ code: "en", label: "English" }];
+export const CURRENCIES: { code: Currency; symbol: string; label: string }[] = [
+  { code: "EUR", symbol: "€", label: "Euro (€)" },
+  { code: "USD", symbol: "$", label: "US Dollar ($)" },
+];
 
 const DICTS: Record<Locale, Dictionary> = { en };
 
-const state = $state<{ locale: Locale }>({ locale: "en" });
+const state = $state<{ locale: Locale; currency: Currency }>({ locale: "en", currency: "EUR" });
+
+/** BCP-47 tag used for number/date formatting — follows the active language. */
+export function localeTag(): string {
+  return state.locale === "en" ? "en-GB" : "es-ES";
+}
 
 /** Active dictionary as a reactive proxy: reading any namespace tracks `locale`. */
 export const t: Dictionary = new Proxy({} as Dictionary, {
@@ -39,4 +49,15 @@ export function setLocale(locale: Locale): void {
 export async function loadLocale(): Promise<void> {
   const saved = await storage.read<Locale>("locale");
   if (saved && DICTS[saved]) state.locale = saved;
+  const cur = await storage.read<Currency>("currency");
+  if (cur === "EUR" || cur === "USD") state.currency = cur;
+}
+
+// ---- Currency (display symbol only; user-entered amounts never change) --------
+export function getCurrency(): Currency {
+  return state.currency;
+}
+export function setCurrency(currency: Currency): void {
+  state.currency = currency;
+  void storage.write("currency", currency);
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app, go } from "../lib/firing.svelte";
   import { addKiln } from "../lib/kilns.svelte";
+  import { t } from "../lib/i18n.svelte";
 
   function continueToKiln(): void {
     const k = addKiln("cylinder");
@@ -11,13 +12,13 @@
 </script>
 
 <div class="scrim" role="presentation" onclick={() => (app.firstKilnOpen = false)}></div>
-<div class="card" role="dialog" aria-label="Add your first kiln">
+<div class="card" role="dialog" aria-label={t.firstKilnPrompt.ariaLabel}>
   <div class="mark"><span class="wm">PÁRAMO</span><span class="tl">KILN MANAGER</span></div>
-  <h2>Add your first kiln</h2>
-  <p>Add your first kiln to start monitoring your firings! Just click continue and fill in the relevant data.</p>
+  <h2>{t.firstKilnPrompt.title}</h2>
+  <p>{t.firstKilnPrompt.body}</p>
   <div class="row">
-    <button class="primary" onclick={continueToKiln}>Continue</button>
-    <button class="ghost" onclick={() => (app.firstKilnOpen = false)}>Later</button>
+    <button class="primary" onclick={continueToKiln}>{t.firstKilnPrompt.continue}</button>
+    <button class="ghost" onclick={() => (app.firstKilnOpen = false)}>{t.firstKilnPrompt.later}</button>
   </div>
 </div>
 

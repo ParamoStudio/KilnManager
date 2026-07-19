@@ -14,6 +14,7 @@
   import { kilnStore } from "../lib/kilns.svelte";
   import { fuelDefFor } from "../lib/settings.svelte";
   import { monthlyData } from "../lib/expenses.svelte";
+  import { t, localeTag } from "../lib/i18n.svelte";
   import { eur, fmtDay, fmtFull } from "../lib/format";
   import KilnThumb from "../components/KilnThumb.svelte";
   import FuelPricePanel from "../components/FuelPricePanel.svelte";
@@ -27,10 +28,10 @@
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   })();
   const review = $derived(monthlyData().find((m) => m.key === nowMonthKey) ?? null);
-  const monthName = (() => {
-    const s = new Date().toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+  const monthName = $derived.by(() => {
+    const s = new Date().toLocaleDateString(localeTag(), { month: "long", year: "numeric" });
     return s.charAt(0).toUpperCase() + s.slice(1);
-  })();
+  });
   const daysLeft = (() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() - d.getDate();
@@ -42,7 +43,7 @@
 
   const kilnOf = (rec: FiringRecord) => kilnStore.list.find((k) => k.id === rec.planner.kilnId) ?? kilnStore.list[0]!;
   const energyLabel = (k: (typeof kilnStore.list)[number]): string =>
-    k.energy === "gas" ? (k.gasType === "butane" ? "Butane" : "Propane") : fuelDefFor(k).label;
+    k.energy === "gas" ? (k.gasType === "butane" ? t.kilnProfiles.gasButane : t.kilnProfiles.gasPropane) : fuelDefFor(k).label;
   // `rounded` is what clients actually pay (each charged amount rounded up to the
   // next 0.50); `real` is the exact figure kept for the record.
   function summary(rec: FiringRecord): { clients: number; rounded: number; real: number } {
@@ -67,10 +68,10 @@
 <div class="home">
   <!-- Current firings -->
   <section class="col panel">
-    <span class="col-title">Current firings</span>
+    <span class="col-title">{t.home.currentFirings}</span>
     <div class="list">
       {#if current.length === 0}
-        <p class="faint empty">No firings in progress. Start one →</p>
+        <p class="faint empty">{t.home.noFiringsInProgress}</p>
       {/if}
       {#each current as rec (rec.id)}
         {@const k = kilnOf(rec)}
@@ -82,19 +83,19 @@
           <div class="info">
             <div class="row1">
               <span class="kiln">{titled || fmtFull(rec.createdAt)}</span>
-              <span class="pending">pending</span>
+              <span class="pending">{t.home.pending}</span>
             </div>
             <div class="title">{k.name} <span class="energy">· {energyLabel(k)}</span></div>
             {#if k.location}<div class="faint loc">{k.location}</div>{/if}
             <div class="faint meta">
-              {#if titled}{fmtFull(rec.createdAt)} · {/if}{s.clients} client{s.clients === 1 ? "" : "s"} · {eur(s.rounded)}
+              {#if titled}{fmtFull(rec.createdAt)} · {/if}{t.home.clients(s.clients)} · {eur(s.rounded)}
             </div>
           </div>
           <button
             class="del"
             class:armed={confirmDelete === rec.id}
-            aria-label="Delete firing"
-            title={confirmDelete === rec.id ? "Click again to delete" : "Delete firing"}
+            aria-label={t.home.deleteFiring}
+            title={confirmDelete === rec.id ? t.home.clickAgainToDelete : t.home.deleteFiring}
             onclick={(e) => { e.stopPropagation(); if (confirmDelete === rec.id) { deleteFiring(rec.id); confirmDelete = null; } else confirmDelete = rec.id; }}
           >
             ×
@@ -110,11 +111,11 @@
       {#if !picking}
         <button class="new-firing" onclick={startNew}>
           <span class="plus">+</span>
-          <span>Start new firing</span>
+          <span>{t.home.startNewFiring}</span>
         </button>
       {:else}
         <div class="picker">
-          <span class="col-title center-t">Choose a kiln</span>
+          <span class="col-title center-t">{t.home.chooseAKiln}</span>
           <div class="kilns">
             {#each kilnStore.list as k (k.id)}
               <button class="kiln-card" onclick={() => newFiring(k.id)}>
@@ -124,7 +125,7 @@
               </button>
             {/each}
           </div>
-          <button class="cancel" onclick={() => (picking = false)}>Cancel</button>
+          <button class="cancel" onclick={() => (picking = false)}>{t.home.cancel}</button>
         </div>
       {/if}
     </div>
@@ -133,11 +134,11 @@
 
   <!-- Firing log -->
   <section class="col panel">
-    <span class="col-title">Firing log</span>
+    <span class="col-title">{t.home.firingLog}</span>
 
     <div class="list">
       {#if closed.length === 0}
-        <p class="faint empty">Closed firings will appear here.</p>
+        <p class="faint empty">{t.home.closedFiringsWillAppear}</p>
       {/if}
       {#each closed as rec (rec.id)}
         {@const k = kilnOf(rec)}
@@ -155,16 +156,16 @@
     </div>
 
     <!-- Month review: running total this month, anchored at the bottom -->
-    <button class="review" onclick={() => go("expenses")} title="Ver Expenses">
+    <button class="review" onclick={() => go("expenses")} title={t.home.viewExpenses}>
       <div class="rv-top">
         <span class="rv-month">{monthName}</span>
-        <span class="rv-days">{daysLeft === 0 ? "último día" : `${daysLeft} días restantes`}</span>
+        <span class="rv-days">{t.home.monthDaysLeft(daysLeft)}</span>
       </div>
-      <div class="rv-net">{eur(review?.net ?? 0)}<span class="rv-netl"> neto</span></div>
+      <div class="rv-net">{eur(review?.net ?? 0)}<span class="rv-netl"> {t.home.monthNet}</span></div>
       <div class="rv-stats">
-        <span>{monthFirings} {monthFirings === 1 ? "horneada" : "horneadas"}</span>
+        <span>{t.home.monthFirings(monthFirings)}</span>
         <span class="dot">·</span>
-        <span>{eur(review?.revenue ?? 0)} facturado</span>
+        <span>{eur(review?.revenue ?? 0)} {t.home.monthBilled}</span>
       </div>
     </button>
   </section>

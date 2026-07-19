@@ -11,6 +11,7 @@
   } from "../lib/kilns.svelte";
   import { app } from "../lib/firing.svelte";
   import { settings, fuelDefFor, fuelKeyForKiln, fuelCostFor } from "../lib/settings.svelte";
+  import { t } from "../lib/i18n.svelte";
   import { eur } from "../lib/format";
   import KilnThumb from "../components/KilnThumb.svelte";
   import PostCylinder from "../components/PostCylinder.svelte";
@@ -32,14 +33,14 @@
   });
   const persist = (): void => saveKilns();
 
-  const energyOptions: { key: KilnEnergy; label: string }[] = [
-    { key: "electric", label: "Electric" },
-    { key: "gas", label: "Gas" },
-    { key: "wood", label: "Wood" },
-    { key: "other", label: "Other" },
-  ];
+  const energyOptions = $derived<{ key: KilnEnergy; label: string }[]>([
+    { key: "electric", label: t.kilnProfiles.energyElectric },
+    { key: "gas", label: t.kilnProfiles.energyGas },
+    { key: "wood", label: t.kilnProfiles.energyWood },
+    { key: "other", label: t.kilnProfiles.energyOther },
+  ]);
   const energyLabel = (k: (typeof kilnStore.list)[number]): string =>
-    k.energy === "gas" ? (k.gasType === "butane" ? "Butane" : "Propane") : fuelDefFor(k).label;
+    k.energy === "gas" ? (k.gasType === "butane" ? t.kilnProfiles.gasButane : t.kilnProfiles.gasPropane) : fuelDefFor(k).label;
 
   const dimsLabel = (k: (typeof kilnStore.list)[number]): string =>
     k.shape === "cylinder" ? `${k.diameterCm ?? 0} cm Ø` : `${k.widthCm ?? 0} × ${k.depthCm ?? 0} cm`;
@@ -116,8 +117,8 @@
 
 {#if !editing}
   <div class="wrap">
-    <span class="screen-title">Kiln Profiles</span>
-    <p class="faint sub">Your kilns. Prices and costs are per kiln — you don't charge every kiln the same.</p>
+    <span class="screen-title">{t.kilnProfiles.title}</span>
+    <p class="faint sub">{t.kilnProfiles.subtitle}</p>
     <div class="grid">
       {#each kilnStore.list as k (k.id)}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -137,7 +138,7 @@
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <div class="kcard new" role="button" tabindex="0" onclick={openNew}>
         <span class="plus">+</span>
-        <span>New kiln</span>
+        <span>{t.kilnProfiles.newKiln}</span>
       </div>
     </div>
   </div>
@@ -146,30 +147,30 @@
     {@const fuel = fuelDefFor(editing)}
     <div class="editor">
       <div class="ehead">
-        <button class="back" onclick={() => { editingId = null; confirmDelete = false; }}>← All kilns</button>
+        <button class="back" onclick={() => { editingId = null; confirmDelete = false; }}>{t.kilnProfiles.allKilns}</button>
         {#if confirmDelete}
-          <button class="del confirm" onclick={doDelete}>Delete “{editing.name}” — confirm?</button>
+          <button class="del confirm" onclick={doDelete}>{t.kilnProfiles.deleteConfirm(editing.name)}</button>
         {:else}
-          <button class="del" onclick={() => (confirmDelete = true)}>Delete kiln</button>
+          <button class="del" onclick={() => (confirmDelete = true)}>{t.kilnProfiles.deleteKiln}</button>
         {/if}
       </div>
 
       <div class="cols">
         <!-- Properties -->
         <section class="side">
-          <span class="side-title">Properties</span>
+          <span class="side-title">{t.kilnProfiles.properties}</span>
 
           <label class="field">
-            <span class="fl">Name</span>
+            <span class="fl">{t.kilnProfiles.fieldName}</span>
             <input bind:value={editing.name} onchange={persist} />
           </label>
           <label class="field">
-            <span class="fl">Location <span class="opt">optional</span></span>
-            <input bind:value={editing.location} onchange={persist} placeholder="e.g. Back studio" />
+            <span class="fl">{t.kilnProfiles.fieldLocation} <span class="opt">{t.kilnProfiles.fieldLocationOptional}</span></span>
+            <input bind:value={editing.location} onchange={persist} placeholder={t.kilnProfiles.fieldLocationPlaceholder} />
           </label>
 
           <div class="field">
-            <span class="fl">Energy</span>
+            <span class="fl">{t.kilnProfiles.energy}</span>
             <div class="seg four">
               {#each energyOptions as o (o.key)}
                 <button class:active={(editing.energy ?? "other") === o.key} onclick={() => setEnergy(o.key)}>{o.label}</button>
@@ -177,58 +178,58 @@
             </div>
             {#if editing.energy === "gas"}
               <div class="seg sub">
-                <button class:active={editing.gasType !== "butane"} onclick={() => { editing.gasType = "propane"; persist(); }}>Propane</button>
-                <button class:active={editing.gasType === "butane"} onclick={() => { editing.gasType = "butane"; persist(); }}>Butane</button>
+                <button class:active={editing.gasType !== "butane"} onclick={() => { editing.gasType = "propane"; persist(); }}>{t.kilnProfiles.gasPropane}</button>
+                <button class:active={editing.gasType === "butane"} onclick={() => { editing.gasType = "butane"; persist(); }}>{t.kilnProfiles.gasButane}</button>
               </div>
             {/if}
           </div>
 
           <div class="field">
-            <span class="fl">Shape</span>
+            <span class="fl">{t.kilnProfiles.shape}</span>
             <div class="seg">
-              <button class:active={editing.shape === "cylinder"} onclick={() => setShape("cylinder")}>Cylinder</button>
-              <button class:active={editing.shape === "box"} onclick={() => setShape("box")}>Box</button>
+              <button class:active={editing.shape === "cylinder"} onclick={() => setShape("cylinder")}>{t.kilnProfiles.shapeCylinder}</button>
+              <button class:active={editing.shape === "box"} onclick={() => setShape("box")}>{t.kilnProfiles.shapeBox}</button>
             </div>
           </div>
 
           <div class="row2">
             {#if editing.shape === "cylinder"}
               <label class="field">
-                <span class="fl">Diameter (cm)</span>
+                <span class="fl">{t.kilnProfiles.diameterCm}</span>
                 <input type="number" min="1" bind:value={editing.diameterCm} onchange={persist} />
               </label>
             {:else}
               <label class="field">
-                <span class="fl">Width (cm)</span>
+                <span class="fl">{t.kilnProfiles.widthCm}</span>
                 <input type="number" min="1" bind:value={editing.widthCm} onchange={persist} />
               </label>
               <label class="field">
-                <span class="fl">Depth (cm)</span>
+                <span class="fl">{t.kilnProfiles.depthCm}</span>
                 <input type="number" min="1" bind:value={editing.depthCm} onchange={persist} />
               </label>
             {/if}
             <label class="field">
-              <span class="fl">Usable height (cm)</span>
+              <span class="fl">{t.kilnProfiles.usableHeightCm}</span>
               <input type="number" min="1" bind:value={editing.usableHeightCm} onchange={persist} />
             </label>
           </div>
 
           <div class="volbox">
-            <span class="fl">Loadable volume</span>
+            <span class="fl">{t.kilnProfiles.loadableVolume}</span>
             <span class="vol">{kilnVolumeL(editing).toFixed(1)} L</span>
           </div>
 
           <label class="field">
-            <span class="fl">Shelf thickness (cm)</span>
+            <span class="fl">{t.kilnProfiles.shelfThicknessCm}</span>
             <input type="number" min="0" step="0.1" bind:value={editing.defaultShelfThicknessCm} onchange={persist} />
           </label>
 
           <div class="field">
-            <span class="fl">Standard post heights</span>
+            <span class="fl">{t.kilnProfiles.standardPostHeights}</span>
             <div class="posts">
               {#each editing.standardPostHeightsCm as p, i (i)}
                 <div class="postcard">
-                  <button class="postx" onclick={() => removePost(i)} disabled={editing.standardPostHeightsCm.length <= 1} aria-label="Remove post">×</button>
+                  <button class="postx" onclick={() => removePost(i)} disabled={editing.standardPostHeightsCm.length <= 1} aria-label={t.kilnProfiles.removePost}>×</button>
                   <PostCylinder cm={p} />
                   <div class="postval">
                     <input type="number" min="1" value={p} onchange={(e) => setPost(i, parseFloat(e.currentTarget.value))} />
@@ -236,23 +237,20 @@
                   </div>
                 </div>
               {/each}
-              <button class="postadd" onclick={addPost}>＋<span>Add post</span></button>
+              <button class="postadd" onclick={addPost}>＋<span>{t.kilnProfiles.addPost}</span></button>
             </div>
           </div>
         </section>
 
         <!-- Pricing -->
         <section class="side">
-          <span class="side-title">Pricing &amp; costs</span>
+          <span class="side-title">{t.kilnProfiles.pricingAndCosts}</span>
 
           <div class="field">
-            <span class="fl">Services <span class="opt">price + fuel used per firing</span></span>
-            <div class="fuelnote faint">
-              Fuel: <b>{fuel.label}</b> · {eur(fuel.price)}/{fuel.unit} — update in Home / App Settings.
-              Cost = fuel used × this price.
-            </div>
+            <span class="fl">{t.kilnProfiles.services} <span class="opt">{t.kilnProfiles.servicesHint}</span></span>
+            <div class="fuelnote faint">{@html t.kilnProfiles.fuelNote(fuel.label, eur(fuel.price), fuel.unit)}</div>
             <div class="srow shead">
-              <span>Service</span><span class="r">Price</span><span class="r">Fuel ({fuel.unit})</span><span class="r">= fuel</span><span></span>
+              <span>{t.kilnProfiles.tableService}</span><span class="r">{t.kilnProfiles.tablePrice}</span><span class="r">{t.kilnProfiles.tableFuel(fuel.unit)}</span><span class="r">{t.kilnProfiles.tableFuelCost}</span><span></span>
             </div>
             {#each editing.services as s (s.id)}
               <div class="srow">
@@ -260,14 +258,14 @@
                 <div class="money"><input type="number" min="0" step="0.5" bind:value={s.basePrice} onchange={persist} /><span class="cur">€</span></div>
                 <input class="num" type="number" min="0" step="0.1" bind:value={s.fuelUse} onchange={persist} />
                 <span class="fcost">{eur(fuelCostFor(editing, s.fuelUse ?? 0))}</span>
-                <button class="x" onclick={() => removeService(s.id)} disabled={editing.services.length <= 1} aria-label="Remove">×</button>
+                <button class="x" onclick={() => removeService(s.id)} disabled={editing.services.length <= 1} aria-label={t.kilnProfiles.removeService}>×</button>
               </div>
             {/each}
-            <button class="add" onclick={addService}>+ Add service</button>
+            <button class="add" onclick={addService}>{t.kilnProfiles.addService}</button>
           </div>
 
           <div class="field">
-            <span class="fl">Fixed costs <span class="opt">flat per firing — internal margin only</span></span>
+            <span class="fl">{t.kilnProfiles.fixedCosts} <span class="opt">{t.kilnProfiles.fixedCostsHint}</span></span>
             <div class="rows">
               {#each editing.defaultCostItems as c, i (i)}
                 <div class="lrow">
@@ -280,17 +278,17 @@
                   {#if isBuiltin(c.name)}
                     <span class="xspace"></span>
                   {:else}
-                    <button class="x" onclick={() => removeCost(i)} aria-label="Remove">×</button>
+                    <button class="x" onclick={() => removeCost(i)} aria-label={t.kilnProfiles.removeCost}>×</button>
                   {/if}
                 </div>
               {/each}
             </div>
-            <button class="add" onclick={addCost}>+ Add fixed cost</button>
+            <button class="add" onclick={addCost}>{t.kilnProfiles.addFixedCost}</button>
           </div>
 
           <div class="field">
-            <span class="fl">Price modifiers <span class="opt">surcharges &amp; discounts · full-kiln or per-client</span></span>
-            <button class="modbtn" onclick={() => (modsOpen = true)}>Kiln Price Modifiers</button>
+            <span class="fl">{t.kilnProfiles.priceModifiers} <span class="opt">{t.kilnProfiles.priceModifiersHint}</span></span>
+            <button class="modbtn" onclick={() => (modsOpen = true)}>{t.kilnProfiles.kilnPriceModifiers}</button>
           </div>
         </section>
       </div>

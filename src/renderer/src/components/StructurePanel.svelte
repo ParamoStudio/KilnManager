@@ -22,6 +22,7 @@
     closeActiveFiring,
   } from "../lib/firing.svelte";
   import { settings } from "../lib/settings.svelte";
+  import { t } from "../lib/i18n.svelte";
   import { eur, pct } from "../lib/format";
   import PriceSummary from "./PriceSummary.svelte";
 
@@ -62,15 +63,15 @@
 
 <div class="rail">
   <div class="block">
-    <span class="label">Firing</span>
-    <input class="title" value={title} placeholder="Untitled firing" oninput={(e) => setActiveTitle(e.currentTarget.value)} />
+    <span class="label">{t.structurePanel.firing}</span>
+    <input class="title" value={title} placeholder={t.structurePanel.titlePlaceholder} oninput={(e) => setActiveTitle(e.currentTarget.value)} />
     <span class="faint sub">
       {kiln.name} · {kiln.shape === "cylinder" ? `${kiln.diameterCm} cm Ø` : `${kiln.widthCm}×${kiln.depthCm} cm`} · {kiln.usableHeightCm} cm
     </span>
   </div>
 
   <div class="block">
-    <span class="label">Firing service</span>
+    <span class="label">{t.structurePanel.firingService}</span>
     <div class="acc">
       <button class="acc-head" onclick={() => (svcOpen = !svcOpen)}>
         <span class="svc-name">{svc.name}</span>
@@ -91,11 +92,11 @@
   </div>
 
   <div class="block">
-    <span class="label">Price Modifiers</span>
+    <span class="label">{t.structurePanel.priceModifiers}</span>
 
     <!-- Full-kiln: tick any combination -->
     <button class="acc-btn" onclick={() => (kilnOpen = !kilnOpen)}>
-      <span>Kiln Modifier</span><span class="chev" class:open={kilnOpen}>⌄</span>
+      <span>{t.structurePanel.kilnModifier}</span><span class="chev" class:open={kilnOpen}>⌄</span>
     </button>
     {#if kilnOpen}
       <div class="acc-body">
@@ -106,11 +107,11 @@
             <span class="amt">{signGlyph(m)}{fmtMod(m)}</span>
           </button>
         {/each}
-        {#if fullKilnMods().length === 0}<span class="faint none">None defined for this kiln.</span>{/if}
+        {#if fullKilnMods().length === 0}<span class="faint none">{t.structurePanel.noneDefinedForKiln}</span>{/if}
 
         <button class="mod" onclick={() => (customOpen = !customOpen)}>
           <span class="box" class:checked={!!planner.customDiscount}></span>
-          <span class="ml">Custom discount</span>
+          <span class="ml">{t.structurePanel.customDiscount}</span>
           {#if planner.customDiscount}
             <span class="amt">−{planner.customDiscount.mode === "percent" ? `${planner.customDiscount.value}%` : eur(planner.customDiscount.value)}</span>
           {/if}
@@ -122,8 +123,8 @@
               <button class:active={customMode === "percent"} onclick={() => (customMode = "percent")}>%</button>
               <button class:active={customMode === "fixed"} onclick={() => (customMode = "fixed")}>€</button>
             </div>
-            <button class="applyc" onclick={applyCustom}>Apply</button>
-            {#if planner.customDiscount}<button class="clearc" onclick={clearCustomDiscount} aria-label="Clear">×</button>{/if}
+            <button class="applyc" onclick={applyCustom}>{t.structurePanel.apply}</button>
+            {#if planner.customDiscount}<button class="clearc" onclick={clearCustomDiscount} aria-label={t.structurePanel.clear}>×</button>{/if}
           </div>
         {/if}
       </div>
@@ -131,7 +132,7 @@
 
     <!-- Client-scope: pick a client's shelf to apply -->
     <button class="acc-btn" onclick={() => (clientOpen = !clientOpen)}>
-      <span>Client Modifier</span><span class="chev" class:open={clientOpen}>⌄</span>
+      <span>{t.structurePanel.clientModifier}</span><span class="chev" class:open={clientOpen}>⌄</span>
     </button>
     {#if clientOpen}
       <div class="acc-body">
@@ -141,14 +142,14 @@
             <span class="amt">{signGlyph(m)}{fmtMod(m)}</span>
           </button>
         {/each}
-        {#if clientScopeMods().length === 0}<span class="faint none">None defined for this kiln.</span>{/if}
-        {#if ui.pendingClientMod}<span class="hint faint">Click a client's shelf in the kiln to apply.</span>{/if}
+        {#if clientScopeMods().length === 0}<span class="faint none">{t.structurePanel.noneDefinedForKiln}</span>{/if}
+        {#if ui.pendingClientMod}<span class="hint faint">{t.structurePanel.clickShelfToApply}</span>{/if}
       </div>
     {/if}
 
     <!-- Partners: pick a partner + tier (a cut of the gross profit) -->
     <button class="acc-btn" onclick={() => (partnersOpen = !partnersOpen)}>
-      <span>Partners</span><span class="chev" class:open={partnersOpen}>⌄</span>
+      <span>{t.structurePanel.partners}</span><span class="chev" class:open={partnersOpen}>⌄</span>
     </button>
     {#if partnersOpen}
       <div class="acc-body">
@@ -156,16 +157,16 @@
           <div class="partner-row">
             <span class="pname">{p.name}</span>
             <div class="tierchips">
-              {#each p.tiers as t (t.id)}
-                <button class="tier" class:active={partnerTierActive(p.id, t.id)} onclick={() => togglePartnerTier(p.id, t.id)}>
-                  {t.name} <span class="tpct">{pct(t.pct)}</span>
+              {#each p.tiers as tier (tier.id)}
+                <button class="tier" class:active={partnerTierActive(p.id, tier.id)} onclick={() => togglePartnerTier(p.id, tier.id)}>
+                  {tier.name} <span class="tpct">{pct(tier.pct)}</span>
                 </button>
               {/each}
-              {#if p.tiers.length === 0}<span class="faint none">No tiers</span>{/if}
+              {#if p.tiers.length === 0}<span class="faint none">{t.structurePanel.noTiers}</span>{/if}
             </div>
           </div>
         {/each}
-        {#if settings.partners.length === 0}<span class="faint none">No partners — add them in App Settings.</span>{/if}
+        {#if settings.partners.length === 0}<span class="faint none">{t.structurePanel.noPartnersAddInSettings}</span>{/if}
       </div>
     {/if}
   </div>
@@ -173,7 +174,7 @@
   <div class="foot">
     <PriceSummary {result} />
     <button class="close" class:confirming onclick={closeClick}>
-      {confirming ? "Click again to confirm — closes the firing" : "Confirm firing & invoice"}
+      {confirming ? t.structurePanel.confirmClose : t.structurePanel.confirmFiring}
     </button>
   </div>
 </div>

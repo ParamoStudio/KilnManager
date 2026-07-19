@@ -2,6 +2,7 @@
   import { monthlyData } from "../lib/expenses.svelte";
   import { setPaid } from "../lib/payments.svelte";
   import { eur, fmtDay } from "../lib/format";
+  import { t, localeTag } from "../lib/i18n.svelte";
   import { outputs, isDesktop } from "../lib/storage";
 
   const months = $derived(monthlyData());
@@ -11,7 +12,7 @@
   let confirmUncheck = $state<string | null>(null); // partnerId awaiting confirm
 
   const fmtPaid = (iso: string): string =>
-    iso ? new Date(iso + "T12:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" }) : "";
+    iso ? new Date(iso + "T12:00:00").toLocaleDateString(localeTag(), { day: "numeric", month: "short", year: "numeric" }) : "";
 
   // Persist the workbooks whenever they might have changed (desktop only).
   function syncWorkbooks(): void {
@@ -40,20 +41,16 @@
 <div class="wrap">
   <div class="head">
     <div>
-      <span class="screen-title">Expenses</span>
-      <p class="faint sub">
-        Los costes de cada horno, mes a mes — leídos de tus horneadas cerradas. Cada mes se guarda
-        como su propio <code>.xlsx</code> en la carpeta <code>Expenses Log</code>, actualizándose en
-        cada horneada.
-      </p>
+      <span class="screen-title">{t.expenses.title}</span>
+      <p class="faint sub">{@html t.expenses.subtitle}</p>
     </div>
-    <button class="xbtn" onclick={reveal} disabled={!isDesktop || months.length === 0}>Ver en Finder</button>
+    <button class="xbtn" onclick={reveal} disabled={!isDesktop || months.length === 0}>{t.expenses.revealInFinder}</button>
   </div>
 
   {#if months.length === 0}
     <div class="empty">
-      <p>Aún no hay horneadas cerradas.</p>
-      <p class="faint">Cuando cierres una horneada, sus costes aparecerán aquí.</p>
+      <p>{t.expenses.noFiringsClosed}</p>
+      <p class="faint">{t.expenses.noFiringsClosedHint}</p>
     </div>
   {:else}
     <div class="cols">
@@ -70,16 +67,16 @@
       {#if month}
         <div class="body">
           <div class="ktotals">
-            <div class="kt"><span class="ktl">Ingresos</span><span class="ktv">{eur(month.revenue)}</span></div>
-            <div class="kt"><span class="ktl">Costes</span><span class="ktv">{eur(month.kilnCosts)}</span></div>
-            <div class="kt"><span class="ktl">Bruto</span><span class="ktv">{eur(month.grossProfit)}</span></div>
-            <div class="kt strong"><span class="ktl">Neto</span><span class="ktv">{eur(month.net)}</span></div>
+            <div class="kt"><span class="ktl">{t.expenses.revenue}</span><span class="ktv">{eur(month.revenue)}</span></div>
+            <div class="kt"><span class="ktl">{t.expenses.costs}</span><span class="ktv">{eur(month.kilnCosts)}</span></div>
+            <div class="kt"><span class="ktl">{t.expenses.gross}</span><span class="ktv">{eur(month.grossProfit)}</span></div>
+            <div class="kt strong"><span class="ktl">{t.expenses.net}</span><span class="ktv">{eur(month.net)}</span></div>
           </div>
 
           <!-- Partner debt — prominent -->
           {#if month.partners.length}
             <section class="partners">
-              <span class="secl">Debes este mes</span>
+              <span class="secl">{t.expenses.youOweThisMonth}</span>
               <div class="pgrid">
                 {#each month.partners as p (p.partnerId)}
                   <div class="pcard" class:paid={p.paid}>
@@ -96,19 +93,19 @@
                     {/if}
 
                     {#if !p.paid}
-                      <button class="markbtn" onclick={() => markPaid(p.partnerId)}>Marcar como pagado</button>
+                      <button class="markbtn" onclick={() => markPaid(p.partnerId)}>{t.expenses.markPaid}</button>
                     {:else if confirmUncheck === p.partnerId}
                       <div class="confirm">
-                        <span class="ctxt">¿Marcar como pendiente?</span>
+                        <span class="ctxt">{t.expenses.unmarkConfirm}</span>
                         <div class="crow">
-                          <button class="cbtn yes" onclick={() => markPending(p.partnerId)}>Sí</button>
-                          <button class="cbtn" onclick={() => (confirmUncheck = null)}>No</button>
+                          <button class="cbtn yes" onclick={() => markPending(p.partnerId)}>{t.expenses.yes}</button>
+                          <button class="cbtn" onclick={() => (confirmUncheck = null)}>{t.expenses.no}</button>
                         </div>
                       </div>
                     {:else}
-                      <button class="paidrow" onclick={() => (confirmUncheck = p.partnerId)} title="Deshacer">
+                      <button class="paidrow" onclick={() => (confirmUncheck = p.partnerId)} title={t.expenses.undo}>
                         <span class="pcheck">✓</span>
-                        <span class="ptxt">Pagado{p.paidAt ? ` · ${fmtPaid(p.paidAt)}` : ""}</span>
+                        <span class="ptxt">{p.paidAt ? t.expenses.paidOn(fmtPaid(p.paidAt)) : t.expenses.paid}</span>
                       </button>
                     {/if}
                   </div>
@@ -127,11 +124,11 @@
                 </div>
                 <div class="table">
                   <div class="tr th">
-                    <span>Horneada</span>
-                    <span class="r">Ingresos</span>
-                    <span class="r">Coste</span>
-                    <span class="r">Bruto</span>
-                    <span class="r">Neto</span>
+                    <span>{t.expenses.firing}</span>
+                    <span class="r">{t.expenses.revenue}</span>
+                    <span class="r">{t.expenses.costs}</span>
+                    <span class="r">{t.expenses.gross}</span>
+                    <span class="r">{t.expenses.net}</span>
                   </div>
                   {#each k.firings as f (f.id)}
                     <div class="tr">
@@ -146,7 +143,7 @@
                     </div>
                   {/each}
                   <div class="tr total">
-                    <span>Total del mes</span>
+                    <span>{t.expenses.totalThisMonth}</span>
                     <span class="r">{eur(k.revenue)}</span>
                     <span class="r dim">{eur(k.kilnCosts)}</span>
                     <span class="r">{eur(k.grossProfit)}</span>
@@ -187,7 +184,7 @@
     max-width: 66ch;
     line-height: 1.55;
   }
-  .sub code {
+  .sub :global(code) {
     font-size: 12px;
     background: var(--panel-2);
     border-radius: 5px;

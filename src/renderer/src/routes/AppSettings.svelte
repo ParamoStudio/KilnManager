@@ -16,6 +16,17 @@
   } from "../lib/settings.svelte";
   import { eur, num, fmtDay } from "../lib/format";
   import { vault, isDesktop } from "../lib/storage";
+  import {
+    t,
+    LOCALES,
+    CURRENCIES,
+    getLocale,
+    setLocale,
+    getCurrency,
+    setCurrency,
+    type Locale,
+    type Currency,
+  } from "../lib/i18n.svelte";
   import { onMount } from "svelte";
   import CustomizeTicket from "../components/CustomizeTicket.svelte";
 
@@ -41,18 +52,14 @@
 </script>
 
 <div class="wrap">
-  <span class="screen-title">App Settings</span>
-  <p class="faint sub">Studio-wide settings. Kiln-specific prices and costs live in Kiln Profiles.</p>
+  <span class="screen-title">{t.appSettings.title}</span>
+  <p class="faint sub">{t.appSettings.subtitle}</p>
 
   <div class="cols">
     <!-- Complexity -->
     <section class="side">
-      <span class="side-title">Complexity factors</span>
-      <p class="faint explain">
-        Every piece counts as its shelf volume <b>×</b> its complexity factor — that's its
-        <b>KLU</b> (kiln-load unit). A firing's price is split across everyone by their share of
-        the total KLU, so a trickier load fairly carries a bit more.
-      </p>
+      <span class="side-title">{t.appSettings.complexityFactors}</span>
+      <p class="faint explain">{@html t.appSettings.complexityExplain}</p>
       <div class="rows">
         {#each complexityKeys as key (key)}
           <div class="lrow">
@@ -64,13 +71,10 @@
           </div>
         {/each}
       </div>
-      <button class="reset" onclick={resetComplexity}>Reset to defaults (1.00 / 1.15 / 1.30)</button>
+      <button class="reset" onclick={resetComplexity}>{t.appSettings.resetDefaults}</button>
 
-      <span class="side-title mt">Fuel prices</span>
-      <p class="faint explain">
-        The volatile part of each firing's cost. Set the current price per unit; it multiplies each
-        service's fuel use. You can also update these quickly from Home when you buy.
-      </p>
+      <span class="side-title mt">{t.appSettings.fuelPrices}</span>
+      <p class="faint explain">{t.appSettings.fuelPricesExplain}</p>
       <div class="ftable">
         {#each FUEL_KINDS as fk (fk)}
           {@const f = settings.fuels[fk]}
@@ -89,40 +93,51 @@
         </div>
       {/if}
 
-      <span class="side-title mt">Electricity pricing</span>
-      <p class="faint explain">
-        Adaptive tariffs change through the day, so we can't be exact — pick how you price it. The
-        result feeds every electric kiln. For the truest figure, take it from your bill.
-      </p>
+      <span class="side-title mt">{t.appSettings.electricityPricing}</span>
+      <p class="faint explain">{t.appSettings.electricityExplain}</p>
       <div class="segmented">
-        <button class:on={settings.electricityMode === "fixed"} onclick={() => setElectricityMode("fixed")}>Fixed</button>
-        <button class:on={settings.electricityMode === "adaptive"} onclick={() => setElectricityMode("adaptive")}>Adaptive average</button>
+        <button class:on={settings.electricityMode === "fixed"} onclick={() => setElectricityMode("fixed")}>{t.appSettings.fixed}</button>
+        <button class:on={settings.electricityMode === "adaptive"} onclick={() => setElectricityMode("adaptive")}>{t.appSettings.adaptiveAverage}</button>
       </div>
       {#if settings.electricityMode === "adaptive"}
         <div class="band">
-          <label class="bandf"><span>Low</span>
+          <label class="bandf"><span>{t.appSettings.low}</span>
             <input type="number" min="0" step="0.01" value={settings.electricityLow}
               onchange={(e) => setElectricityBounds(parseFloat(e.currentTarget.value), settings.electricityHigh)} /></label>
-          <label class="bandf"><span>High</span>
+          <label class="bandf"><span>{t.appSettings.high}</span>
             <input type="number" min="0" step="0.01" value={settings.electricityHigh}
               onchange={(e) => setElectricityBounds(settings.electricityLow, parseFloat(e.currentTarget.value))} /></label>
           <span class="mid">≈ {num(settings.fuels.electricity.price, 3)} €/kWh</span>
         </div>
       {:else}
-        <p class="faint small">Set the €/kWh directly in the fuel table above (from your bill).</p>
+        <p class="faint small">{t.appSettings.fixedHint}</p>
       {/if}
 
+      <span class="side-title mt">{t.appSettings.displayTitle}</span>
+      <p class="faint explain">{t.appSettings.displayExplain}</p>
+      <div class="disprow">
+        <label class="dispf"><span>{t.appSettings.language}</span>
+          <select value={getLocale()} onchange={(e) => setLocale(e.currentTarget.value as Locale)}>
+            {#each LOCALES as l (l.code)}<option value={l.code}>{l.label}</option>{/each}
+          </select>
+        </label>
+        <label class="dispf"><span>{t.appSettings.currency}</span>
+          <select value={getCurrency()} onchange={(e) => setCurrency(e.currentTarget.value as Currency)}>
+            {#each CURRENCIES as c (c.code)}<option value={c.code}>{c.label}</option>{/each}
+          </select>
+        </label>
+      </div>
+      <p class="faint small">{t.appSettings.currencyHint}</p>
+
       {#if isDesktop}
-        <span class="side-title mt">Data folder</span>
-        <p class="faint explain">
-          Everything is stored as plain JSON files here — yours to open, back up, or move.
-        </p>
+        <span class="side-title mt">{t.appSettings.dataFolder}</span>
+        <p class="faint explain">{t.appSettings.dataFolderExplain}</p>
         <div class="vault">
           <code class="vpath">{vaultPath ?? "—"}</code>
           <div class="vrow">
-            <button class="vbtn" onclick={() => vault.reveal()}>Reveal in Finder</button>
-            <button class="vbtn" onclick={() => changeVault("locate")}>Locate existing…</button>
-            <button class="vbtn" onclick={() => changeVault("create")}>Move / new…</button>
+            <button class="vbtn" onclick={() => vault.reveal()}>{t.appSettings.revealInFinder}</button>
+            <button class="vbtn" onclick={() => changeVault("locate")}>{t.appSettings.locateExisting}</button>
+            <button class="vbtn" onclick={() => changeVault("create")}>{t.appSettings.moveOrNew}</button>
           </div>
         </div>
       {/if}
@@ -130,46 +145,39 @@
 
     <!-- Partners -->
     <section class="side">
-      <span class="side-title">Partners</span>
-      <p class="faint explain">
-        Collaborators who take an agreed cut of the gross profit, each with named tiers (e.g.
-        their client vs. your client). Shown only in your internal breakdown. Mark a tier with
-        ★ to apply it by default on every new firing (uncheck it per firing if needed).
-      </p>
+      <span class="side-title">{t.appSettings.partners}</span>
+      <p class="faint explain">{t.appSettings.partnersExplain}</p>
       <div class="partners">
         {#each settings.partners as p (p.id)}
           <div class="partner">
             <div class="prow">
               <input class="pname" bind:value={p.name} onchange={persist} />
-              <button class="x" onclick={() => removePartner(p.id)} aria-label="Remove partner">×</button>
+              <button class="x" onclick={() => removePartner(p.id)} aria-label={t.appSettings.removePartner}>×</button>
             </div>
             <div class="tiers">
-              {#each p.tiers as t (t.id)}
+              {#each p.tiers as tier (tier.id)}
                 <div class="tier">
-                  <input class="grow" bind:value={t.name} onchange={persist} />
+                  <input class="grow" bind:value={tier.name} onchange={persist} />
                   <div class="fac">
-                    <input type="number" min="0" max="100" step="1" value={Math.round(t.pct * 100)} onchange={(e) => setPct(t, e.currentTarget.value)} />
+                    <input type="number" min="0" max="100" step="1" value={Math.round(tier.pct * 100)} onchange={(e) => setPct(tier, e.currentTarget.value)} />
                     <span class="pct">%</span>
                   </div>
-                  <button class="star" class:on={t.default} onclick={() => setDefaultTier(p.id, t.id)} title="Apply by default on new firings">{t.default ? "★" : "☆"}</button>
-                  <button class="x" onclick={() => removeTier(p.id, t.id)} aria-label="Remove tier">×</button>
+                  <button class="star" class:on={tier.default} onclick={() => setDefaultTier(p.id, tier.id)} title={t.appSettings.starTitle}>{tier.default ? "★" : "☆"}</button>
+                  <button class="x" onclick={() => removeTier(p.id, tier.id)} aria-label={t.appSettings.removeTier}>×</button>
                 </div>
               {/each}
-              {#if p.tiers.length === 0}<p class="faint none">No tiers yet.</p>{/if}
+              {#if p.tiers.length === 0}<p class="faint none">{t.appSettings.noTiersYet}</p>{/if}
             </div>
-            <button class="add sm" onclick={() => addTier(p.id)}>+ Add tier</button>
+            <button class="add sm" onclick={() => addTier(p.id)}>{t.appSettings.addTier}</button>
           </div>
         {/each}
-        {#if settings.partners.length === 0}<p class="faint none">No partners yet.</p>{/if}
+        {#if settings.partners.length === 0}<p class="faint none">{t.appSettings.noPartnersYet}</p>{/if}
       </div>
-      <button class="add" onclick={addPartner}>+ Add partner</button>
+      <button class="add" onclick={addPartner}>{t.appSettings.addPartner}</button>
 
-      <span class="side-title mt">Client ticket</span>
-      <p class="faint explain">
-        Your logos, workshop name, a printed note and the message you send — with a live preview
-        of the ticket your clients receive.
-      </p>
-      <button class="customize" onclick={() => (customizing = true)}>Customize Client Ticket…</button>
+      <span class="side-title mt">{t.appSettings.clientTicket}</span>
+      <p class="faint explain">{t.appSettings.clientTicketExplain}</p>
+      <button class="customize" onclick={() => (customizing = true)}>{t.appSettings.customizeClientTicket}</button>
     </section>
   </div>
 </div>
@@ -308,6 +316,31 @@
   }
   .small {
     font-size: 11.5px;
+  }
+  .disprow {
+    display: flex;
+    gap: 12px;
+  }
+  .dispf {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-dim);
+    flex: 1;
+  }
+  .dispf select {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+  }
+  .dispf select:focus {
+    outline: none;
+    border-color: var(--text-faint);
   }
   .fac {
     display: flex;

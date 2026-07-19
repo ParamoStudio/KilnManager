@@ -4,6 +4,7 @@ import { kilnStore, loadKilns } from "./kilns.svelte";
 import { type ComplexityKey } from "./complexity";
 import { cx, loadSettings, fuelCostFor, fuelDefFor, resolvePartner, defaultTierRef } from "./settings.svelte";
 import { loadPayments } from "./payments.svelte";
+import { loadLocale } from "./i18n.svelte";
 import { storage } from "./storage";
 
 // ---- Planner state (renderer-only, richer than the core Firing) -----------
@@ -494,6 +495,7 @@ export async function loadApp(): Promise<void> {
   }
   await loadContacts();
   await loadPayments();
+  await loadLocale();
 }
 
 // ---- UI / workflow state (transient, not part of the firing doc) ----------

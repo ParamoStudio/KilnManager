@@ -11,6 +11,7 @@
     closeShelfEditor,
   } from "../lib/firing.svelte";
   import PostCylinder from "./PostCylinder.svelte";
+  import { t } from "../lib/i18n.svelte";
 
   const kiln = $derived(currentKiln());
   const isNew = $derived(ui.shelfEditor === "new");
@@ -67,12 +68,12 @@
     summing = false;
   }
 
-  const splits = [
-    { n: 1, label: "Full" },
+  const splits = $derived([
+    { n: 1, label: t.shelfEditor.splitFull },
     { n: 2, label: "½" },
     { n: 3, label: "⅓" },
     { n: 4, label: "¼" },
-  ];
+  ]);
 
   function done(): void {
     const s = Math.max(2, Math.min(support || 2, maxSupport));
@@ -107,13 +108,13 @@
   <div class="arrow" class:down={above} style="left:{arrowX}px"></div>
 
   <div class="head">
-    <h3>{isNew ? "Add shelf" : "Edit shelf"}</h3>
-    <button class="x" onclick={closeShelfEditor} aria-label="Close">×</button>
+    <h3>{isNew ? t.shelfEditor.addShelf : t.shelfEditor.editShelf}</h3>
+    <button class="x" onclick={closeShelfEditor} aria-label={t.shelfEditor.close}>×</button>
   </div>
 
   <div class="postpreview"><PostCylinder cm={support} w={26} /></div>
 
-  <span class="label center">Shelf height</span>
+  <span class="label center">{t.shelfEditor.shelfHeight}</span>
   <div class="presets">
     {#each kiln.standardPostHeightsCm as p (p)}
       <button class="chip" class:active={!summing && posts.length === 1 && posts[0] === p} onclick={() => addPost(p)} disabled={!summing && p > maxSupport}>{p}</button>
@@ -122,36 +123,36 @@
 
   <div class="sum-strip">
     {#if !summing}
-      <button class="pluspill" transition:fade={{ duration: 90 }} onclick={() => (summing = true)} title="Stack several posts (e.g. 8 + 5)">+</button>
+      <button class="pluspill" transition:fade={{ duration: 90 }} onclick={() => (summing = true)} title={t.shelfEditor.stackTitle}>+</button>
     {:else}
       <div class="slots" transition:fade={{ duration: 90 }}>
         {#each posts as p, i (i)}
           <span class="slot">{p}</span>
           {#if i < posts.length - 1}<span class="op">+</span>{/if}
         {/each}
-        <button class="xpill" onclick={clearSum} title="Clear / collapse">×</button>
+        <button class="xpill" onclick={clearSum} title={t.shelfEditor.clearTitle}>×</button>
       </div>
     {/if}
   </div>
 
   <div class="faint reserved">
-    {#if posts.length > 1}{posts.join(" + ")} = {support} cm · {/if}posts {support} + shelf {thickness}
+    {#if posts.length > 1}{posts.join(" + ")} = {support} cm · {/if}{t.shelfEditor.reservedPosts(support, thickness)}
   </div>
 
   <div class="cf-row">
-    <button class="chip" class:active={customOpen} onclick={() => (customOpen = !customOpen)}>Custom</button>
-    <button class="chip fill" onclick={fillKiln} title="Reserve all remaining height (last shelf / tall piece)">Fill kiln</button>
+    <button class="chip" class:active={customOpen} onclick={() => (customOpen = !customOpen)}>{t.shelfEditor.custom}</button>
+    <button class="chip fill" onclick={fillKiln} title={t.shelfEditor.fillKilnTitle}>{t.shelfEditor.fillKiln}</button>
   </div>
 
   {#if customOpen}
     <div class="custom">
       <input type="number" min="2" max={maxSupport} bind:value={customVal} />
-      <span class="unit">cm</span>
-      <button class="mini" onclick={() => { addPost(customVal); customOpen = false; }}>{summing ? "Add" : "Set"}</button>
+      <span class="unit">{t.shelfEditor.cm}</span>
+      <button class="mini" onclick={() => { addPost(customVal); customOpen = false; }}>{summing ? t.shelfEditor.add : t.shelfEditor.set}</button>
     </div>
   {/if}
 
-  <span class="label center mt">Split shelf</span>
+  <span class="label center mt">{t.shelfEditor.splitShelf}</span>
   <div class="splits">
     {#each splits as s (s.n)}
       <button class="split" class:active={division === s.n} onclick={() => (division = s.n)}>{s.label}</button>
@@ -159,12 +160,12 @@
   </div>
 
   {#if editing && editing.segments.some((z) => z !== null) && division !== editing.division}
-    <div class="warn">Re-dividing clears this shelf's clients.</div>
+    <div class="warn">{t.shelfEditor.redivideWarning}</div>
   {/if}
 
   <div class="actions">
-    <button class="doneb" onclick={done} disabled={isNew && roomForNewShelf() <= 0}>Done</button>
-    <div class="total-box">{reserved} cm total</div>
+    <button class="doneb" onclick={done} disabled={isNew && roomForNewShelf() <= 0}>{t.shelfEditor.done}</button>
+    <div class="total-box">{t.shelfEditor.totalCm(reserved)}</div>
   </div>
 </div>
 

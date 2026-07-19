@@ -1,5 +1,6 @@
 <script lang="ts">
   import { vault } from "../lib/storage";
+  import { t } from "../lib/i18n.svelte";
 
   let { configured, onready }: { configured: boolean; onready: () => void } = $props();
 
@@ -16,31 +17,28 @@
       return;
     }
     if (r.reason === "not-a-vault") {
-      error = "That folder isn't a Páramo data folder. Pick the one that holds your data, or create a new one.";
+      error = t.vaultOnboarding.errorNotAVault;
     } else if (r.reason !== "canceled") {
-      error = "Couldn't set that folder. Try again.";
+      error = t.vaultOnboarding.errorGeneric;
     }
   }
 </script>
 
 <div class="scrim"></div>
-<div class="card" role="dialog" aria-label="Choose data folder">
+<div class="card" role="dialog" aria-label={t.vaultOnboarding.ariaLabel}>
   <div class="mark"><span class="wm">PÁRAMO</span><span class="tl">KILN MANAGER</span></div>
 
   {#if !configured}
-    <h2>Your data, in your folder</h2>
-    <p>
-      Páramo Kiln Manager keeps everything as plain <b>JSON files</b> in a folder <b>you</b> choose —
-      open it in Finder, back it up, sync it, move it. The app is just the viewer.
-    </p>
-    <p class="faint small">Pick an empty folder (or make a new one). We'll drop a small marker file inside so the app recognises it later.</p>
-    <button class="primary" onclick={() => pick("create")} disabled={busy}>Choose folder…</button>
+    <h2>{t.vaultOnboarding.newTitle}</h2>
+    <p>{@html t.vaultOnboarding.newBody}</p>
+    <p class="faint small">{t.vaultOnboarding.newHint}</p>
+    <button class="primary" onclick={() => pick("create")} disabled={busy}>{t.vaultOnboarding.chooseFolder}</button>
   {:else}
-    <h2>Data folder not found</h2>
-    <p>The folder with your Páramo data was moved, renamed, or deleted. Locate it again, or start a fresh one.</p>
+    <h2>{t.vaultOnboarding.lostTitle}</h2>
+    <p>{t.vaultOnboarding.lostBody}</p>
     <div class="row">
-      <button class="primary" onclick={() => pick("locate")} disabled={busy}>Locate it…</button>
-      <button class="ghost" onclick={() => pick("create")} disabled={busy}>Create new…</button>
+      <button class="primary" onclick={() => pick("locate")} disabled={busy}>{t.vaultOnboarding.locateIt}</button>
+      <button class="ghost" onclick={() => pick("create")} disabled={busy}>{t.vaultOnboarding.createNew}</button>
     </div>
   {/if}
 

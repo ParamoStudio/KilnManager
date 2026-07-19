@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { KilnModifier } from "@core";
   import { getKiln, addModifier, removeModifier, setModifierMode, saveKilns } from "../lib/kilns.svelte";
+  import { t } from "../lib/i18n.svelte";
 
   let { kilnId, onclose }: { kilnId: string; onclose: () => void } = $props();
 
@@ -13,18 +14,18 @@
 </script>
 
 <div class="scrim" role="presentation" onclick={onclose}></div>
-<div class="pop" role="dialog" aria-label="Kiln price modifiers">
+<div class="pop" role="dialog" aria-label={t.kilnModifiers.ariaLabel}>
   <div class="head">
-    <h3>Kiln Price Modifiers</h3>
-    <button class="x" onclick={onclose} aria-label="Close">×</button>
+    <h3>{t.kilnModifiers.title}</h3>
+    <button class="x" onclick={onclose} aria-label={t.common.close}>×</button>
   </div>
 
   <div class="tabs">
-    <button class:active={tab === "surcharge"} onclick={() => (tab = "surcharge")}>Surcharges</button>
-    <button class:active={tab === "discount"} onclick={() => (tab = "discount")}>Discounts</button>
+    <button class:active={tab === "surcharge"} onclick={() => (tab = "surcharge")}>{t.kilnModifiers.surcharges}</button>
+    <button class:active={tab === "discount"} onclick={() => (tab = "discount")}>{t.kilnModifiers.discounts}</button>
   </div>
 
-  {#each [{ scope: "full-kiln", label: "Full Kiln Modifier" }, { scope: "client", label: "Client Modifier" }] as blk, i (blk.scope)}
+  {#each [{ scope: "full-kiln", label: t.kilnModifiers.fullKilnModifier }, { scope: "client", label: t.kilnModifiers.clientModifier }] as blk, i (blk.scope)}
     {@const scope = blk.scope as "full-kiln" | "client"}
     <div class="block" class:divide={i === 1}>
       <span class="blabel">{blk.label}</span>
@@ -37,13 +38,13 @@
               <button class:active={m.mode === "fixed"} onclick={() => setModifierMode(m, "fixed")}>€</button>
             </div>
             <input class="mval" type="number" min="0" step="0.5" bind:value={m.value} onchange={persist} />
-            <button class="del" onclick={() => removeModifier(kilnId, m.id)} aria-label="Remove">×</button>
+            <button class="del" onclick={() => removeModifier(kilnId, m.id)} aria-label={t.kilnModifiers.removeModifier}>×</button>
           </div>
         {/each}
-        {#if rows(tab, scope).length === 0}<p class="none faint">None yet.</p>{/if}
+        {#if rows(tab, scope).length === 0}<p class="none faint">{t.kilnModifiers.noneYet}</p>{/if}
       </div>
       <button class="add" onclick={() => addModifier(kilnId, tab, scope)}>
-        + Add {tab === "surcharge" ? "surcharge" : "discount"}
+        {tab === "surcharge" ? t.kilnModifiers.addSurcharge : t.kilnModifiers.addDiscount}
       </button>
     </div>
   {/each}

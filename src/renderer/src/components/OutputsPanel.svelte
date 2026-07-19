@@ -9,6 +9,7 @@
   import { eur, pct, fmtFull } from "../lib/format";
   import { buildTicketHtml, type TicketData, type TicketLine } from "../lib/ticket";
   import { monthlyData } from "../lib/expenses.svelte";
+  import { t } from "../lib/i18n.svelte";
   import { outputs, isDesktop } from "../lib/storage";
 
   let { id, onclose }: { id: string; onclose: () => void } = $props();
@@ -50,12 +51,12 @@
     result ? result.clients.reduce((a, c) => a + (c.charged ? roundUp50(c.price) : 0), 0) : 0,
   );
 
-  const views: { id: View; label: string }[] = [
-    { id: "firing", label: "Firing" },
-    { id: "clients", label: "Clients" },
-    { id: "partners", label: "Partners" },
-    { id: "personal", label: "Expenses" },
-  ];
+  const views = $derived<{ id: View; label: string }[]>([
+    { id: "firing", label: t.outputsPanel.navFiring },
+    { id: "clients", label: t.outputsPanel.navClients },
+    { id: "partners", label: t.outputsPanel.navPartners },
+    { id: "personal", label: t.outputsPanel.navExpenses },
+  ]);
 
   // ---- Client tickets ----
   const chargedClients = $derived(result ? result.clients.filter((c) => c.charged) : []);
@@ -74,7 +75,7 @@
       const label = `${m.name} (${m.mode === "percent" ? `${m.value}%` : eur(m.value)})`;
       lines.push({ label, value: `${val < 0 ? "−" : "+"}${eur(Math.abs(val))}` });
     }
-    lines.push({ label: "TOTAL", value: eur(roundUp50(c.price)), strong: true });
+    lines.push({ label: t.ticket.total, value: eur(roundUp50(c.price)), strong: true });
     return {
       studioName: settings.studioName,
       logoTop: settings.logoTop || undefined,
@@ -89,7 +90,7 @@
       extras: [],
       lines,
       total: eur(roundUp50(c.price)),
-      thanks: `Thank you for trusting ${settings.studioName} with your pieces.`,
+      thanks: t.ticket.defaultThanks(settings.studioName),
     };
   }
 
@@ -118,7 +119,7 @@
     // The PDF was already generated on close; regenerate to be safe, then open it.
     const p = await exportTicket(selClient);
     if (!p) {
-      exportedNote = "Desktop only";
+      exportedNote = t.outputsPanel.desktopOnly;
       setTimeout(() => (exportedNote = ""), 2000);
       return;
     }
@@ -161,7 +162,7 @@
 </script>
 
 <div class="scrim" role="presentation" onclick={onclose}></div>
-<div class="panel" role="dialog" aria-label="Firing outputs">
+<div class="panel" role="dialog" aria-label={t.outputsPanel.ariaLabel}>
   {#if rec && kiln && result && service}
     <aside class="rail">
       <div class="rail-head">
@@ -173,52 +174,52 @@
           <button class="rbtn" class:active={view === v.id} onclick={() => (view = v.id)}>{v.label}</button>
         {/each}
       </nav>
-      <button class="sendbtn" class:active={view === "ticket"} onclick={() => (view = "ticket")}>Send Tickets</button>
+      <button class="sendbtn" class:active={view === "ticket"} onclick={() => (view = "ticket")}>{t.outputsPanel.sendTickets}</button>
     </aside>
 
     <section class="body">
-      <button class="close" onclick={onclose} aria-label="Close">×</button>
+      <button class="close" onclick={onclose} aria-label={t.outputsPanel.close}>×</button>
 
       {#if view === "firing"}
-        <h2>Firing breakdown</h2>
+        <h2>{t.outputsPanel.firingBreakdown}</h2>
         <div class="cols2">
           <div class="block">
-            <span class="bh">Price</span>
-            <div class="row"><span class="muted">Base · {service.name}</span><span>{eur(service.basePrice)}</span></div>
+            <span class="bh">{t.outputsPanel.price}</span>
+            <div class="row"><span class="muted">{t.outputsPanel.base(service.name)}</span><span>{eur(service.basePrice)}</span></div>
             {#each fkMods as m (m.id)}
               <div class="row"><span class="muted">{m.name}</span><span class={m.family === "discount" ? "neg" : ""}>{m.family === "discount" ? "−" : "+"}{fmtMod(m)}</span></div>
             {/each}
             {#if rec.planner.customDiscount}
-              <div class="row"><span class="muted">Custom discount</span><span class="neg">−{fmtMod(rec.planner.customDiscount)}</span></div>
+              <div class="row"><span class="muted">{t.outputsPanel.customDiscount}</span><span class="neg">−{fmtMod(rec.planner.customDiscount)}</span></div>
             {/if}
-            <div class="row sum"><span>Firing price</span><span>{eur(result.serviceRevenue)}</span></div>
-            <div class="row"><span class="muted">Occupancy</span><span class="muted">{pct(result.fillFraction)} loaded</span></div>
+            <div class="row sum"><span>{t.outputsPanel.firingPrice}</span><span>{eur(result.serviceRevenue)}</span></div>
+            <div class="row"><span class="muted">{t.outputsPanel.occupancy}</span><span class="muted">{pct(result.fillFraction)} {t.outputsPanel.loaded}</span></div>
           </div>
 
           <div class="block">
-            <span class="bh">Your costs</span>
-            <div class="row"><span class="muted">{fuel?.label} · {fuelUse} {fuel?.unit} × {eur(fuel?.price ?? 0)}</span><span>{eur(fuelCost)}</span></div>
+            <span class="bh">{t.outputsPanel.yourCosts}</span>
+            <div class="row"><span class="muted">{t.outputsPanel.fuelLine(fuel?.label ?? "", fuelUse, fuel?.unit ?? "", eur(fuel?.price ?? 0))}</span><span>{eur(fuelCost)}</span></div>
             {#each fixedCosts as c (c.name)}
               <div class="row"><span class="muted">{c.name}</span><span>{eur(c.amount)}</span></div>
             {/each}
-            <div class="row sum"><span>Kiln costs</span><span>{eur(result.accounting.kilnCosts)}</span></div>
+            <div class="row sum"><span>{t.outputsPanel.kilnCosts}</span><span>{eur(result.accounting.kilnCosts)}</span></div>
           </div>
         </div>
 
         <div class="block wide">
-          <span class="bh">Result</span>
-          <div class="row"><span class="muted">Collected</span><span>{eur(roundedTotal)} <span class="real">(exact {eur(result.accounting.revenue)})</span></span></div>
-          <div class="row"><span class="muted">− Kiln costs</span><span class="neg">−{eur(result.accounting.kilnCosts)}</span></div>
-          <div class="row"><span class="muted">Gross profit</span><span>{eur(result.accounting.grossProfit)}</span></div>
+          <span class="bh">{t.outputsPanel.result}</span>
+          <div class="row"><span class="muted">{t.outputsPanel.collected}</span><span>{eur(roundedTotal)} <span class="real">({t.outputsPanel.exact(eur(result.accounting.revenue))})</span></span></div>
+          <div class="row"><span class="muted">{t.outputsPanel.minusKilnCosts}</span><span class="neg">−{eur(result.accounting.kilnCosts)}</span></div>
+          <div class="row"><span class="muted">{t.outputsPanel.grossProfit}</span><span>{eur(result.accounting.grossProfit)}</span></div>
           {#if result.accounting.partnerCuts.length}
-            <div class="row"><span class="muted">− Partners</span><span class="neg">−{eur(result.accounting.partnerCuts.reduce((a, p) => a + p.amount, 0))}</span></div>
+            <div class="row"><span class="muted">{t.outputsPanel.minusPartners}</span><span class="neg">−{eur(result.accounting.partnerCuts.reduce((a, p) => a + p.amount, 0))}</span></div>
           {/if}
-          <div class="row total"><span>Net to you</span><span>{eur(result.accounting.netToYou)}</span></div>
+          <div class="row total"><span>{t.outputsPanel.netToYou}</span><span>{eur(result.accounting.netToYou)}</span></div>
         </div>
       {:else if view === "clients"}
-        <h2>Clients</h2>
+        <h2>{t.outputsPanel.clientsTitle}</h2>
         <div class="ctable">
-          <div class="crow chead"><span>Client</span><span class="r">KLU</span><span class="r">Share</span><span class="r">Charge</span></div>
+          <div class="crow chead"><span>{t.outputsPanel.tableClient}</span><span class="r">{t.outputsPanel.tableKlu}</span><span class="r">{t.outputsPanel.tableShare}</span><span class="r">{t.outputsPanel.tableCharge}</span></div>
           {#each result.clients as c, i (c.contactName)}
             {@const mods = clientMods(c.contactName)}
             <div class="crow">
@@ -226,7 +227,7 @@
               <span class="r">{c.klu.toFixed(1)}</span>
               <span class="r">{pct(c.sharePct)}</span>
               <span class="r">
-                {#if c.charged}{eur(roundUp50(c.price))} <span class="real">({eur(c.price)})</span>{:else}<span class="real">own</span>{/if}
+                {#if c.charged}{eur(roundUp50(c.price))} <span class="real">({eur(c.price)})</span>{:else}<span class="real">{t.outputsPanel.own}</span>{/if}
               </span>
             </div>
             {#if mods.length}
@@ -237,37 +238,37 @@
               </div>
             {/if}
           {/each}
-          <div class="crow total"><span>Total collected</span><span class="r"></span><span class="r"></span><span class="r">{eur(roundedTotal)}</span></div>
+          <div class="crow total"><span>{t.outputsPanel.totalCollected}</span><span class="r"></span><span class="r"></span><span class="r">{eur(roundedTotal)}</span></div>
         </div>
       {:else if view === "partners"}
-        <h2>Partners</h2>
+        <h2>{t.outputsPanel.partnersTitle}</h2>
         {#if result.accounting.partnerCuts.length}
           <div class="ptable">
             {#each result.accounting.partnerCuts as p (p.name)}
-              <div class="prow"><span>{p.name}</span><span class="faint">{pct(p.pct)} of gross</span><span class="r">{eur(p.amount)}</span></div>
+              <div class="prow"><span>{p.name}</span><span class="faint">{t.outputsPanel.ofGross(pct(p.pct))}</span><span class="r">{eur(p.amount)}</span></div>
             {/each}
-            <div class="prow total"><span>To partners</span><span></span><span class="r">{eur(result.accounting.partnerCuts.reduce((a, p) => a + p.amount, 0))}</span></div>
+            <div class="prow total"><span>{t.outputsPanel.toPartners}</span><span></span><span class="r">{eur(result.accounting.partnerCuts.reduce((a, p) => a + p.amount, 0))}</span></div>
           </div>
         {:else}
-          <p class="faint empty">No partners on this firing.</p>
+          <p class="faint empty">{t.outputsPanel.noPartnersOnFiring}</p>
         {/if}
       {:else if view === "personal"}
-        <h2>Expenses · in &amp; out</h2>
+        <h2>{t.outputsPanel.expensesTitle}</h2>
         <div class="block wide">
-          <div class="row"><span class="muted">Collected (in)</span><span>{eur(roundedTotal)}</span></div>
-          <div class="row"><span class="muted">Fuel — {fuel?.label}</span><span class="neg">−{eur(fuelCost)}</span></div>
+          <div class="row"><span class="muted">{t.outputsPanel.collectedIn}</span><span>{eur(roundedTotal)}</span></div>
+          <div class="row"><span class="muted">{t.outputsPanel.fuelOut(fuel?.label ?? "")}</span><span class="neg">−{eur(fuelCost)}</span></div>
           {#each fixedCosts as c (c.name)}
             <div class="row"><span class="muted">{c.name}</span><span class="neg">−{eur(c.amount)}</span></div>
           {/each}
           {#each result.accounting.partnerCuts as p (p.name)}
-            <div class="row"><span class="muted">Partner · {p.name}</span><span class="neg">−{eur(p.amount)}</span></div>
+            <div class="row"><span class="muted">{t.outputsPanel.partnerOut(p.name)}</span><span class="neg">−{eur(p.amount)}</span></div>
           {/each}
-          <div class="row total"><span>Net to you</span><span>{eur(result.accounting.netToYou)}</span></div>
+          <div class="row total"><span>{t.outputsPanel.netToYou}</span><span>{eur(result.accounting.netToYou)}</span></div>
         </div>
       {:else}
-        <h2>Client ticket</h2>
+        <h2>{t.outputsPanel.clientTicketTitle}</h2>
         {#if chargedClients.length === 0}
-          <p class="faint empty">No charged clients on this firing.</p>
+          <p class="faint empty">{t.outputsPanel.noChargedClients}</p>
         {:else}
           <div class="ticketpick">
             {#each chargedClients as c (c.contactName)}
@@ -277,12 +278,12 @@
           <div class="ticketrow">
             <div class="tprev"><iframe class="tframe" srcdoc={ticketHtml} title="Ticket preview"></iframe></div>
             <div class="tactions">
-              <button class="tbtn primary" onclick={doOpen} disabled={!isDesktop}>Open PDF</button>
-              <button class="tbtn" onclick={doShare} disabled={!isDesktop}>Share…</button>
-              <button class="tbtn" onclick={copyMessage}>{copied ? "Message copied ✓" : "Copy message"}</button>
-              <button class="tbtn" onclick={doReveal} disabled={!isDesktop}>Reveal in Finder</button>
+              <button class="tbtn primary" onclick={doOpen} disabled={!isDesktop}>{t.outputsPanel.openPdf}</button>
+              <button class="tbtn" onclick={doShare} disabled={!isDesktop}>{t.outputsPanel.share}</button>
+              <button class="tbtn" onclick={copyMessage}>{copied ? t.outputsPanel.messageCopied : t.outputsPanel.copyMessage}</button>
+              <button class="tbtn" onclick={doReveal} disabled={!isDesktop}>{t.outputsPanel.revealInFinder}</button>
               {#if exportedNote}<span class="faint enote">{exportedNote}</span>{/if}
-              {#if !isDesktop}<span class="faint enote">Opening the PDF is desktop-only.</span>{/if}
+              {#if !isDesktop}<span class="faint enote">{t.outputsPanel.openPdfDesktopOnly}</span>{/if}
               <div class="msgprev faint">“{messageFor(selClient ?? "")}”</div>
             </div>
           </div>

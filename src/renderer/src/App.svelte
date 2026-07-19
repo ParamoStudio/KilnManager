@@ -3,6 +3,7 @@
   import { app, go, loadApp } from "./lib/firing.svelte";
   import { vault, openLink } from "./lib/storage";
   import { settings, markKofiSupported } from "./lib/settings.svelte";
+  import { t } from "./lib/i18n.svelte";
   import { kilnStore } from "./lib/kilns.svelte";
   import Home from "./routes/Home.svelte";
   import FiringPlanner from "./routes/FiringPlanner.svelte";
@@ -60,12 +61,12 @@
   }
 
   const inFiring = $derived(app.screen === "firing");
-  const tabs: { id: "home" | "kilnProfiles" | "expenses" | "appSettings"; label: string }[] = [
-    { id: "home", label: "Home" },
-    { id: "expenses", label: "Expenses" },
-    { id: "kilnProfiles", label: "Kiln Profiles" },
-    { id: "appSettings", label: "App Settings" },
-  ];
+  const tabs = $derived<{ id: "home" | "kilnProfiles" | "expenses" | "appSettings"; label: string }[]>([
+    { id: "home", label: t.app.tabHome },
+    { id: "expenses", label: t.app.tabExpenses },
+    { id: "kilnProfiles", label: t.app.tabKilnProfiles },
+    { id: "appSettings", label: t.app.tabAppSettings },
+  ]);
 
   function onKey(e: KeyboardEvent): void {
     const t = e.target as HTMLElement | null;
@@ -97,30 +98,30 @@
     </h1>
 
     <div class="topright">
-      <button class="agenda-tab" onclick={() => (app.agendaOpen = true)} title="Client Book (A)">
+      <button class="agenda-tab" onclick={() => (app.agendaOpen = true)} title={t.app.clientBookShortcut}>
         <svg viewBox="0 0 24 24" width="23" height="23" aria-hidden="true" class="ag-ic">
           <rect x="4" y="3.5" width="15" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.4" />
           <line x1="8" y1="3.5" x2="8" y2="20.5" stroke="currentColor" stroke-width="1.4" />
           <line x1="11" y1="8.5" x2="16" y2="8.5" stroke="currentColor" stroke-width="1.4" />
           <line x1="11" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="1.4" />
         </svg>
-        Client Book
+        {t.app.clientBook}
       </button>
       <div class="extras">
         <div class="extra-row">
-          <button class="iconlink" onclick={() => openLink(GITHUB)} title="GitHub" aria-label="GitHub">
+          <button class="iconlink" onclick={() => openLink(GITHUB)} title={t.app.github} aria-label={t.app.github}>
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
               <path fill="currentColor" d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.85 9.73.5.09.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.79.62-3.38-1.37-3.38-1.37-.46-1.19-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.9 1.56 2.36 1.11 2.94.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05a9.3 9.3 0 0 1 2.5-.34c.85 0 1.71.12 2.5.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.59.69.49A10.03 10.03 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/>
             </svg>
           </button>
-          <button class="iconlink" onclick={() => openLink(SHOP)} title="Shop" aria-label="Shop">
+          <button class="iconlink" onclick={() => openLink(SHOP)} title={t.app.shop} aria-label={t.app.shop}>
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
               <path d="M6 8h12l-1 11H7L6 8z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
               <path d="M9 8V6.5a3 3 0 0 1 6 0V8" fill="none" stroke="currentColor" stroke-width="1.5" />
             </svg>
           </button>
         </div>
-        <button class="toolsbtn" title="Coming soon" aria-label="Ceramic Lab Tools">Ceramic Lab Tools</button>
+        <button class="toolsbtn" title={t.app.comingSoon} aria-label={t.app.ceramicLabTools}>{t.app.ceramicLabTools}</button>
       </div>
     </div>
   </header>
@@ -128,16 +129,16 @@
   {#if showKofi}
     <div class="kofi" role="note">
       <span class="kofi-txt">
-        This program is open source and free to use. Enjoying it?
-        <button class="kofi-link" onclick={openKofi}>Support me if you feel like it</button>.
+        {t.app.kofiText}
+        <button class="kofi-link" onclick={openKofi}>{t.app.kofiLink}</button>.
       </span>
-      <button class="kofi-x" onclick={() => (kofiDismissed = true)} aria-label="Dismiss">×</button>
+      <button class="kofi-x" onclick={() => (kofiDismissed = true)} aria-label={t.app.dismiss}>×</button>
     </div>
   {/if}
 
   <nav class="tabs">
     {#if inFiring}
-      <button class="back" onclick={() => go("home")}>← Home</button>
+      <button class="back" onclick={() => go("home")}>{t.app.backToHome}</button>
     {:else}
       {#each tabs as tab (tab.id)}
         <button class="tab" class:active={app.screen === tab.id} onclick={() => go(tab.id)}>{tab.label}</button>

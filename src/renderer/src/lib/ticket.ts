@@ -3,6 +3,8 @@
  * One HTML generator used for BOTH the in-app preview (iframe) and the printed
  * PDF (Electron printToPDF), so what you see is exactly what you send.
  */
+import { t } from "./i18n.svelte";
+
 export interface TicketLine {
   label: string;
   value: string;
@@ -60,12 +62,12 @@ function miniKiln(shape: "cylinder" | "box", frac: number): string {
 
 export function buildTicketHtml(d: TicketData): string {
   const infoLeft = [
-    { k: "Client", v: d.client },
-    { k: "Date", v: d.date },
+    { k: t.ticket.client, v: d.client },
+    { k: t.ticket.date, v: d.date },
   ];
   const infoRight = [
-    { k: "Firing type", v: d.firingType },
-    { k: "Firing total", v: d.firingTotal },
+    { k: t.ticket.firingType, v: d.firingType },
+    { k: t.ticket.firingTotal, v: d.firingTotal },
     ...d.extras.map((e) => ({ k: e.label, v: e.value })),
   ];
 
@@ -107,7 +109,7 @@ export function buildTicketHtml(d: TicketData): string {
     .foot img { max-width: 130px; max-height: 72px; object-fit: contain; display:inline-block; }
   </style></head><body><div class="page">
     <div class="top">
-      <div><h1>FIRING TICKET</h1><div class="sub">${esc(d.studioName)}</div></div>
+      <div><h1>${esc(t.ticket.heading)}</h1><div class="sub">${esc(d.studioName)}</div></div>
       ${d.logoTop ? `<img class="logo-top" src="${d.logoTop}" alt=""/>` : ""}
     </div>
     <div class="box info">
@@ -117,7 +119,7 @@ export function buildTicketHtml(d: TicketData): string {
     <div class="box items">${lineRows}</div>
     <div class="share">
       ${miniKiln(d.shape, d.sharePct)}
-      <div class="txt">Your pieces filled <span class="pctbig">${Math.round(d.sharePct * 100)}%</span><br/>of this firing.</div>
+      <div class="txt">${esc(t.ticket.yourPiecesFilled)} <span class="pctbig">${Math.round(d.sharePct * 100)}%</span><br/>${esc(t.ticket.ofThisFiring)}</div>
     </div>
     <div class="thanks">${escBr(d.note || d.thanks)}</div>
     ${d.logoBottom ? `<div class="foot"><img src="${d.logoBottom}" alt=""/></div>` : ""}

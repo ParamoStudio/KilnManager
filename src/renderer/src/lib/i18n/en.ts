@@ -218,6 +218,11 @@ export const en = {
     low: "Low",
     high: "High",
     fixedHint: "Set the €/kWh directly in the fuel table above (from your bill).",
+    displayTitle: "Language & currency",
+    displayExplain: "Language and formatting for the whole app. More languages arrive with updates.",
+    language: "Language",
+    currency: "Currency",
+    currencyHint: "Currency only changes the symbol shown — your entered amounts are never converted.",
     dataFolder: "Data folder",
     dataFolderExplain: "Everything is stored as plain JSON files here — yours to open, back up, or move.",
     revealInFinder: "Reveal in Finder",
@@ -286,6 +291,7 @@ export const en = {
     unmarkConfirm: "Mark as pending?",
     yes: "Yes",
     no: "No",
+    paid: "Paid",
     paidOn: (date: string) => `Paid · ${date}`,
     undo: "Undo",
     firing: "Firing",
@@ -346,7 +352,8 @@ export const en = {
 
   // ---- FiringPlanner.svelte ------------------------------------------------------
   firingPlanner: {
-    pickBanner: (modName: string) => `Pick an assigned shelf to apply: ${modName} to that client`,
+    pickPrefix: "Pick an assigned shelf to apply:",
+    pickSuffix: "to that client",
     cancel: "Cancel",
   },
 
@@ -407,8 +414,7 @@ export const en = {
     shelfHeight: "Shelf height",
     stackTitle: "Stack several posts (e.g. 8 + 5)",
     clearTitle: "Clear / collapse",
-    reservedPosts: (postsSum: string, support: number, thickness: number) =>
-      `${postsSum} posts ${support} + shelf ${thickness}`,
+    reservedPosts: (support: number, thickness: number) => `posts ${support} + shelf ${thickness}`,
     custom: "Custom",
     fillKiln: "Fill kiln",
     fillKilnTitle: "Reserve all remaining height (last shelf / tall piece)",

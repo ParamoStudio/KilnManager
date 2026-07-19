@@ -2,6 +2,7 @@
   import type { FiringResult } from "@core";
   import { roundUp50 } from "@core";
   import { MYSELF, selectClientZones } from "../lib/firing.svelte";
+  import { t } from "../lib/i18n.svelte";
   import { colorForIndex } from "../lib/colors";
   import { eur, pct } from "../lib/format";
 
@@ -24,22 +25,22 @@
 
 <div class="strip">
   <div class="head">
-    <span class="label">Client breakdown</span>
+    <span class="label">{t.capacityStrip.clientBreakdown}</span>
   </div>
 
   {#if result.clients.length === 0}
-    <span class="faint empty">No clients assigned yet — select zones and assign them.</span>
+    <span class="faint empty">{t.capacityStrip.noClientsYet}</span>
   {:else}
     <div class="clients">
       {#each ordered as { c, color } (c.contactName)}
-        <button class="chip" class:mine={c.contactName === MYSELF} onclick={() => selectClientZones(c.contactName)} title="Select this client's zones">
+        <button class="chip" class:mine={c.contactName === MYSELF} onclick={() => selectClientZones(c.contactName)} title={t.capacityStrip.selectZonesTitle}>
           <span class="dot" style="--z:{color}"></span>
           <span class="cn">{c.contactName}</span>
           <span class="sh faint">{pct(c.sharePct)}</span>
           {#if c.charged}
             <span class="pr">{eur(roundUp50(c.price))}<span class="real">({eur(c.price)})</span></span>
           {:else}
-            <span class="pr own">own<span class="real">(−{eur(lostFor(c.sharePct))})</span></span>
+            <span class="pr own">{t.capacityStrip.own}<span class="real">(−{eur(lostFor(c.sharePct))})</span></span>
           {/if}
         </button>
       {/each}
