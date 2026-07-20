@@ -73,6 +73,7 @@
     { n: 2, label: "½" },
     { n: 3, label: "⅓" },
     { n: 4, label: "¼" },
+    { n: 5, label: "⅕" },
   ]);
 
   function done(): void {

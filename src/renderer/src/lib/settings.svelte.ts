@@ -84,13 +84,25 @@ export const BIDDING_ZONES: { code: string; label: string }[] = [
   { code: "PL", label: "Poland" },
 ];
 
-export const DEFAULT_TICKET_MESSAGE =
-  "Hi {client}! Your pieces are in the kiln — they'll be ready to pick up in about a day. I've attached your ticket. See you!";
-
-// Prior Spanish defaults, migrated to the new English default when untouched.
+// Prior hardcoded defaults (across languages), migrated to "" (= follow the
+// active language live) when the user never touched the message.
 const LEGACY_TICKET_MESSAGES = [
+  "Hi {client}! Your pieces are in the kiln — they'll be ready to pick up in about a day. I've attached your ticket. See you!",
+  "¡Hola {client}! Tus piezas están en el horno — estarán listas para recoger en aproximadamente un día. Te adjunto tu ticket. ¡Nos vemos!",
   "¡Buenos días {client}! Ya tengo tus piezas en el horno, más o menos en un día podrás pasarte a buscarlas. Te adjunto el ticket. Nos vemos.",
 ];
+
+/** The message to actually send: the user's custom text, or the live default
+ * for the active language (empty stored value = "still following the language"). */
+export function effectiveTicketMessage(): string {
+  return settings.ticketMessage.trim() ? settings.ticketMessage : t.ticket.defaultMessageTemplate;
+}
+/** Save the message; snaps back to "" (follow the language) if it exactly
+ * matches the active language's own default, so it keeps auto-translating. */
+export function setTicketMessage(value: string): void {
+  settings.ticketMessage = value.trim() === t.ticket.defaultMessageTemplate.trim() ? "" : value;
+  saveSettings();
+}
 
 export const FUEL_KINDS: FuelKind[] = ["electricity", "propane", "butane", "wood", "other"];
 
@@ -109,7 +121,7 @@ function defaultSettings(): AppSettings {
     fuels: defaultFuels(),
     priceHistory: [],
     studioName: "My Studio",
-    ticketMessage: DEFAULT_TICKET_MESSAGE,
+    ticketMessage: "",
     ticketNote: "",
     logoTop: "",
     logoBottom: "",
@@ -257,7 +269,7 @@ export async function loadSettings(): Promise<void> {
     settings.ticketMessage =
       typeof saved.ticketMessage === "string" && !LEGACY_TICKET_MESSAGES.includes(saved.ticketMessage.trim())
         ? saved.ticketMessage
-        : DEFAULT_TICKET_MESSAGE;
+        : "";
     settings.ticketNote = typeof saved.ticketNote === "string" ? saved.ticketNote : "";
     settings.logoTop = typeof saved.logoTop === "string" ? saved.logoTop : "";
     settings.logoBottom = typeof saved.logoBottom === "string" ? saved.logoBottom : "";

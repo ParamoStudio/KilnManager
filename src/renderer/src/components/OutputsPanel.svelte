@@ -4,7 +4,7 @@
   import { computeFiring, roundUp50 } from "@core";
   import { app, firings, coreFiringFrom } from "../lib/firing.svelte";
   import { kilnStore } from "../lib/kilns.svelte";
-  import { settings, fuelDefFor, fuelCostFor } from "../lib/settings.svelte";
+  import { settings, fuelDefFor, fuelCostFor, effectiveTicketMessage } from "../lib/settings.svelte";
   import { colorForIndex } from "../lib/colors";
   import { eur, pct, fmtFull } from "../lib/format";
   import { buildTicketHtml, type TicketData, type TicketLine } from "../lib/ticket";
@@ -97,7 +97,7 @@
   const ticketHtml = $derived(selClient ? (buildTicketHtml(ticketData(selClient)!) ?? "") : "");
   const messageFor = (name: string): string => {
     const c = result?.clients.find((x) => x.contactName === name);
-    return settings.ticketMessage
+    return effectiveTicketMessage()
       .replace(/\{client\}/g, name)
       .replace(/\{total\}/g, c ? eur(roundUp50(c.price)) : "");
   };

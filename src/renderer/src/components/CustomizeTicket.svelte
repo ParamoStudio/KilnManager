@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { settings, saveSettings } from "../lib/settings.svelte";
+  import { settings, saveSettings, setTicketMessage } from "../lib/settings.svelte";
   import { buildTicketHtml, type TicketData } from "../lib/ticket";
   import { t } from "../lib/i18n.svelte";
 
@@ -44,12 +44,17 @@
     thanks: t.ticket.defaultThanks(studioName || "…"),
   });
   const previewHtml = $derived(buildTicketHtml(previewData));
-  const msgPreview = $derived(ticketMessage.replace(/\{client\}/g, t.customizeTicket.previewClient).replace(/\{total\}/g, "47,00 €"));
+  const msgIsDefault = $derived(!ticketMessage.trim());
+  const msgPreview = $derived(
+    (ticketMessage.trim() ? ticketMessage : t.ticket.defaultMessageTemplate)
+      .replace(/\{client\}/g, t.customizeTicket.previewClient)
+      .replace(/\{total\}/g, "47,00 €"),
+  );
 
   function save(): void {
     settings.studioName = studioName.trim() || "My Studio";
     settings.ticketNote = ticketNote;
-    settings.ticketMessage = ticketMessage;
+    setTicketMessage(ticketMessage);
     settings.logoTop = logoTop;
     settings.logoBottom = logoBottom;
     saveSettings();
@@ -112,8 +117,9 @@
 
     <label class="field">
       <span class="fl">{t.customizeTicket.messageLabel}</span>
-      <textarea class="msg" rows="3" bind:value={ticketMessage}></textarea>
+      <textarea class="msg" rows="3" bind:value={ticketMessage} placeholder={t.ticket.defaultMessageTemplate}></textarea>
       <span class="hint">{@html t.customizeTicket.messageHint("{client}", "{total}")}</span>
+      <span class="hint">{msgIsDefault ? t.customizeTicket.messageFollowsLanguage : t.customizeTicket.messageCustomized}</span>
       <span class="msgprev">“{msgPreview}”</span>
     </label>
 

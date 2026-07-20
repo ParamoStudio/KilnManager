@@ -277,6 +277,8 @@ export const en = {
     noteHint: "Replaces the default “Thank you for trusting …” line. Leave empty to keep the default.",
     messageLabel: "Message you send with the ticket",
     messageHint: (client: string, total: string) => `Use <b>${client}</b> and <b>${total}</b> as placeholders.`,
+    messageFollowsLanguage: "Following the app language — leave empty to keep translating automatically.",
+    messageCustomized: "Customized — this text will no longer follow the app language.",
     imageTooLarge: "That image is large (>1.5 MB) — a smaller PNG/SVG keeps the file light.",
     save: "Save",
     cancel: "Cancel",
@@ -484,8 +486,11 @@ export const en = {
     yourPiecesFilled: "Your pieces filled", // followed by the bold X% then ofThisFiring
     ofThisFiring: "of this firing.",
     defaultThanks: (studio: string) => `Thank you for trusting ${studio} with your pieces.`,
-    defaultMessage: (client: string) =>
-      `Hi ${client}! Your pieces are in the kiln — they'll be ready to pick up in about a day. I've attached your ticket. See you!`,
+    // Template with literal {client}/{total} placeholders — the "send" message,
+    // shown/used live for the active language as long as it's untouched (see
+    // settings.svelte.ts effectiveTicketMessage). Once customized, it freezes.
+    defaultMessageTemplate:
+      "Hi {client}! Your pieces are in the kiln — they'll be ready to pick up in about a day. I've attached your ticket. See you!",
   },
 
   // ---- Seed / default data ---------------------------------------------------

@@ -254,6 +254,8 @@ export const es: Dictionary = {
     noteHint: "Sustituye la línea por defecto «Gracias por confiar…». Déjalo vacío para mantener la de serie.",
     messageLabel: "Mensaje que envías con el ticket",
     messageHint: (client: string, total: string) => `Usa <b>${client}</b> y <b>${total}</b> como marcadores.`,
+    messageFollowsLanguage: "Sigue el idioma de la app — déjalo vacío para que siga traduciéndose solo.",
+    messageCustomized: "Personalizado — este texto ya no seguirá el idioma de la app.",
     imageTooLarge: "Esa imagen es grande (>1,5 MB) — un PNG/SVG más pequeño mantiene el archivo ligero.",
     save: "Guardar",
     cancel: "Cancelar",
@@ -446,8 +448,8 @@ export const es: Dictionary = {
     yourPiecesFilled: "Tus piezas ocuparon el",
     ofThisFiring: "de esta horneada.",
     defaultThanks: (studio: string) => `Gracias por confiar en ${studio} con tus piezas.`,
-    defaultMessage: (client: string) =>
-      `¡Hola ${client}! Tus piezas están en el horno — estarán listas para recoger en aproximadamente un día. Te adjunto tu ticket. ¡Nos vemos!`,
+    defaultMessageTemplate:
+      "¡Hola {client}! Tus piezas están en el horno — estarán listas para recoger en aproximadamente un día. Te adjunto tu ticket. ¡Nos vemos!",
   },
 
   defaults: {

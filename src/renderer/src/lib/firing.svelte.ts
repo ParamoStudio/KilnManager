@@ -21,7 +21,7 @@ export interface PlannerLevel {
   id: string;
   supportHeightCm: number;
   shelfThicknessCm: number;
-  division: number; // 1 | 2 | 3 | 4
+  division: number; // 1 | 2 | 3 | 4 | 5
   segments: (Segment | null)[]; // length === division
 }
 
@@ -82,7 +82,7 @@ export function addShelf(supportHeightCm: number, division: number): string | nu
   const room = remainingCm() - thickness;
   if (room <= 0) return null; // no space
   const support = Math.max(2, Math.min(supportHeightCm, room));
-  const div = Math.max(1, Math.min(4, Math.round(division)));
+  const div = Math.max(1, Math.min(5, Math.round(division)));
   const id = newId();
   planner.levels.unshift({
     id,
