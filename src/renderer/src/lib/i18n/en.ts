@@ -206,7 +206,11 @@ export const en = {
     complexityFactors: "Complexity factors",
     complexityExplain:
       "Every piece counts as its shelf volume <b>×</b> its complexity factor — that's its <b>KLU</b> (kiln-load unit). A firing's price is split across everyone by their share of the total KLU, so a trickier load fairly carries a bit more.",
-    resetDefaults: "Reset to defaults (1.00 / 1.15 / 1.30)",
+    complexityHelp: "What each level means",
+    complexityHelpSimple: "Simple — a normal load.",
+    complexityHelpMedium: "Medium — more time or more fragile (simple jewellery, small pieces, somewhat fragile sculpture).",
+    complexityHelpComplex: "Complex — more time and more fragile (e.g. fine jewellery, or huge sculpture loads).",
+    resetDefaults: (a: string, b: string, c: string) => `Reset to defaults (${a} / ${b} / ${c})`,
     fuelPrices: "Fuel prices",
     fuelPricesExplain:
       "The volatile part of each firing's cost. Set the current price per unit; it multiplies each service's fuel use. You can also update these quickly from Home when you buy.",
@@ -241,7 +245,17 @@ export const en = {
     clientTicket: "Client ticket",
     clientTicketExplain:
       "Your logos, workshop name, a printed note and the message you send — with a live preview of the ticket your clients receive.",
-    customizeClientTicket: "Customize Client Ticket…",
+    customizeClientTicket: "Customize Invoice…",
+  },
+
+  // Fuel labels + units (fixed categories, localized — the stored value is only
+  // the price). Keyed by FuelKind.
+  fuels: {
+    electricity: { label: "Electricity", unit: "kWh" },
+    propane: { label: "Propane", unit: "bottle" },
+    butane: { label: "Butane", unit: "bottle" },
+    wood: { label: "Wood", unit: "kg" },
+    other: { label: "Fuel", unit: "unit" },
   },
 
   // ---- CustomizeTicket.svelte ------------------------------------------------

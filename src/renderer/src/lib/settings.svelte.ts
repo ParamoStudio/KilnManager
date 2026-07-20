@@ -6,6 +6,7 @@
 import type { FuelKind, KilnProfile } from "@core";
 import { COMPLEXITY, complexityKeys, type ComplexityKey } from "./complexity";
 import { storage } from "./storage";
+import { t } from "./i18n.svelte";
 
 export interface PartnerTier {
   id: string;
@@ -137,9 +138,15 @@ function defaultSettings(): AppSettings {
 
 export const settings = $state<AppSettings>(defaultSettings());
 
-/** Reactive complexity label + factor for a key (reads from settings). */
+const CX_LABEL: Record<ComplexityKey, "complexitySimple" | "complexityMedium" | "complexityComplex"> = {
+  simple: "complexitySimple",
+  medium: "complexityMedium",
+  complex: "complexityComplex",
+};
+
+/** Complexity label (localized, fixed category) + the user's stored factor. */
 export function cx(key: ComplexityKey): ComplexityDef {
-  return settings.complexity[key];
+  return { label: t.defaults[CX_LABEL[key]], factor: settings.complexity[key].factor };
 }
 
 /** The concrete fuel a kiln burns (drives which global price applies). */
@@ -155,8 +162,16 @@ export function fuelKeyForKiln(k: Pick<KilnProfile, "energy" | "gasType">): Fuel
       return "other";
   }
 }
+/** Localized label/unit for a fuel kind (the stored value is only the price). */
+export function fuelLabel(kind: FuelKind): string {
+  return t.fuels[kind].label;
+}
+export function fuelUnit(kind: FuelKind): string {
+  return t.fuels[kind].unit;
+}
 export function fuelDefFor(k: Pick<KilnProfile, "energy" | "gasType">): FuelDef {
-  return settings.fuels[fuelKeyForKiln(k)];
+  const kind = fuelKeyForKiln(k);
+  return { ...settings.fuels[kind], label: t.fuels[kind].label, unit: t.fuels[kind].unit };
 }
 /** Variable fuel € for one firing = the service's consumption × current price. */
 export function fuelCostFor(k: Pick<KilnProfile, "energy" | "gasType">, fuelUse: number): number {
@@ -251,6 +266,20 @@ export async function loadSettings(): Promise<void> {
     settings.electricityHigh = typeof saved.electricityHigh === "number" ? saved.electricityHigh : 0.2;
     settings.biddingZone = typeof saved.biddingZone === "string" ? saved.biddingZone : "ES";
     settings.kofiSupported = saved.kofiSupported === true;
+  }
+  localizeSeedPartner();
+}
+
+// The bundled example partner ("studio") is seeded in English. If it's still
+// untouched, show its name/tiers in the active language (display-time fixup —
+// user edits stop matching and are left alone).
+function localizeSeedPartner(): void {
+  const p = settings.partners.find((x) => x.id === "studio");
+  if (!p) return;
+  if (p.name === "Guest studio" || p.name === "Example Guest Studio") p.name = t.defaults.exampleGuestStudio;
+  for (const tier of p.tiers) {
+    if (tier.id === "their-client" && tier.name === "Their client") tier.name = t.defaults.theirClient;
+    if (tier.id === "my-client" && tier.name === "My client") tier.name = t.defaults.myClient;
   }
 }
 

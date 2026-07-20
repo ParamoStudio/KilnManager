@@ -4,7 +4,7 @@ export type ComplexityKey = "simple" | "medium" | "complex";
 export const COMPLEXITY: Record<ComplexityKey, { label: string; factor: number }> = {
   simple: { label: "Simple", factor: 1.0 },
   medium: { label: "Medium", factor: 1.15 },
-  complex: { label: "Complex", factor: 1.3 },
+  complex: { label: "Complex", factor: 1.4 },
 };
 
 export const complexityKeys: ComplexityKey[] = ["simple", "medium", "complex"];

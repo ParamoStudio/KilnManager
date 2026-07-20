@@ -482,6 +482,7 @@ export function saveApp(): void {
 }
 
 export async function loadApp(): Promise<void> {
+  await loadLocale(); // first: so seed localization + labels use the active language
   await loadKilns();
   await loadSettings();
   const pending = await storage.read<FiringRecord[]>("PendingFirings");
@@ -495,7 +496,6 @@ export async function loadApp(): Promise<void> {
   }
   await loadContacts();
   await loadPayments();
-  await loadLocale();
 }
 
 // ---- UI / workflow state (transient, not part of the firing doc) ----------

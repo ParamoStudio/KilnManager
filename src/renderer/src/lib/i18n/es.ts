@@ -186,7 +186,11 @@ export const es: Dictionary = {
     complexityFactors: "Factores de complejidad",
     complexityExplain:
       "Cada pieza cuenta como el volumen de su balda <b>×</b> su factor de complejidad — eso es su <b>KLU</b> (unidad de carga del horno). El precio de una horneada se reparte entre todos según su parte del KLU total, así una carga más difícil carga con un poco más, con justicia.",
-    resetDefaults: "Restablecer valores (1,00 / 1,15 / 1,30)",
+    complexityHelp: "Qué significa cada nivel",
+    complexityHelpSimple: "Simple — una carga normal.",
+    complexityHelpMedium: "Media — más tiempo o más frágil (joyas sencillas, piezas pequeñas, escultura algo frágil).",
+    complexityHelpComplex: "Compleja — más tiempo y más frágil (p. ej. joyería fina, o cargas enormes de esculturas).",
+    resetDefaults: (a: string, b: string, c: string) => `Restablecer valores (${a} / ${b} / ${c})`,
     fuelPrices: "Precios de combustible",
     fuelPricesExplain:
       "La parte volátil del coste de cada horneada. Fija el precio actual por unidad; multiplica el consumo de cada servicio. También puedes actualizarlos rápido desde Inicio al comprar.",
@@ -221,7 +225,15 @@ export const es: Dictionary = {
     clientTicket: "Ticket de cliente",
     clientTicketExplain:
       "Tus logos, el nombre del taller, una nota impresa y el mensaje que envías — con vista previa en vivo del ticket que reciben tus clientes.",
-    customizeClientTicket: "Personalizar ticket de cliente…",
+    customizeClientTicket: "Personalizar Factura…",
+  },
+
+  fuels: {
+    electricity: { label: "Electricidad", unit: "kWh" },
+    propane: { label: "Propano", unit: "botella" },
+    butane: { label: "Butano", unit: "botella" },
+    wood: { label: "Leña", unit: "kg" },
+    other: { label: "Combustible", unit: "ud" },
   },
 
   customizeTicket: {

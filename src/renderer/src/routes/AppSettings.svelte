@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { complexityKeys } from "../lib/complexity";
+  import { complexityKeys, COMPLEXITY } from "../lib/complexity";
   import {
     settings,
     saveSettings,
@@ -12,6 +12,9 @@
     recordFuelPrice,
     setElectricityMode,
     setElectricityBounds,
+    cx,
+    fuelLabel,
+    fuelUnit,
     FUEL_KINDS,
   } from "../lib/settings.svelte";
   import { eur, num, fmtDay } from "../lib/format";
@@ -56,14 +59,25 @@
   <p class="faint sub">{t.appSettings.subtitle}</p>
 
   <div class="cols">
-    <!-- Complexity -->
+    <!-- LEFT: pricing inputs -->
     <section class="side">
-      <span class="side-title">{t.appSettings.complexityFactors}</span>
+      <div class="side-title-row">
+        <span class="side-title">{t.appSettings.complexityFactors}</span>
+        <span class="helpwrap">
+          <button class="help" aria-label={t.appSettings.complexityHelp}>?</button>
+          <span class="helptip">
+            <span class="hth">{t.appSettings.complexityHelp}</span>
+            <span>{t.appSettings.complexityHelpSimple}</span>
+            <span>{t.appSettings.complexityHelpMedium}</span>
+            <span>{t.appSettings.complexityHelpComplex}</span>
+          </span>
+        </span>
+      </div>
       <p class="faint explain">{@html t.appSettings.complexityExplain}</p>
       <div class="rows">
         {#each complexityKeys as key (key)}
           <div class="lrow">
-            <input class="grow" bind:value={settings.complexity[key].label} onchange={persist} />
+            <span class="grow cxname">{cx(key).label}</span>
             <div class="fac">
               <span class="mul">×</span>
               <input type="number" min="1" step="0.05" bind:value={settings.complexity[key].factor} onchange={persist} />
@@ -71,24 +85,25 @@
           </div>
         {/each}
       </div>
-      <button class="reset" onclick={resetComplexity}>{t.appSettings.resetDefaults}</button>
+      <button class="reset" onclick={resetComplexity}>
+        {t.appSettings.resetDefaults(num(COMPLEXITY.simple.factor, 2), num(COMPLEXITY.medium.factor, 2), num(COMPLEXITY.complex.factor, 2))}
+      </button>
 
       <span class="side-title mt">{t.appSettings.fuelPrices}</span>
       <p class="faint explain">{t.appSettings.fuelPricesExplain}</p>
       <div class="ftable">
         {#each FUEL_KINDS as fk (fk)}
-          {@const f = settings.fuels[fk]}
           <div class="ftrow">
-            <span class="flabel">{f.label}</span>
-            <input class="fprice" type="number" min="0" step="0.01" value={f.price} onchange={(e) => recordFuelPrice(fk, parseFloat(e.currentTarget.value))} />
-            <span class="funit">/{f.unit}</span>
+            <span class="flabel">{fuelLabel(fk)}</span>
+            <input class="fprice" type="number" min="0" step="0.01" value={settings.fuels[fk].price} onchange={(e) => recordFuelPrice(fk, parseFloat(e.currentTarget.value))} />
+            <span class="funit">/{fuelUnit(fk)}</span>
           </div>
         {/each}
       </div>
       {#if settings.priceHistory.length}
         <div class="hist">
           {#each settings.priceHistory.slice(0, 6) as h (h.id)}
-            <span class="hitem">{settings.fuels[h.fuel].label} {eur(h.price)} · {fmtDay(h.at)}</span>
+            <span class="hitem">{fuelLabel(h.fuel)} {eur(h.price)} · {fmtDay(h.at)}</span>
           {/each}
         </div>
       {/if}
@@ -112,40 +127,13 @@
       {:else}
         <p class="faint small">{t.appSettings.fixedHint}</p>
       {/if}
-
-      <span class="side-title mt">{t.appSettings.displayTitle}</span>
-      <p class="faint explain">{t.appSettings.displayExplain}</p>
-      <div class="disprow">
-        <label class="dispf"><span>{t.appSettings.language}</span>
-          <select value={getLocale()} onchange={(e) => setLocale(e.currentTarget.value as Locale)}>
-            {#each LOCALES as l (l.code)}<option value={l.code}>{l.label}</option>{/each}
-          </select>
-        </label>
-        <label class="dispf"><span>{t.appSettings.currency}</span>
-          <select value={getCurrency()} onchange={(e) => setCurrency(e.currentTarget.value as Currency)}>
-            {#each CURRENCIES as c (c.code)}<option value={c.code}>{c.label}</option>{/each}
-          </select>
-        </label>
-      </div>
-      <p class="faint small">{t.appSettings.currencyHint}</p>
-
-      {#if isDesktop}
-        <span class="side-title mt">{t.appSettings.dataFolder}</span>
-        <p class="faint explain">{t.appSettings.dataFolderExplain}</p>
-        <div class="vault">
-          <code class="vpath">{vaultPath ?? "—"}</code>
-          <div class="vrow">
-            <button class="vbtn" onclick={() => vault.reveal()}>{t.appSettings.revealInFinder}</button>
-            <button class="vbtn" onclick={() => changeVault("locate")}>{t.appSettings.locateExisting}</button>
-            <button class="vbtn" onclick={() => changeVault("create")}>{t.appSettings.moveOrNew}</button>
-          </div>
-        </div>
-      {/if}
     </section>
 
-    <!-- Partners -->
+    <!-- RIGHT: invoice, partners, display, data -->
     <section class="side">
-      <span class="side-title">{t.appSettings.partners}</span>
+      <button class="customize" onclick={() => (customizing = true)}>{t.appSettings.customizeClientTicket}</button>
+
+      <span class="side-title mt">{t.appSettings.partners}</span>
       <p class="faint explain">{t.appSettings.partnersExplain}</p>
       <div class="partners">
         {#each settings.partners as p (p.id)}
@@ -175,9 +163,34 @@
       </div>
       <button class="add" onclick={addPartner}>{t.appSettings.addPartner}</button>
 
-      <span class="side-title mt">{t.appSettings.clientTicket}</span>
-      <p class="faint explain">{t.appSettings.clientTicketExplain}</p>
-      <button class="customize" onclick={() => (customizing = true)}>{t.appSettings.customizeClientTicket}</button>
+      <span class="side-title mt">{t.appSettings.displayTitle}</span>
+      <p class="faint explain">{t.appSettings.displayExplain}</p>
+      <div class="disprow">
+        <label class="dispf"><span>{t.appSettings.language}</span>
+          <select value={getLocale()} onchange={(e) => setLocale(e.currentTarget.value as Locale)}>
+            {#each LOCALES as l (l.code)}<option value={l.code}>{l.label}</option>{/each}
+          </select>
+        </label>
+        <label class="dispf"><span>{t.appSettings.currency}</span>
+          <select value={getCurrency()} onchange={(e) => setCurrency(e.currentTarget.value as Currency)}>
+            {#each CURRENCIES as c (c.code)}<option value={c.code}>{c.label}</option>{/each}
+          </select>
+        </label>
+      </div>
+      <p class="faint small">{t.appSettings.currencyHint}</p>
+
+      {#if isDesktop}
+        <span class="side-title mt">{t.appSettings.dataFolder}</span>
+        <p class="faint explain">{t.appSettings.dataFolderExplain}</p>
+        <div class="vault">
+          <code class="vpath">{vaultPath ?? "—"}</code>
+          <div class="vrow">
+            <button class="vbtn" onclick={() => vault.reveal()}>{t.appSettings.revealInFinder}</button>
+            <button class="vbtn" onclick={() => changeVault("locate")}>{t.appSettings.locateExisting}</button>
+            <button class="vbtn" onclick={() => changeVault("create")}>{t.appSettings.moveOrNew}</button>
+          </div>
+        </div>
+      {/if}
     </section>
   </div>
 </div>
@@ -219,11 +232,76 @@
     font-size: 11px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--text-faint);
+    color: var(--text);
     font-weight: 600;
+    text-align: center;
+    display: block;
   }
   .side-title.mt {
     margin-top: 18px;
+  }
+  .side-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .helpwrap {
+    position: relative;
+    display: inline-flex;
+  }
+  .help {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid var(--text-faint);
+    background: none;
+    color: var(--text-faint);
+    font-size: 10px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: help;
+  }
+  .help:hover {
+    color: var(--text);
+    border-color: var(--text);
+  }
+  .helptip {
+    display: none;
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    width: 270px;
+    flex-direction: column;
+    gap: 6px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-dim);
+    text-align: left;
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 400;
+  }
+  .helpwrap:hover .helptip {
+    display: flex;
+  }
+  .hth {
+    font-weight: 600;
+    color: var(--text);
+  }
+  .cxname {
+    font-size: 14px;
+    color: var(--text);
+    padding: 9px 2px;
   }
   .explain {
     font-size: 12.5px;
@@ -259,17 +337,19 @@
     border-color: var(--text-faint);
   }
   .customize {
-    align-self: flex-start;
-    background: var(--text);
-    color: var(--bg);
-    border: none;
-    border-radius: 9px;
-    padding: 10px 16px;
-    font-size: 13px;
+    align-self: stretch;
+    text-align: center;
+    background: color-mix(in srgb, var(--amber) 16%, var(--panel));
+    color: var(--amber);
+    border: 1px solid color-mix(in srgb, var(--amber) 55%, var(--line));
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 14px;
     font-weight: 600;
   }
   .customize:hover {
-    opacity: 0.9;
+    background: color-mix(in srgb, var(--amber) 26%, var(--panel));
+    border-color: var(--amber);
   }
   .segmented {
     display: flex;
