@@ -8,6 +8,38 @@ Build a firing visually — stack shelves, split them, assign each zone to a
 client — and the app splits the real cost fairly across everyone in the load,
 then produces a clean ticket for each of them.
 
+## Install
+
+**[→ Download the latest version](https://github.com/ParamoStudio/KilnManager/releases/latest)**
+
+| Your computer      | Download                                              |
+| ------------------ | ----------------------------------------------------- |
+| Mac (Apple Silicon) | `Páramo Kiln Manager-x.y.z-arm64.dmg`                |
+| Mac (Intel)         | `Páramo Kiln Manager-x.y.z-x64.dmg`                  |
+| Windows             | `Páramo Kiln Manager Setup x.y.z.exe`                |
+| Linux               | `Páramo Kiln Manager-x.y.z.AppImage`                 |
+
+On **Mac**, open the `.dmg` and drag the app into Applications. The first time
+you open it, macOS will say it can't check the app for malicious software: this
+is because the app isn't signed with a paid Apple Developer certificate, not
+because anything is wrong with it. **Right-click the app → Open**, then confirm.
+You only have to do this once. (If macOS refuses outright, run
+`xattr -dr com.apple.quarantine "/Applications/Páramo Kiln Manager.app"`.)
+
+On **Windows**, SmartScreen will warn for the same reason: *More info → Run
+anyway*.
+
+### Or run it from source
+
+If you'd rather build it yourself (or you're on a platform without a build):
+
+```bash
+git clone https://github.com/ParamoStudio/KilnManager.git
+cd KilnManager
+npm install
+npm run package   # builds an installable app for your platform into release/
+```
+
 ## Load a kiln from your phone
 
 Loading a kiln means standing at the kiln, not at a computer. The companion

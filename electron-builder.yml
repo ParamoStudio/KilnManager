@@ -1,0 +1,52 @@
+# Packaging config — turns the compiled app into something you can actually
+# install: a real .app / .exe with the studio's name and icon, not "Electron".
+#
+# Build locally with `npm run package` (your platform only). The Release
+# workflow builds macOS, Windows and Linux on a tag and attaches them.
+appId: studio.paramo.kilnmanager
+productName: Páramo Kiln Manager
+copyright: © Páramo Studio
+
+directories:
+  buildResources: build
+  output: release
+
+# electron-vite emits the compiled app into out/; that's all that ships.
+files:
+  - out/**
+  - package.json
+
+# The app is fully offline and local-first, so there's no auto-update server.
+publish: null
+
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  icon: build/icon.png
+  # Not notarised (that needs a paid Apple Developer account). See the README:
+  # first launch is right-click → Open, or clear the quarantine attribute.
+  identity: null
+
+dmg:
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.png
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+  icon: build/icon.png
+  category: Graphics

@@ -59,7 +59,8 @@ export const en = {
       "I'm leaving this here shyly. I'm not much of a social media person and I struggle to get it running, or even to want to sell. I'm afraid that living off it might spoil the love I have for ceramics. Anyway: if you want to take a look and something catches your eye, it's always an honour.",
     whoShopLink: "Visit the shop",
     whoKofiTitle: "Support",
-    whoKofiBody: "This app is free and open source. If it's useful to you and you feel like it, you can buy me a coffee.",
+    whoKofiBody:
+      "This app is free and open source. If it's useful to you and you feel like it, you can buy me a coffee (well, most likely Lithium Carbonate, that got too expensive!).",
     whoKofiLink: "Ko-fi",
     kofiText: "This program is open source and free to use. Enjoying it?",
     kofiLink: "Support me if you feel like it",

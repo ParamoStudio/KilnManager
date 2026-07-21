@@ -9,3 +9,6 @@ data/
 
 # Local Wrangler/Miniflare state (test data — never committed)
 .wrangler/
+
+# Packaged app artifacts
+release/

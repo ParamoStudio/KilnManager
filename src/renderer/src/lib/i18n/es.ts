@@ -47,7 +47,8 @@ export const es: Dictionary = {
       "La dejo aquí con timidez. No soy muy de redes sociales y me cuesta ponerla en marcha, o incluso querer vender. Temo que vivir de ello pueda estropear un poco el amor que le tengo a la cerámica. En fin: si quieres echar un vistazo y algo te gusta, siempre es un honor.",
     whoShopLink: "Visitar la tienda",
     whoKofiTitle: "Apoyo",
-    whoKofiBody: "Esta app es gratuita y de código abierto. Si te resulta útil y te apetece, puedes invitarme a un café.",
+    whoKofiBody:
+      "Esta app es gratuita y de código abierto. Si te resulta útil y te apetece, puedes invitarme a un café (bueno, seguramente a Carbonato de Litio, ¡que se ha puesto por las nubes!).",
     whoKofiLink: "Ko-fi",
     kofiText: "Este programa es de código abierto y gratuito. ¿Te resulta útil?",
     kofiLink: "Apóyame si te apetece",
