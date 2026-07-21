@@ -14,8 +14,9 @@
     phoneSyncNow,
     importFromPhone,
   } from "../lib/phonesync.svelte";
+  import { bridgeReady, relayBase, setCustomRelay, testRelay } from "../lib/phonesync.svelte";
   import { syncDirty } from "../lib/syncflags.svelte";
-  import { bridgeConfigured } from "../lib/syncconfig";
+  import { openLink } from "../lib/storage";
   import { t } from "../lib/i18n.svelte";
 
   let { onclose }: { onclose: () => void } = $props();
@@ -39,6 +40,37 @@
     imported = await importFromPhone();
   }
 
+  // ---- Advanced: run your own relay ---------------------------------------
+  const HOWTO = "https://github.com/ParamoStudio/KilnManager/blob/main/docs/self-hosting-relay.md";
+  let advancedOpen = $state(false);
+  let relayDraft = $state("");
+  let testState = $state<"idle" | "testing" | "ok" | "fail">("idle");
+  let testError = $state("");
+
+  let advInited = false;
+  $effect(() => {
+    if (advInited) return;
+    advInited = true;
+    relayDraft = phone.customRelay;
+  });
+
+  async function runTest(): Promise<void> {
+    testState = "testing";
+    const res = await testRelay(relayDraft);
+    testError = res.error;
+    testState = res.ok ? "ok" : "fail";
+  }
+  function saveRelay(): void {
+    setCustomRelay(relayDraft);
+    testState = "idle";
+    advancedOpen = false;
+  }
+  function useDefaultRelay(): void {
+    relayDraft = "";
+    setCustomRelay("");
+    testState = "idle";
+  }
+
   // Two-step unpair: the first press explains what's at stake when firings are
   // still waiting, the second actually does it.
   let confirmUnpair = $state(false);
@@ -60,7 +92,7 @@
   </div>
   <p class="faint intro">{t.phone.intro}</p>
 
-  {#if !bridgeConfigured()}
+  {#if !bridgeReady()}
     <p class="notready">{t.phone.notConfigured}</p>
   {:else if !phone.paired}
     <button class="gen" onclick={generatePairing}>{t.phone.generate}</button>
@@ -99,6 +131,46 @@
       {/if}
     </div>
   {/if}
+
+  <!-- Self-hosting: deliberately tucked away at the bottom. Almost nobody needs
+       it, but a studio that wants its data on its own infrastructure can. -->
+  <div class="advanced">
+    <button class="advtoggle" onclick={() => (advancedOpen = !advancedOpen)}>
+      {advancedOpen ? "▾" : "▸"} {t.phone.advanced}
+    </button>
+    {#if advancedOpen}
+      <div class="advbody">
+        <p class="faint advhint">{t.phone.relayExplain}</p>
+        <input
+          class="relayinput"
+          bind:value={relayDraft}
+          placeholder={t.phone.relayPlaceholder}
+          oninput={() => (testState = "idle")}
+        />
+        <div class="advrow">
+          <button class="mini" onclick={runTest} disabled={testState === "testing" || !relayDraft.trim()}>
+            {testState === "testing" ? t.phone.relayTesting : t.phone.relayTest}
+          </button>
+          {#if testState === "ok"}
+            <span class="tick">✓ {t.phone.relayOk}</span>
+          {:else if testState === "fail"}
+            <span class="cross">✕ {t.phone.relayFail(testError)}</span>
+          {/if}
+        </div>
+        {#if testState === "ok"}
+          <p class="warn">{t.phone.relaySwitchWarn}</p>
+          <button class="gen" onclick={saveRelay}>{t.phone.relayUse}</button>
+        {/if}
+        <div class="advrow">
+          <button class="link" onclick={() => openLink(HOWTO)}>{t.phone.relayHowTo}</button>
+          {#if phone.customRelay}
+            <button class="mini" onclick={useDefaultRelay}>{t.phone.relayDefault}</button>
+          {/if}
+        </div>
+        <p class="faint current">{t.phone.relayCurrent(phone.customRelay || t.phone.relayParamo)}</p>
+      </div>
+    {/if}
+  </div>
 </div>
 
 <style>
@@ -208,6 +280,72 @@
     line-height: 1.55;
     color: var(--amber);
     margin: 0;
+  }
+  .advanced {
+    border-top: 1px solid var(--line-soft);
+    padding-top: 10px;
+    margin-top: 2px;
+  }
+  .advtoggle {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--text-faint);
+    font-size: 11.5px;
+  }
+  .advtoggle:hover {
+    color: var(--text-dim);
+  }
+  .advbody {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .advhint {
+    font-size: 11.5px;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .relayinput {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+  }
+  .relayinput:focus {
+    outline: none;
+    border-color: var(--text-faint);
+  }
+  .advrow {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+  }
+  .tick {
+    font-size: 12px;
+    color: var(--green, #7fdca4);
+  }
+  .cross {
+    font-size: 11.5px;
+    color: var(--amber);
+  }
+  .link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--accent);
+    font-size: 11.5px;
+    text-decoration: underline;
+  }
+  .current {
+    font-size: 11px;
+    margin: 0;
+    overflow-wrap: anywhere;
   }
   .statusrow {
     display: flex;

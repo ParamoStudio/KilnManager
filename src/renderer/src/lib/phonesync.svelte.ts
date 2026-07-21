@@ -11,15 +11,29 @@ import { kilnStore } from "./kilns.svelte";
 import { settings } from "./settings.svelte";
 import { syncDirty, setDirtyHook } from "./syncflags.svelte";
 import { complexityKeys } from "./complexity";
-import { RELAY_BASE, MOBILE_APP_URL, bridgeConfigured } from "./syncconfig";
+import { RELAY_BASE, MOBILE_APP_URL } from "./syncconfig";
 import { storage } from "./storage";
 
 interface PhoneSyncConfig {
   token: string;
+  /** Empty = use the relay Páramo runs. Set = this studio self-hosts its own. */
+  customRelay?: string;
+}
+
+/** Whichever relay this install talks to — the studio's own if configured. */
+export function relayBase(): string {
+  return (phone.customRelay || RELAY_BASE).replace(/\/+$/, "");
+}
+
+/** Can this install pair at all? True as soon as there's a relay to talk to,
+ * whether that's Páramo's or the studio's own. */
+export function bridgeReady(): boolean {
+  return !!(relayBase() && MOBILE_APP_URL);
 }
 
 export const phone = $state<{
   token: string;
+  customRelay: string;
   paired: boolean;
   pending: number; // firings waiting on the relay
   pendingNew: number; // …of those, ones we've never seen
@@ -32,6 +46,7 @@ export const phone = $state<{
   lastUpdated: number;
 }>({
   token: "",
+  customRelay: "",
   paired: false,
   pending: 0,
   pendingNew: 0,
@@ -44,14 +59,57 @@ export const phone = $state<{
 });
 
 function persist(): void {
-  const cfg: PhoneSyncConfig = { token: phone.token };
+  const cfg: PhoneSyncConfig = { token: phone.token, customRelay: phone.customRelay };
   void storage.write("phoneSync", cfg);
 }
 
 export async function loadPhoneSync(): Promise<void> {
   const cfg = await storage.read<PhoneSyncConfig>("phoneSync");
   phone.token = cfg?.token ?? "";
-  phone.paired = !!(bridgeConfigured() && phone.token);
+  phone.customRelay = cfg?.customRelay ?? "";
+  phone.paired = !!(bridgeReady() && phone.token);
+}
+
+/**
+ * Point this install at a self-hosted relay (or back at Páramo's, if cleared).
+ * Any existing pairing is dropped: a different relay is a different mailbox, so
+ * the phones have to scan a new QR to follow the move.
+ */
+export function setCustomRelay(url: string): void {
+  const next = url.trim().replace(/\/+$/, "");
+  if (next === phone.customRelay) return;
+  phone.customRelay = next;
+  phone.token = "";
+  phone.paired = false;
+  phone.pending = phone.pendingNew = phone.pendingUpdate = 0;
+  persist();
+}
+
+/**
+ * Prove a URL really is a Kiln relay before trusting it with the studio's data:
+ * write a probe to a throwaway channel and read it straight back. A URL that
+ * merely returns 200 (a parked domain, a proxy) fails this.
+ */
+export async function testRelay(url: string): Promise<{ ok: boolean; error: string }> {
+  const base = url.trim().replace(/\/+$/, "");
+  if (!/^https?:\/\//i.test(base)) return { ok: false, error: "url" };
+  const probeToken = `probe${Math.random().toString(36).slice(2, 14)}pppppp`.slice(0, 24);
+  const stamp = Date.now();
+  try {
+    const put = await fetch(`${base}/channel/${probeToken}/down`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ probe: stamp }),
+    });
+    if (!put.ok) return { ok: false, error: `http ${put.status}` };
+    const get = await fetch(`${base}/channel/${probeToken}/down`);
+    if (!get.ok) return { ok: false, error: `http ${get.status}` };
+    const body = (await get.json()) as { probe?: number } | null;
+    if (!body || body.probe !== stamp) return { ok: false, error: "contract" };
+    return { ok: true, error: "" };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "network" };
+  }
 }
 
 /** Generate a fresh pairing token. Endpoints are fixed at build time.
@@ -61,7 +119,7 @@ export function generatePairing(): void {
   const bytes = new Uint8Array(18);
   crypto.getRandomValues(bytes);
   phone.token = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  phone.paired = !!(bridgeConfigured() && phone.token);
+  phone.paired = !!(bridgeReady() && phone.token);
   persist();
   if (phone.paired) {
     void pushDown().catch((e) => {
@@ -77,11 +135,13 @@ export function revokePairing(): void {
 
 /** The URL the QR encodes: the mobile PWA with the pairing baked into the hash. */
 export function pairUrl(): string {
-  return `${MOBILE_APP_URL.replace(/\/+$/, "")}/#pair=${phone.token}~${encodeURIComponent(RELAY_BASE)}`;
+  // The relay address travels inside the QR, so phones follow a self-hosted
+  // relay automatically — there's nothing to type on the phone.
+  return `${MOBILE_APP_URL.replace(/\/+$/, "")}/#pair=${phone.token}~${encodeURIComponent(relayBase())}`;
 }
 
 function channel(box: "down" | "up"): string {
-  return `${RELAY_BASE.replace(/\/+$/, "")}/channel/${phone.token}/${box}`;
+  return `${relayBase()}/channel/${phone.token}/${box}`;
 }
 
 /** The phone-facing payload: structure only, no €. */

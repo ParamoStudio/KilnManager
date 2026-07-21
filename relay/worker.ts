@@ -24,9 +24,10 @@ export interface Env {
 
 // A channel that sees no traffic for a week is dropped. Every write refreshes it.
 const TTL_SECONDS = 7 * 24 * 60 * 60;
-// Guardrails: the phone never holds more than 5 pending firings, and payloads
-// stay small (structure only). These bound abuse without needing accounts.
-const MAX_PENDING = 5;
+// Guardrails that bound abuse without needing accounts. The pending limit is
+// shared across every phone paired to this token — a studio can have several
+// people loading kilns at once, so it can't be a single phone's allowance.
+const MAX_PENDING = 25;
 const MAX_BODY_BYTES = 512 * 1024;
 // A token is only ever machine-generated (QR). Reject anything malformed early.
 const TOKEN_RE = /^[A-Za-z0-9_-]{16,64}$/;

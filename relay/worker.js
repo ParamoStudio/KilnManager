@@ -10,7 +10,9 @@
  */
 
 const TTL_SECONDS = 7 * 24 * 60 * 60; // a quiet channel self-expires in a week
-const MAX_PENDING = 5; // the phone never holds more than 5 pending firings
+// Shared across every phone paired to this token: a studio can have several
+// people loading kilns at once, so this can't be a single phone's limit.
+const MAX_PENDING = 25;
 const MAX_BODY_BYTES = 512 * 1024;
 const TOKEN_RE = /^[A-Za-z0-9_-]{16,64}$/;
 

@@ -185,7 +185,16 @@ export function discardDraft(): void {
 export const drafts = $state<{ list: SavedDraft[] }>({ list: [] });
 
 let seq = 0;
-const newId = (p: string): string => `${p}${Date.now().toString(36)}${seq++}`;
+/**
+ * Ids must be unique across DEVICES, not just within this phone: a studio can
+ * have several people loading kilns against the same pairing QR, and the relay
+ * keys firings by id. Timestamp + counter alone collide when two phones create
+ * a firing in the same millisecond, and one would silently overwrite the other.
+ */
+const newId = (p: string): string => {
+  const rand = Math.random().toString(36).slice(2, 8);
+  return `${p}${Date.now().toString(36)}${seq++}${rand}`;
+};
 
 export function canSaveNewDraft(): boolean {
   return drafts.list.length < MAX_DRAFTS;
