@@ -6,3 +6,6 @@ out/
 
 # Local user data (private, offline — never committed)
 data/
+
+# Local Wrangler/Miniflare state (test data — never committed)
+.wrangler/

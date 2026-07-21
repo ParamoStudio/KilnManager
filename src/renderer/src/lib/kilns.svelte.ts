@@ -4,6 +4,7 @@
  */
 import type { CostItem, KilnModifier, KilnProfile, KilnShape } from "@core";
 import { demoKilns } from "./kilns";
+import { markKilnsDirty } from "./syncflags.svelte";
 import { storage } from "./storage";
 
 /** Fixed cost lines every kiln always shows (in this order, deduped by name). */
@@ -130,6 +131,7 @@ export const newServiceId = (): string => `svc-${newKilnId()}`;
 
 export function saveKilns(): void {
   void storage.write("kilns", $state.snapshot(kilnStore.list));
+  markKilnsDirty(); // the phone gets kiln structure (no prices); re-push next sync
 }
 
 export async function loadKilns(): Promise<void> {

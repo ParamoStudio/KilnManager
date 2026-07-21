@@ -1,6 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { app, go, loadApp } from "./lib/firing.svelte";
+  import { loadPhoneSync, phoneSyncOnOpen } from "./lib/phonesync.svelte";
+  import PhonePanel from "./components/PhonePanel.svelte";
+  import WhoIsParamo from "./components/WhoIsParamo.svelte";
   import { vault, openLink } from "./lib/storage";
   import { settings, markKofiSupported } from "./lib/settings.svelte";
   import { t } from "./lib/i18n.svelte";
@@ -22,10 +25,27 @@
   // launch; opening the Ko-fi page marks it supported and hides it for good.
   let kofiDismissed = $state(false);
   const showKofi = $derived(ready && !settings.kofiSupported && !kofiDismissed);
+  let phoneOpen = $state(false);
+  let whoOpen = $state(false);
+
+  /**
+   * The layout is designed for a roomy desktop window. Rather than reflow every
+   * panel, we scale the whole UI proportionally as the window narrows (CSS
+   * zoom, so layout reflows at the scaled size). Below the floor there's no
+   * sensible scale left, so we blur everything and ask for a bigger window.
+   */
+  const DESIGN_W = 1440;
+  const MIN_W = 1000;
+  let innerWidth = $state(DESIGN_W);
+  const tooSmall = $derived(innerWidth > 0 && innerWidth < MIN_W);
+  const uiScale = $derived(Math.min(1, Math.max(MIN_W / DESIGN_W, innerWidth / DESIGN_W)));
+  $effect(() => {
+    // At the "too small" size we drop back to 1:1 so the warning reads clearly.
+    document.documentElement.style.zoom = tooSmall ? "1" : String(uiScale);
+  });
+
   const KOFI = "https://ko-fi.com/paramostudio";
   // External links (placeholders — swap for the real URLs).
-  const GITHUB = "https://github.com/ParamoStudio";
-  const SHOP = "https://paramo.studio";
   function openKofi(): void {
     openLink(KOFI);
     markKofiSupported();
@@ -47,11 +67,14 @@
   async function bootstrap(): Promise<void> {
     try {
       await loadApp();
+      await loadPhoneSync();
     } catch (err) {
       console.error("loadApp failed", err);
     } finally {
       ready = true;
       if (kilnStore.list.length === 0) app.firstKilnOpen = true;
+      // Non-blocking: refresh the phone's data + see if firings are waiting.
+      void phoneSyncOnOpen();
     }
   }
 
@@ -89,7 +112,16 @@
   }
 </script>
 
-<svelte:window onkeydown={onKey} />
+<svelte:window onkeydown={onKey} bind:innerWidth />
+
+{#if tooSmall}
+  <div class="toosmall" role="alertdialog">
+    <div class="ts-card">
+      <h2>{t.app.tooSmallTitle}</h2>
+      <p>{t.app.tooSmallBody}</p>
+    </div>
+  </div>
+{/if}
 
 <div class="app">
   <header class="topbar">
@@ -107,22 +139,16 @@
         </svg>
         {t.app.clientBook}
       </button>
-      <div class="extras">
-        <div class="extra-row">
-          <button class="iconlink" onclick={() => openLink(GITHUB)} title={t.app.github} aria-label={t.app.github}>
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-              <path fill="currentColor" d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.85 9.73.5.09.68-.22.68-.49 0-.24-.01-.87-.01-1.71-2.79.62-3.38-1.37-3.38-1.37-.46-1.19-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.9 1.56 2.36 1.11 2.94.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05a9.3 9.3 0 0 1 2.5-.34c.85 0 1.71.12 2.5.34 1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.06.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.59.69.49A10.03 10.03 0 0 0 22 12.25C22 6.58 17.52 2 12 2Z"/>
-            </svg>
-          </button>
-          <button class="iconlink" onclick={() => openLink(SHOP)} title={t.app.shop} aria-label={t.app.shop}>
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-              <path d="M6 8h12l-1 11H7L6 8z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
-              <path d="M9 8V6.5a3 3 0 0 1 6 0V8" fill="none" stroke="currentColor" stroke-width="1.5" />
-            </svg>
-          </button>
-        </div>
-        <button class="toolsbtn" title={t.app.comingSoon} aria-label={t.app.ceramicLabTools}>{t.app.ceramicLabTools}</button>
-      </div>
+      <button class="sqbtn" onclick={() => (phoneOpen = true)} title={t.phone.title} aria-label={t.phone.title}>
+        <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true">
+          <rect x="7" y="2.5" width="10" height="19" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.4" />
+          <line x1="10.6" y1="5.4" x2="13.4" y2="5.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+          <circle cx="12" cy="18.2" r="1" fill="currentColor" />
+        </svg>
+      </button>
+      <button class="sqbtn" onclick={() => (whoOpen = true)} title={t.app.whoTitle} aria-label={t.app.whoTitle}>
+        <span class="qmark">?</span>
+      </button>
     </div>
   </header>
 
@@ -168,6 +194,12 @@
 {/if}
 {#if ready && app.firstKilnOpen}
   <FirstKilnPrompt />
+{/if}
+{#if phoneOpen}
+  <PhonePanel onclose={() => (phoneOpen = false)} />
+{/if}
+{#if whoOpen}
+  <WhoIsParamo onclose={() => (whoOpen = false)} />
 {/if}
 {#if app.agendaOpen}
   <AgendaCard
@@ -271,48 +303,65 @@
     right: 10px;
     top: 0;
     display: flex;
-    align-items: center;
-    gap: 26px;
-  }
-  /* External-links block: two rows of equal width, right-aligned. */
-  .extras {
-    display: flex;
-    flex-direction: column;
     align-items: stretch;
-    gap: 6px;
+    gap: 8px;
   }
-  .extra-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
+  /* Window too narrow to scale any further: blur the app, ask for more room. */
+  .toosmall {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(11, 11, 13, 0.55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
-  .iconlink {
+  .ts-card {
+    max-width: 420px;
+    text-align: center;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 28px 30px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65);
+  }
+  .ts-card h2 {
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+  .ts-card p {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text-dim);
+    margin: 0;
+  }
+
+  /* Square icon buttons beside the Client Book tab: same height, icon only. */
+  .sqbtn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 30px;
+    width: 54px;
+    align-self: stretch;
     background: var(--panel);
     border: 1px solid var(--line);
-    border-radius: 9px;
-    color: var(--text-faint);
+    border-radius: 8px 8px 16px 16px;
+    border-top-width: 2px;
+    border-top-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    color: var(--text-dim);
   }
-  .iconlink:hover {
+  .sqbtn:hover {
     color: var(--text);
     border-color: var(--text-faint);
+    border-top-color: var(--accent);
   }
-  .toolsbtn {
-    width: 100%;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 9px;
-    padding: 6px 12px;
-    color: var(--text-faint);
-    font-size: 11.5px;
-    white-space: nowrap;
-  }
-  .toolsbtn:hover {
-    color: var(--text);
-    border-color: var(--text-faint);
+  .qmark {
+    font-size: 19px;
+    font-weight: 400;
+    line-height: 1;
   }
   .wordmark {
     font-size: 21px;

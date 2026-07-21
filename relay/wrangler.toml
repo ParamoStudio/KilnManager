@@ -1,0 +1,13 @@
+# Cloudflare Worker config for the Páramo Kiln Loader pairing relay.
+# Deploy: see README.md. Free tier is plenty (a few tiny reads/writes per day).
+
+name = "kiln-relay"
+main = "worker.ts"
+compatibility_date = "2024-11-01"
+
+# The KV namespace that holds the down: / up: mailboxes.
+# Create it once with:  wrangler kv namespace create KILN_RELAY
+# then paste the returned id below.
+[[kv_namespaces]]
+binding = "KILN_RELAY"
+id = "PASTE_KV_NAMESPACE_ID_HERE"

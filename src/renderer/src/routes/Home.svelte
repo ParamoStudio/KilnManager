@@ -83,6 +83,7 @@
           <div class="info">
             <div class="row1">
               <span class="kiln">{titled || fmtFull(rec.createdAt)}</span>
+              {#if rec.source === "phone"}<span class="phonebadge">{t.phone.fromPhone}</span>{/if}
               <span class="pending">{t.home.pending}</span>
             </div>
             <div class="title">{k.name} <span class="energy">· {energyLabel(k)}</span></div>
@@ -308,6 +309,16 @@
     border: 1px solid color-mix(in srgb, var(--amber) 40%, var(--line));
     border-radius: 999px;
     padding: 2px 7px;
+  }
+  .phonebadge {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--blue, #8ab6f0);
+    border: 1px solid color-mix(in srgb, var(--blue, #8ab6f0) 40%, var(--line));
+    border-radius: 999px;
+    padding: 2px 7px;
+    margin-left: auto;
   }
   .title {
     font-size: 13px;

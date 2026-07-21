@@ -5,6 +5,7 @@ import { type ComplexityKey } from "./complexity";
 import { cx, loadSettings, fuelCostFor, fuelDefFor, resolvePartner, defaultTierRef } from "./settings.svelte";
 import { loadPayments } from "./payments.svelte";
 import { loadLocale } from "./i18n.svelte";
+import { markContactsDirty } from "./syncflags.svelte";
 import { storage } from "./storage";
 
 // ---- Planner state (renderer-only, richer than the core Firing) -----------
@@ -361,6 +362,8 @@ export interface FiringRecord {
   closedAt?: number;
   planner: PlannerState;
   clientNotes: Record<string, string>;
+  /** Where the firing came from — set when imported from the phone loader. */
+  source?: "phone";
 }
 
 export const firings = $state<{ list: FiringRecord[]; activeId: string | null }>({
@@ -419,6 +422,45 @@ export function newFiring(kilnId: string): void {
   loadIntoPlanner(rec.planner);
   ui.selection = [];
   app.screen = "firing";
+  saveApp();
+}
+
+/** Import a firing built on the phone as a new "current" firing, tagged so it's
+ * visually distinguishable until the ceramicist reviews/prices it here. The
+ * phone sends the same PlannerState shape the app already uses — no translation,
+ * no pricing done on the phone. Missing fields are filled defensively. */
+export function importPhoneFiring(item: {
+  id?: string;
+  title?: string;
+  firing: PlannerState;
+  notes?: Record<string, string>;
+}): void {
+  const p = item.firing ?? ({} as PlannerState);
+  const kiln = kilnStore.list.find((k) => k.id === p.kilnId) ?? kilnStore.list[0];
+  const rec: FiringRecord = {
+    id: `f${Date.now().toString(36)}${seq++}`,
+    title: item.title ?? "",
+    createdAt: Date.now(),
+    status: "current",
+    source: "phone",
+    clientNotes: item.notes ?? {},
+    planner: {
+      kilnId: p.kilnId || kiln?.id || "",
+      serviceId: p.serviceId || kiln?.services[0]?.id || "",
+      levels: p.levels ?? [],
+      kilnMods: p.kilnMods ?? [],
+      customDiscount: p.customDiscount ?? null,
+      clientMods: p.clientMods ?? {},
+      partners:
+        p.partners && p.partners.length
+          ? p.partners
+          : (() => {
+              const d = defaultTierRef();
+              return d ? [d] : [];
+            })(),
+    },
+  };
+  firings.list.push(rec);
   saveApp();
 }
 
@@ -577,16 +619,19 @@ export function addContactFull(data: Omit<Contact, "id">): Contact {
   const c: Contact = { id: cid(), ...data };
   contacts.list.push(c);
   saveContacts();
+  markContactsDirty();
   return c;
 }
 export function updateContact(id: string, patch: Partial<Contact>): void {
   const c = contacts.list.find((x) => x.id === id);
   if (c) Object.assign(c, patch);
   saveContacts();
+  markContactsDirty();
 }
 export function deleteContact(id: string): void {
   contacts.list = contacts.list.filter((c) => c.id !== id);
   saveContacts();
+  markContactsDirty();
 }
 export function recentContacts(n = 4): Contact[] {
   return [...contacts.list]

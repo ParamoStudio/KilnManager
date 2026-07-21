@@ -18,6 +18,6 @@
       "@/*": ["src/renderer/src/*"]
     }
   },
-  "include": ["src/core", "src/renderer", "tests"],
+  "include": ["src/core", "src/renderer", "mobile/src", "tests"],
   "exclude": ["src/main", "src/preload"]
 }

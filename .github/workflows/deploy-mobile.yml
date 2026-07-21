@@ -1,0 +1,53 @@
+# Publishes the phone loader (mobile/) to GitHub Pages.
+#
+# Pages serves this repo at https://<owner>.github.io/KilnManager/, so the build
+# needs an absolute base — PAGES_BASE — for the service worker to get a valid
+# scope. Without that the app installs but won't work offline.
+name: Deploy mobile app to Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - "src/core/**"
+      - "vite.mobile.config.ts"
+      - "package.json"
+      - ".github/workflows/deploy-mobile.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build:mobile
+        env:
+          PAGES_BASE: /KilnManager/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: out/mobile
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
