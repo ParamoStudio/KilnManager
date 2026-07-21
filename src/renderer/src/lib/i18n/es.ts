@@ -527,7 +527,11 @@ export const es: Dictionary = {
     pendingNone: "No hay horneadas esperando en el móvil",
     pending: (n: number) => `${n} ${n === 1 ? "horneada" : "horneadas"} del móvil listas para revisar`,
     checkPhone: "Comprobar móvil",
-    importNow: (n: number) => `Importar ${n}`,
+    importNow: (nw: number, up: number) =>
+      nw > 0 && up > 0 ? `Importar ${nw} · actualizar ${up}` : up > 0 ? `Actualizar ${up}` : `Importar ${nw}`,
+    unpairWarn: (n: number) =>
+      `${n} horneada${n === 1 ? "" : "s"} esperando a entrar. Impórtala${n === 1 ? "" : "s"} antes: si desemparejas ahora se queda${n === 1 ? "" : "n"} atrapada${n === 1 ? "" : "s"} en el móvil.`,
+    unpairAnyway: "Desemparejar igualmente",
     imported: (n: number) => `Importadas ${n} ${n === 1 ? "horneada" : "horneadas"} del móvil`,
     fromPhone: "Del móvil",
     checking: "Comprobando tu móvil…",

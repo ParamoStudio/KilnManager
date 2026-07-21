@@ -31,8 +31,11 @@
       <span class="rule"></span>
     </header>
 
-    <p class="intro">{t.app.whoIntro}</p>
+    <!-- The introduction is the point of this card, so it's framed and leads. -->
+    <blockquote class="intro">{t.app.whoIntro}</blockquote>
 
+    <!-- Paired by length so each row's two cards come out the same height:
+         the two short ones together, the two long ones together. -->
     <div class="grid">
       <section class="block">
         <div class="bh">
@@ -51,6 +54,21 @@
         {:else}
           <span class="soon">{t.app.comingSoon}</span>
         {/if}
+      </section>
+
+      <section class="block kofi">
+        <div class="bh">
+          <span class="ic" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="17" height="17">
+              <path d="M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
+              <path d="M16 9.5h1.8a2.2 2.2 0 0 1 0 4.4H16" fill="none" stroke="currentColor" stroke-width="1.7" />
+              <path d="M7.5 3.5v2M11 3.5v2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+            </svg>
+          </span>
+          <h4>{t.app.whoKofiTitle}</h4>
+        </div>
+        <p>{t.app.whoKofiBody}</p>
+        <button class="link" onclick={() => openLink(LINKS.kofi)}>{t.app.whoKofiLink}</button>
       </section>
 
       <section class="block">
@@ -85,21 +103,6 @@
         </div>
         <p>{t.app.whoShopBody}</p>
         <button class="link" onclick={() => openLink(LINKS.shop)}>{t.app.whoShopLink}</button>
-      </section>
-
-      <section class="block kofi">
-        <div class="bh">
-          <span class="ic" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="17" height="17">
-              <path d="M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" />
-              <path d="M16 9.5h1.8a2.2 2.2 0 0 1 0 4.4H16" fill="none" stroke="currentColor" stroke-width="1.7" />
-              <path d="M7.5 3.5v2M11 3.5v2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
-            </svg>
-          </span>
-          <h4>{t.app.whoKofiTitle}</h4>
-        </div>
-        <p>{t.app.whoKofiBody}</p>
-        <button class="link" onclick={() => openLink(LINKS.kofi)}>{t.app.whoKofiLink}</button>
       </section>
     </div>
   </div>
@@ -169,20 +172,26 @@
     height: 1px;
     background: color-mix(in srgb, var(--accent) 55%, var(--line));
   }
+  /* The lead: framed, larger, and clearly the thing to read first. */
   .intro {
-    font-size: 13.5px;
-    line-height: 1.6;
-    color: var(--text-dim);
-    margin: 0 auto 16px;
-    max-width: 70ch;
+    font-size: 15px;
+    line-height: 1.72;
+    color: var(--text);
+    margin: 0 0 16px;
+    padding: 18px 26px;
     text-align: center;
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    border-left: 2px solid color-mix(in srgb, var(--accent) 60%, var(--line));
+    border-radius: 12px;
   }
-  /* Two columns so it all lands in one screenful. */
+  /* Two columns so it all lands in one screenful; stretch keeps the two cards
+     in a row exactly the same height. */
   .grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
-    align-items: start;
+    align-items: stretch;
   }
   .block {
     display: flex;
@@ -243,8 +252,14 @@
     flex-wrap: wrap;
     gap: 7px;
   }
+  /* Actions sit at the foot of the card, so paired cards line up. */
+  .block > .link,
+  .block > .linkrow,
+  .block > .soon {
+    margin-top: auto;
+    padding-top: 4px;
+  }
   .link {
-    margin-top: 3px;
     background: none;
     border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
     border-radius: 8px;
@@ -266,7 +281,6 @@
     background: none;
   }
   .soon {
-    margin-top: 3px;
     font-size: 11px;
     letter-spacing: 0.07em;
     text-transform: uppercase;

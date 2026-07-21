@@ -38,6 +38,18 @@
   async function doImport(): Promise<void> {
     imported = await importFromPhone();
   }
+
+  // Two-step unpair: the first press explains what's at stake when firings are
+  // still waiting, the second actually does it.
+  let confirmUnpair = $state(false);
+  function askUnpair(): void {
+    if (!confirmUnpair && phone.pending > 0) {
+      confirmUnpair = true;
+      return;
+    }
+    revokePairing();
+    confirmUnpair = false;
+  }
 </script>
 
 <button class="scrim" onclick={onclose} aria-label={t.common.close} transition:fade={{ duration: 150 }}></button>
@@ -57,8 +69,13 @@
     <p class="faint scan">{t.phone.scanHint}</p>
     <div class="prow">
       <button class="mini" onclick={generatePairing}>{t.phone.regenerate}</button>
-      <button class="mini danger" onclick={revokePairing}>{t.phone.revoke}</button>
+      <button class="mini danger" onclick={askUnpair}>{confirmUnpair ? t.phone.unpairAnyway : t.phone.revoke}</button>
     </div>
+    <!-- Unpairing with firings still on the relay would strand them: the next
+         pairing gets a fresh channel and they'd never arrive. Say so first. -->
+    {#if confirmUnpair && phone.pending > 0}
+      <p class="warn">{t.phone.unpairWarn(phone.pending)}</p>
+    {/if}
 
     <div class="statusrow">
       <button class="push" disabled={phone.busy} onclick={() => phoneSyncNow()}>
@@ -74,7 +91,7 @@
     <div class="pending">
       {#if phone.pending > 0}
         <span class="pcount">{t.phone.pendingSplit(phone.pendingNew, phone.pendingUpdate)}</span>
-        <button class="import" onclick={doImport}>{t.phone.importNow(phone.pending)}</button>
+        <button class="import" onclick={doImport}>{t.phone.importNow(phone.pendingNew, phone.pendingUpdate)}</button>
       {:else if imported > 0}
         <span class="faint">{t.phone.imported(imported)}</span>
       {:else}
@@ -185,6 +202,12 @@
   .mini.danger:hover {
     border-color: #e88;
     color: #e88;
+  }
+  .warn {
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--amber);
+    margin: 0;
   }
   .statusrow {
     display: flex;

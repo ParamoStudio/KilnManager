@@ -571,7 +571,11 @@ export const en = {
     pendingNone: "No firings waiting on the phone",
     pending: (n: number) => `${n} ${n === 1 ? "firing" : "firings"} from your phone ready to review`,
     checkPhone: "Check phone",
-    importNow: (n: number) => `Import ${n}`,
+    importNow: (nw: number, up: number) =>
+      nw > 0 && up > 0 ? `Import ${nw} · update ${up}` : up > 0 ? `Update ${up}` : `Import ${nw}`,
+    unpairWarn: (n: number) =>
+      `${n} ${n === 1 ? "firing is" : "firings are"} waiting to come in. Import ${n === 1 ? "it" : "them"} first — unpairing now leaves ${n === 1 ? "it" : "them"} stranded on the phone.`,
+    unpairAnyway: "Unpair anyway",
     imported: (n: number) => `Imported ${n} ${n === 1 ? "firing" : "firings"} from your phone`,
     fromPhone: "From phone",
     checking: "Checking your phone…",
