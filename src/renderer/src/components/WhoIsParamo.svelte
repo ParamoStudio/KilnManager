@@ -11,8 +11,9 @@
   let { onclose }: { onclose: () => void } = $props();
 
   const LINKS = {
-    // Not published yet — flip `toolsetLive` to true once the site is up.
-    toolset: "https://paramostudio.github.io/nidus-tools/",
+    // Repo exists; the site itself isn't published yet. Flip `toolsetLive`
+    // to true once Pages is serving it.
+    toolset: "https://paramostudio.github.io/CeramicLab/",
     github: "https://github.com/ParamoStudio",
     kilnMonitor: "https://github.com/ParamoStudio/KilnMonitor",
     shop: "https://paramo.studio",
