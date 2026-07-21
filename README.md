@@ -11,6 +11,7 @@ then produces a clean ticket for each of them.
 ## Install
 
 **[→ Download the latest version](https://github.com/ParamoStudio/KilnManager/releases/latest)**
+· [what's changed](CHANGELOG.md)
 
 | Your computer        | Download                                  |
 | -------------------- | ----------------------------------------- |
