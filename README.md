@@ -53,6 +53,14 @@ invoicing there.
 - Works **offline** once installed — the studio's Wi-Fi doesn't have to reach.
 - Pairs by scanning a QR from the desktop app. No accounts, ever.
 - The phone never sees or computes prices; it only records structure.
+- A whole studio can share one QR: every phone posts to the same mailbox.
+
+> **A firing waits 7 days, then it's gone.**\
+> A firing sent from a phone sits in the relay until you open Kiln Manager on
+> the computer and it gets collected. After 7 days it expires and is deleted —
+> and since the phone clears its own copy a day after sending, there's nothing
+> left to recover. In practice: open the desktop app within the week. If you're
+> away longer than that, don't sync until you're back.
 
 ## Layout
 
@@ -73,9 +81,13 @@ tests/          Vitest suite, including the agreed worked example
 
 The relay is a dumb, token-keyed mailbox: it holds client first names and firing
 structure (**never prices, never payment data**), and everything self-expires
-after 7 days. Páramo runs one for everybody, so there's nothing to set up — and
-because it's open source, you can host your own by changing `RELAY_BASE` in
-`src/renderer/src/lib/syncconfig.ts` and deploying `relay/worker.js`.
+after 7 days. Each pairing gets its own mailbox, keyed by its own random token,
+so studios never share a queue.
+
+Páramo runs a relay for everybody, so there's nothing to set up. If you'd rather
+your data never touched someone else's infrastructure, you can run your own for
+free: **phone button → Advanced**, and follow
+[Running your own relay](docs/self-hosting-relay.md).
 
 ## Development
 
