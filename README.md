@@ -74,20 +74,25 @@ after 7 days. Páramo runs one for everybody, so there's nothing to set up — a
 because it's open source, you can host your own by changing `RELAY_BASE` in
 `src/renderer/src/lib/syncconfig.ts` and deploying `relay/worker.js`.
 
-## Run
+## Development
+
+Only needed if you want to work on the app. To just use it, see
+[Install](#install) above.
 
 ```bash
 npm install
 
-npm run dev          # launch the Electron desktop app (dev)
-npm run dev:web      # OR run the desktop frontend in a plain browser
-npm run dev:mobile   # the phone loader, for testing in a browser
-npm run build        # build the Electron app
-npm run build:mobile # build the phone loader
+npm run dev          # the desktop app, with hot reload
+npm run dev:web      # OR the desktop frontend in a plain browser
+npm run dev:mobile   # the phone loader, in a browser
 
 npm test             # engine test suite
 npm run typecheck    # Node + Svelte type check
+npm run package      # build an installable app for your platform
 ```
+
+Releases are cut by pushing a version tag (`git tag v1.0.0 && git push origin
+v1.0.0`); CI builds macOS, Windows and Linux and drafts a GitHub Release.
 
 ## Your data
 
