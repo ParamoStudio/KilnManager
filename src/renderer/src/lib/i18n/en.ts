@@ -42,7 +42,7 @@ export const en = {
     tooSmallBody: "Kiln Manager needs a bit more room to lay everything out. Make the window larger (or full-screen it) to keep going.",
     whoTitle: "What is Páramo Studio? Who am I?",
     whoIntro:
-      "Hi! I'm Victor. A young… ceramist? (I've always found it hard to call myself one.) I work as a pottery wheel teacher and run workshops on niche topics, following whatever sudden obsession comes along with normal practice — low-fire porcelain, textured glazes from reclaimed or local materials, electronics + ceramics instruments, or whatever weird idea shows up. Sometimes more common things too, like Raku, which I absolutely love.",
+      "Hi! I'm Victor. A young… ceramist? (I've always found it hard to call myself one.) I work as a pottery wheel teacher and run workshops on niche topics, following whatever sudden obsession comes along with normal practice: low-fire porcelain, textured glazes from reclaimed or local materials, electronics + ceramics instruments, or whatever weird idea shows up. Sometimes more common things too, like Raku, which I absolutely love.",
     whoToolsetTitle: "Páramo · Ceramic Lab Toolset",
     whoToolsetBody:
       "A few tools I first made for my students, to smooth out some studio workflows. It grew into a site that works as an aggregator of ceramic tools.",
@@ -51,12 +51,12 @@ export const en = {
     whoGithubBody:
       "If you hit a problem with this app, or have a suggestion, open an issue there. You might also find other repositories you like.",
     whoKilnMonitor:
-      "Kiln Monitor — an open-source ESP32 kiln monitor that extends the life and capabilities of older electric kilns, and modernises wood, gas or self-built ones through a web firing interface.",
+      "Kiln Monitor: an open-source ESP32 kiln monitor that extends the life and capabilities of older electric kilns, and modernises wood, gas or self-built ones through a web firing interface.",
     whoGithubLink: "My GitHub",
     whoKilnMonitorLink: "Kiln Monitor",
     whoShopTitle: "The shop",
     whoShopBody:
-      "I'm leaving this here shyly. I'm not much of a social media person and I struggle to get it running, or even to want to sell — I'm afraid that living off it might spoil the love I have for ceramics. Anyway: if you want to take a look and something catches your eye, it's always an honour.",
+      "I'm leaving this here shyly. I'm not much of a social media person and I struggle to get it running, or even to want to sell. I'm afraid that living off it might spoil the love I have for ceramics. Anyway: if you want to take a look and something catches your eye, it's always an honour.",
     whoShopLink: "Visit the shop",
     whoKofiTitle: "Support",
     whoKofiBody: "This app is free and open source. If it's useful to you and you feel like it, you can buy me a coffee.",

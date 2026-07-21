@@ -30,7 +30,7 @@ export const es: Dictionary = {
     tooSmallBody: "Kiln Manager necesita algo más de espacio para colocarlo todo. Agranda la ventana (o ponla a pantalla completa) para seguir.",
     whoTitle: "¿Qué es Páramo Studio? ¿Quién soy?",
     whoIntro:
-      "¡Hola! Soy Víctor. Un joven… ¿ceramista? (siempre me ha costado autoproclamarme uno). Trabajo como profesor de torno e imparto talleres sobre temas muy concretos, siguiendo las obsesiones repentinas que aparecen con la práctica normal — porcelana de baja temperatura, esmaltes texturados a partir de materiales recuperados o recursos locales, instrumentos que mezclan electrónica y cerámica, o cualquier idea rara que se me ocurra. A veces también cosas más comunes, como el Raku, que me encanta.",
+      "Mmm… Soy Víctor. Un joven ¿ceramista? (siempre me ha costado un poco autoproclamarme así). Trabajo de profe de torno en un taller e imparto cursos sobre temas nicho relacionados con la cerámica a medida que van surgiendo nuevas obsesiones y experimentos en el día a día (porcelanas de baja temperatura, esmaltes con materiales reciclados o recursos locales, instrumentos que mezclan electrónica y cerámica, o cualquier idea rara que me dé por probar). A veces también de cosas más comunes como el Raku, que me encanta.",
     whoToolsetTitle: "Páramo · Ceramic Lab Toolset",
     whoToolsetBody:
       "Unas herramientas que hice primero para mis alumnos, para facilitar algunos flujos de trabajo del taller. Con el tiempo creció hasta ser una web que funciona como agregador de herramientas de cerámica.",
@@ -39,12 +39,12 @@ export const es: Dictionary = {
     whoGithubBody:
       "Si tienes algún problema con esta app, o alguna sugerencia, abre un issue allí. Quizá encuentres también otros repositorios que te gusten.",
     whoKilnMonitor:
-      "Kiln Monitor — un monitor de horno open source basado en ESP32, pensado para alargar la vida y las capacidades de hornos eléctricos antiguos, y para modernizar hornos de leña, gas o construidos a medida mediante una interfaz web de horneada.",
+      "Kiln Monitor: un monitor de horno open source basado en ESP32, pensado para alargar la vida y las capacidades de hornos eléctricos antiguos, y para modernizar hornos de leña, gas o construidos a medida mediante una interfaz web de horneada.",
     whoGithubLink: "Mi GitHub",
     whoKilnMonitorLink: "Kiln Monitor",
     whoShopTitle: "La tienda",
     whoShopBody:
-      "La dejo aquí con timidez. No soy muy de redes sociales y me cuesta ponerla en marcha, o incluso querer vender — temo que vivir de ello pueda estropear un poco el amor que le tengo a la cerámica. En fin: si quieres echar un vistazo y algo te gusta, siempre es un honor.",
+      "La dejo aquí con timidez. No soy muy de redes sociales y me cuesta ponerla en marcha, o incluso querer vender. Temo que vivir de ello pueda estropear un poco el amor que le tengo a la cerámica. En fin: si quieres echar un vistazo y algo te gusta, siempre es un honor.",
     whoShopLink: "Visitar la tienda",
     whoKofiTitle: "Apoyo",
     whoKofiBody: "Esta app es gratuita y de código abierto. Si te resulta útil y te apetece, puedes invitarme a un café.",
