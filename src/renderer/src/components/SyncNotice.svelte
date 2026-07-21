@@ -12,7 +12,7 @@
 </script>
 
 {#if phone.phase !== "idle"}
-  <div class="notice" class:done={phone.phase === "done"} role="status" transition:fly={{ y: -10, duration: 200 }}>
+  <div class="notice" class:done={phone.phase === "done"} role="status" transition:fly={{ y: -6, duration: 200 }}>
     {#if phone.phase === "checking"}
       <span class="spin" aria-hidden="true"></span>
       <span>{t.phone.checking}</span>
@@ -34,32 +34,31 @@
 {/if}
 
 <style>
+  /* Lives inside the Current Firings panel, right under its title — that's
+     where the firings it's fetching will land. */
   .notice {
-    position: fixed;
-    z-index: 90;
-    top: 14px;
-    left: 50%;
-    transform: translateX(-50%);
     display: flex;
     align-items: center;
     gap: 9px;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 9px 18px;
+    background: color-mix(in srgb, var(--amber) 12%, var(--panel-2));
+    border: 1px solid color-mix(in srgb, var(--amber) 55%, var(--line));
+    border-radius: 10px;
+    padding: 9px 13px;
     font-size: 12.5px;
     color: var(--text);
-    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.55);
+    flex-shrink: 0;
   }
   .notice.done {
-    border-color: color-mix(in srgb, var(--green, #7fdca4) 35%, var(--line));
+    background: color-mix(in srgb, var(--green, #7fdca4) 10%, var(--panel-2));
+    border-color: color-mix(in srgb, var(--green, #7fdca4) 45%, var(--line));
   }
   .spin {
     width: 12px;
     height: 12px;
+    flex-shrink: 0;
     border-radius: 50%;
-    border: 2px solid color-mix(in srgb, var(--text-faint) 60%, transparent);
-    border-top-color: var(--accent);
+    border: 2px solid color-mix(in srgb, var(--amber) 30%, transparent);
+    border-top-color: var(--amber);
     animation: spin 0.8s linear infinite;
   }
   @keyframes spin {

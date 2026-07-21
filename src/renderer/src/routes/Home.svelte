@@ -19,6 +19,7 @@
   import KilnThumb from "../components/KilnThumb.svelte";
   import FuelPricePanel from "../components/FuelPricePanel.svelte";
   import FiringSearch from "../components/FiringSearch.svelte";
+  import SyncNotice from "../components/SyncNotice.svelte";
   import { groupByMonth } from "../lib/firinglog";
 
   const current = $derived(currentFirings());
@@ -77,6 +78,7 @@
   <!-- Current firings -->
   <section class="col panel">
     <span class="col-title">{t.home.currentFirings}</span>
+    <SyncNotice />
     <div class="list">
       {#if current.length === 0}
         <p class="faint empty">{t.home.noFiringsInProgress}</p>
@@ -91,8 +93,10 @@
           <div class="info">
             <!-- The title gets a header row of its own: it always fits, wrapping
                  if it must. Everything else lines up underneath. -->
-            <div class="ftitle">
-              <span class="ft-text">{titled || fmtFull(rec.createdAt)}</span>
+            <div class="ftitle"><span class="ft-text">{titled || fmtFull(rec.createdAt)}</span></div>
+            <!-- Chips always sit on their own row, so their position never
+                 depends on how long the title happens to be. -->
+            <div class="chips">
               {#if rec.source === "phone"}
                 <span class="phonebadge" title={t.phone.fromPhone} aria-label={t.phone.fromPhone}>
                   <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
@@ -152,12 +156,16 @@
 
   <!-- Firing log -->
   <section class="col panel">
-    <div class="log-head">
-      <span class="col-title">{t.home.firingLog}</span>
-      <button class="searchbtn" onclick={() => (searching = true)} disabled={closed.length === 0}>
-        {t.home.searchLog}
-      </button>
-    </div>
+    <span class="col-title">{t.home.firingLog}</span>
+    <!-- Looks like a search field, but it's a button: tapping it opens the
+         full search panel rather than filtering in this narrow column. -->
+    <button class="searchcell" onclick={() => (searching = true)} disabled={closed.length === 0}>
+      <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+        <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6" />
+        <line x1="15.8" y1="15.8" x2="20" y2="20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+      </svg>
+      <span>{t.home.searchPlaceholder}</span>
+    </button>
 
     <div class="list">
       {#if closed.length === 0}
@@ -207,25 +215,25 @@
 {/if}
 
 <style>
-  .log-head {
+  .searchcell {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-  .searchbtn {
+    gap: 9px;
+    width: 100%;
     background: var(--panel-2);
     border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 5px 11px;
-    color: var(--text-dim);
-    font-size: 11.5px;
+    border-radius: 999px;
+    padding: 10px 16px;
+    color: var(--text-faint);
+    font-size: 12.5px;
+    text-align: left;
+    margin-bottom: 4px;
   }
-  .searchbtn:hover:not(:disabled) {
-    color: var(--text);
+  .searchcell:hover:not(:disabled) {
+    color: var(--text-dim);
     border-color: var(--text-faint);
   }
-  .searchbtn:disabled {
+  .searchcell:disabled {
     opacity: 0.35;
   }
   /* Month separators keep the log scannable as it grows. */
@@ -377,11 +385,14 @@
   /* Header: the full title plus its status chips, wrapping as one block. The
      title is never clipped and nothing gets squeezed against the chips. */
   .ftitle {
+    margin-bottom: 5px;
+  }
+  .chips {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 6px;
-    margin-bottom: 4px;
+    margin-bottom: 5px;
   }
   .ft-text {
     font-weight: 600;

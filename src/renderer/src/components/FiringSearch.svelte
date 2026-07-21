@@ -9,21 +9,59 @@
   import { kilnStore } from "../lib/kilns.svelte";
   import { groupByMonth, searchFirings } from "../lib/firinglog";
   import { computeFiring, roundUp50 } from "@core";
-  import { t } from "../lib/i18n.svelte";
+  import { t, localeTag } from "../lib/i18n.svelte";
   import { eur, fmtFull } from "../lib/format";
   import KilnThumb from "./KilnThumb.svelte";
 
   let { onclose }: { onclose: () => void } = $props();
 
   let query = $state("");
+  let fKiln = $state("");
+  let fYear = $state("");
+  let fMonth = $state("");
 
   const kilnOf = (rec: FiringRecord) => kilnStore.list.find((k) => k.id === rec.planner.kilnId) ?? kilnStore.list[0]!;
   const kilnNameOf = (r: FiringRecord): string => kilnOf(r)?.name ?? "";
   const kilnLocOf = (r: FiringRecord): string => kilnOf(r)?.location ?? "";
+  const stampOf = (r: FiringRecord): number => r.closedAt ?? r.createdAt;
 
   const all = $derived(closedFirings());
-  const results = $derived(searchFirings(all, query, kilnNameOf, kilnLocOf));
+
+  // Filter options are built from what's actually in the log — no empty
+  // dropdowns for kilns you never fired or years you weren't working.
+  const kilnOptions = $derived.by(() => {
+    const ids = new Set(all.map((r) => r.planner.kilnId));
+    return kilnStore.list.filter((k) => ids.has(k.id));
+  });
+  const yearOptions = $derived.by(() =>
+    [...new Set(all.map((r) => new Date(stampOf(r)).getFullYear()))].sort((a, b) => b - a),
+  );
+  const monthOptions = $derived.by(() => {
+    const months = new Set(all.map((r) => new Date(stampOf(r)).getMonth()));
+    return [...months]
+      .sort((a, b) => a - b)
+      .map((m) => ({
+        value: String(m),
+        label: new Date(2000, m, 1).toLocaleDateString(localeTag(), { month: "long" }),
+      }));
+  });
+
+  const filtered = $derived(
+    all.filter((r) => {
+      if (fKiln && r.planner.kilnId !== fKiln) return false;
+      const d = new Date(stampOf(r));
+      if (fYear && String(d.getFullYear()) !== fYear) return false;
+      if (fMonth && String(d.getMonth()) !== fMonth) return false;
+      return true;
+    }),
+  );
+  const results = $derived(searchFirings(filtered, query, kilnNameOf, kilnLocOf));
   const groups = $derived(groupByMonth(results));
+  const anyFilter = $derived(!!(fKiln || fYear || fMonth));
+
+  function clearFilters(): void {
+    fKiln = fYear = fMonth = "";
+  }
 
   function summary(rec: FiringRecord): { clients: number; rounded: number } {
     try {
@@ -54,7 +92,28 @@
 
     <!-- svelte-ignore a11y_autofocus -->
     <input class="q" bind:value={query} autofocus placeholder={t.home.searchPlaceholder} />
-    <p class="faint hint">{query.trim() ? t.home.searchResults(results.length) : t.home.searchAll(all.length)}</p>
+
+    <div class="filters">
+      <select bind:value={fKiln} class:on={!!fKiln}>
+        <option value="">{t.home.filterKiln}</option>
+        {#each kilnOptions as k (k.id)}<option value={k.id}>{k.name}</option>{/each}
+      </select>
+      <select bind:value={fMonth} class:on={!!fMonth}>
+        <option value="">{t.home.filterMonth}</option>
+        {#each monthOptions as m (m.value)}<option value={m.value}>{m.label}</option>{/each}
+      </select>
+      <select bind:value={fYear} class:on={!!fYear}>
+        <option value="">{t.home.filterYear}</option>
+        {#each yearOptions as y (y)}<option value={String(y)}>{y}</option>{/each}
+      </select>
+      {#if anyFilter}
+        <button class="clearf" onclick={clearFilters}>{t.home.filterClear}</button>
+      {/if}
+    </div>
+
+    <p class="faint hint">
+      {query.trim() || anyFilter ? t.home.searchResults(results.length) : t.home.searchAll(all.length)}
+    </p>
 
     <div class="scroll">
       {#each groups as g (g.key)}
@@ -143,9 +202,39 @@
     outline: none;
     border-color: var(--text-faint);
   }
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .filters select {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 12px;
+    color: var(--text-dim);
+    font: inherit;
+    font-size: 12.5px;
+  }
+  .filters select.on {
+    color: var(--text);
+    border-color: color-mix(in srgb, var(--amber) 55%, var(--line));
+  }
+  .clearf {
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 13px;
+    color: var(--text-faint);
+    font-size: 12px;
+  }
+  .clearf:hover {
+    color: var(--text);
+    border-color: var(--text-faint);
+  }
   .hint {
     font-size: 11.5px;
-    margin: -4px 0 0;
+    margin: -2px 0 0;
   }
   .scroll {
     display: flex;
