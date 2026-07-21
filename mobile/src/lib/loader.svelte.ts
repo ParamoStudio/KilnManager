@@ -141,10 +141,25 @@ export function startNewDraft(kilnId: string): void {
 }
 /** Close the editor. The firing already lives in the list (and on the relay);
  * a completely empty one is just dropped. */
+/** The title and the firing type are edited by binding, so they need their own
+ * setters — every other edit already goes through a function that persists. */
+export function setDraftTitle(title: string): void {
+  draft.title = title;
+  persistDraft();
+}
+export function setDraftService(serviceId: string): void {
+  draft.planner.serviceId = serviceId;
+  persistDraft();
+}
+
 export function closeDraft(): void {
+  // Persist the final state FIRST: tearing the draft down before saving would
+  // drop whatever was typed last (the title was being lost exactly this way).
   if (draft.planner.levels.length === 0 && !draft.title.trim()) {
     drafts.list = drafts.list.filter((d) => d.id !== draft.id);
     persistDrafts();
+  } else {
+    persistDraft();
   }
   draft.active = false;
   draft.id = "";
@@ -152,7 +167,7 @@ export function closeDraft(): void {
   draft.planner = emptyPlanner("", "");
   draft.notes = {};
   clearSelection();
-  persistDraft();
+  void storage.write("draft", $state.snapshot(draft));
 }
 export function discardDraft(): void {
   drafts.list = drafts.list.filter((d) => d.id !== draft.id);

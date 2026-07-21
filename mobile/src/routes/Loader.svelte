@@ -5,6 +5,8 @@
     currentKiln,
     remainingCm,
     closeDraft,
+    setDraftTitle,
+    setDraftService,
     clearSelection,
     selectionOwners,
     zoneLabel,
@@ -40,11 +42,16 @@
     <span class="rem faint">{remaining.toFixed(1)} cm</span>
   </div>
 
-  <input class="ftitle" bind:value={draft.title} placeholder={t.loader.firingTitlePlaceholder} />
+  <input
+    class="ftitle"
+    value={draft.title}
+    oninput={(e) => setDraftTitle(e.currentTarget.value)}
+    placeholder={t.loader.firingTitlePlaceholder}
+  />
 
   {#if kiln}
     <div class="svcfield">
-      <select class="svc" value={draft.planner.serviceId} onchange={(e) => (draft.planner.serviceId = e.currentTarget.value)} disabled={kiln.services.length <= 1}>
+      <select class="svc" value={draft.planner.serviceId} onchange={(e) => setDraftService(e.currentTarget.value)} disabled={kiln.services.length <= 1}>
         {#each kiln.services as s (s.id)}<option value={s.id}>{s.name}</option>{/each}
       </select>
       {#if kiln.services.length > 1}<span class="chev" aria-hidden="true">▾</span>{/if}

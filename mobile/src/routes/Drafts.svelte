@@ -36,6 +36,10 @@
     const clients = n === 0 ? t.drafts.unassigned : t.drafts.clientsCount(n);
     return `${t.drafts.shelvesCount(d.planner.levels.length)} · ${clients}`;
   }
+  /** Full date, for firings the user never named. */
+  function fmtFull(ts: number): string {
+    return new Date(ts).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+  }
   function fmtDay(ts: number): string {
     return new Date(ts).toLocaleDateString(undefined, { day: "numeric", month: "short" });
   }
@@ -69,8 +73,11 @@
         {@const isSynced = d.status === "synced"}
         <div class="card" class:isSynced>
           <button class="body" onclick={() => resume(d.id)}>
-            <span class="dtitle">{d.title || k?.name || "—"}</span>
-            {#if d.title && k}<span class="faint ksub">{k.name}</span>{/if}
+            <!-- Same rule as the desktop: the firing's own name leads, and when
+                 it hasn't got one the date it was started stands in. The kiln is
+                 always shown underneath. -->
+            <span class="dtitle">{d.title || fmtFull(d.createdAt)}</span>
+            {#if k}<span class="faint ksub">{k.name}</span>{/if}
             <span class="faint dmeta">{meta(d)}</span>
             <span class="badge" class:green={isSynced}>
               <span class="dot"></span>
