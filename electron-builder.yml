@@ -4,7 +4,13 @@
 # Build locally with `npm run package` (your platform only). The Release
 # workflow builds macOS, Windows and Linux on a tag and attaches them.
 appId: studio.paramo.kilnmanager
-productName: Páramo Kiln Manager
+# ASCII ONLY. macOS stores filenames decomposed (NFD) while Info.plist keeps
+# them composed (NFC), and Chromium builds its helper-process paths from this
+# name — with an accent the two don't match, the helpers can't be found, and the
+# app dies with SIGTRAP inside V8 before any of our code runs.
+# The accented name lives in CFBundleDisplayName below, which is what the Finder,
+# the Dock and the menu bar actually show.
+productName: Paramo Kiln Manager
 copyright: © Páramo Studio
 
 directories:
@@ -21,15 +27,25 @@ publish: null
 
 mac:
   category: public.app-category.productivity
+  # The pretty, accented name the Finder, Dock and menu bar show. Only the
+  # on-disk bundle name has to stay ASCII (see productName above).
+  extendInfo:
+    CFBundleDisplayName: Páramo Kiln Manager
   target:
     - target: dmg
       arch: [arm64, x64]
     - target: zip
       arch: [arm64, x64]
   icon: build/icon.png
-  # Not notarised (that needs a paid Apple Developer account). See the README:
-  # first launch is right-click → Open, or clear the quarantine attribute.
-  identity: null
+  # No Developer ID certificate, so electron-builder ad-hoc signs instead. That
+  # signature is what makes the app runnable at all on Apple Silicon, and it
+  # carries the entitlements V8 needs for JIT — do NOT set `identity: null`
+  # here, that skips the whole signing step and the app dies with SIGTRAP
+  # before it ever reaches our code.
+  #
+  # Hardened runtime is off because we don't notarise: it buys nothing without
+  # notarisation and only risks blocking JIT.
+  hardenedRuntime: false
 
 dmg:
   artifactName: ${productName}-${version}-${arch}.${ext}
