@@ -56,6 +56,11 @@ invoicing there.
 - The phone never sees or computes prices; it only records structure.
 - A whole studio can share one QR: every phone posts to the same mailbox.
 
+**On iPhone**, adding Kiln Loader to the home screen gives it a storage of its
+own, so the pairing you made in Safari doesn't come with it. Right after you
+scan the QR the app offers you a **pairing code** — copy it, then paste it into
+the installed app under *Have a pairing code?*. One time, and you're done.
+
 > **A firing waits 7 days, then it's gone.**\
 > A firing sent from a phone sits in the relay until you open Kiln Manager on
 > the computer and it gets collected. After 7 days it expires and is deleted —

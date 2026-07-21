@@ -15,6 +15,41 @@ nothing until someone redeploys it.
 
 ---
 
+## Phone loader — 22 July 2026
+
+Not tied to a desktop release: the phone loader is served from GitHub Pages and
+reaches phones on their next launch with signal.
+
+### A pairing code, for when the QR isn't enough
+
+Scanning the QR pairs *the browser that scanned it*. On iPhone that turns out
+not to be the browser you end up using: a home-screen web app gets a storage
+container of its own, so a pairing made in Safari is invisible to the installed
+app, which would start up unpaired and mute with no explanation. (Android
+happens to share storage between browser and installed app — a happy accident,
+not a guarantee across every vendor.)
+
+So the pairing can now also travel as a code:
+
+- **Offered once**, right after the scan, while you're still holding both
+  devices, with a Copy button.
+- **Accepted any time** from a permanent *Have a pairing code?* under
+  *How it works* — paste and connect.
+
+It carries the relay address too, so self-hosted relays aren't a special case,
+and it accepts a pasted pair link as well, since that's what people tend to
+have kept. Confirmed working on iPhone: pair in Safari, install to the home
+screen, paste the code, done.
+
+### Fixed: the published app offered strangers fake kilns
+
+The developer fixture that loads sample kilns and clients was gated on "not
+paired yet" — which is exactly what a first-time user is. Anyone opening the
+published app was invited to fill it with fictional data before they had ever
+seen a real kiln.
+
+---
+
 ## v1.0.2 — 21 July 2026
 
 ### Bring your own relay
