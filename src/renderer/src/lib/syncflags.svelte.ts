@@ -9,9 +9,19 @@ export const syncDirty = $state<{ contacts: boolean; kilns: boolean }>({
   kilns: false,
 });
 
+/** The phone-sync module registers here so a new/edited client or kiln is
+ * pushed to the phone right away, instead of waiting for the next app launch.
+ * A hook (rather than an import) keeps this module dependency-free. */
+let hook: (() => void) | null = null;
+export function setDirtyHook(fn: (() => void) | null): void {
+  hook = fn;
+}
+
 export function markContactsDirty(): void {
   syncDirty.contacts = true;
+  hook?.();
 }
 export function markKilnsDirty(): void {
   syncDirty.kilns = true;
+  hook?.();
 }

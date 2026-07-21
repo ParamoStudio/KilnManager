@@ -4,9 +4,7 @@
     sel,
     currentKiln,
     remainingCm,
-    saveDraft,
-    canSaveNewDraft,
-    discardDraft,
+    closeDraft,
     clearSelection,
     selectionOwners,
     zoneLabel,
@@ -27,13 +25,10 @@
 
   let sheet = $state<"none" | "add" | "assign">("none");
 
-  // Going back auto-saves: a draft with any content is kept (re-added to the
-  // pending list); a truly empty one is just discarded. The user decides later
-  // in the main list whether to delete it — there is no explicit "save" button.
+  // Nothing to "save": every edit is already written to the list and uploaded.
+  // Going back just closes the editor (an untouched, empty firing is dropped).
   function back(): void {
-    const hasContent = draft.planner.levels.length > 0 || draft.title.trim().length > 0;
-    if (hasContent && canSaveNewDraft()) saveDraft(draft.title);
-    else discardDraft();
+    closeDraft();
     onexit();
   }
 </script>

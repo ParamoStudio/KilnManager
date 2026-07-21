@@ -31,10 +31,10 @@ export const es: Dictionary = {
     statusSynced: "Sincronizada",
     autoDeleteHint: "se borra en un día",
     deleteSynced: "Borrar sincronizadas",
-    syncNow: "Sincronizar ahora",
-    syncing: "Sincronizando…",
-    lastSync: (time: string) => `Última sync ${time}`,
-    syncError: "Fallo de sincronización — revisa tu conexión",
+    syncNow: "Subir a la app manualmente",
+    syncing: "Subiendo…",
+    lastSync: (time: string) => `Se sube solo · última ${time}`,
+    syncError: "No se pudo subir — se reintentará al recuperar conexión",
   },
 
   loader: {
@@ -112,12 +112,6 @@ export const es: Dictionary = {
     notPaired: "Sin emparejar",
   },
 
-  desktop: {
-    title: "Esto es para tu móvil",
-    body: "Kiln Loader es el complemento para el móvil de Kiln Manager. Ábrelo escaneando el código QR de la app de escritorio — eso es lo que lo empareja con tus hornos y clientes.",
-    getApp: "¿Aún no tienes Kiln Manager? Descárgalo aquí:",
-    repo: "github.com/ParamoStudio/KilnManager",
-  },
 
   fixture: {
     seedButton: "Cargar hornos y clientes de ejemplo (dev)",

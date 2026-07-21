@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { synced, draft, loadCached, seedFixture } from "./lib/loader.svelte";
-  import { loadPairing, autoSync, sync } from "./lib/sync.svelte";
+  import { loadPairing, autoSync, startAutoUpload, sync } from "./lib/sync.svelte";
   import { loadLocale, t, LOCALES, getLocale, setLocale } from "./lib/i18n.svelte";
   import Drafts from "./routes/Drafts.svelte";
   import PickKiln from "./routes/PickKiln.svelte";
@@ -24,6 +24,7 @@
     await loadLocale();
     await loadPairing();
     await loadCached();
+    startAutoUpload(); // every edit from here on uploads itself
     ready = true;
     // If a draft was mid-edit when the phone was closed, jump straight back in.
     if (draft.active) screen = "loading";
@@ -45,11 +46,16 @@
         <line x1="10.6" y1="5.4" x2="13.4" y2="5.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
         <circle cx="12" cy="18.2" r="1" fill="currentColor" />
       </svg>
-      <h1>{t.desktop.title}</h1>
-      <p>{t.desktop.body}</p>
-      <p class="get">{t.desktop.getApp}</p>
+      <!-- Deliberately English only: this page is the public entry point and is
+           seen before any language preference exists. -->
+      <h1>This one's for your phone</h1>
+      <p>
+        Kiln Loader is the phone companion for Kiln Manager. Open it by scanning the QR code in the
+        desktop app — that's what pairs it with your kilns and clients.
+      </p>
+      <p class="get">Don't have Kiln Manager yet? Download it here:</p>
       <a class="repo" href="https://github.com/ParamoStudio/KilnManager" target="_blank" rel="noopener noreferrer">
-        {t.desktop.repo}
+        github.com/ParamoStudio/KilnManager
       </a>
     </div>
   </div>

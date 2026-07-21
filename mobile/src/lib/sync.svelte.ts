@@ -14,7 +14,7 @@ import { storage } from "./storage";
 import {
   synced,
   drafts,
-  deleteDraft,
+  setDraftChangeHook,
   setDraftStatus,
   type MobileKiln,
   type MobileContact,
@@ -91,10 +91,12 @@ export async function syncDown(): Promise<void> {
   }
 }
 
-/** Push every not-yet-synced draft; mark each "synced" on success. */
+/** Push every not-yet-synced firing; mark each "synced" on success. Each keeps
+ * its stable id, so the relay (and the desktop) overwrite rather than duplicate
+ * — editing a firing five times still yields exactly one firing. */
 export async function syncUp(): Promise<void> {
   if (!sync.paired) return;
-  for (const d of drafts.list.filter((x) => x.status === "draft")) {
+  for (const d of drafts.list.filter((x) => x.status === "draft" && x.planner.levels.length > 0)) {
     const res = await fetch(channel("up"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -105,17 +107,21 @@ export async function syncUp(): Promise<void> {
   }
 }
 
-/** Drop any locally-synced draft the desktop has already imported (it's no
- * longer in the relay's up-box) — the "confirmed downloaded" round-trip. */
-export async function refreshConsumed(): Promise<void> {
+/**
+ * Automatic upload: every edit schedules one, debounced so a burst of taps
+ * becomes a single request. Offline failures are silent — the firing simply
+ * stays "Draft" and goes up on the next edit, app open, or manual upload.
+ */
+let uploadTimer: ReturnType<typeof setTimeout> | null = null;
+export function scheduleUpload(): void {
   if (!sync.paired) return;
-  const res = await fetch(channel("up"), { method: "GET" });
-  if (!res.ok) throw new Error(`up ${res.status}`);
-  const pending = (await res.json()) as { id: string }[];
-  const stillThere = new Set(pending.map((p) => p.id));
-  for (const d of drafts.list.filter((x) => x.status === "synced")) {
-    if (!stillThere.has(d.id)) deleteDraft(d.id);
-  }
+  if (uploadTimer) clearTimeout(uploadTimer);
+  uploadTimer = setTimeout(() => {
+    uploadTimer = null;
+    void syncUp().catch(() => {
+      /* offline — retried on the next change or app open */
+    });
+  }, 1500);
 }
 
 /** Full manual sync (the "Sync now" button): down → up → confirm-consumed. */
@@ -126,7 +132,6 @@ export async function syncNow(): Promise<boolean> {
   try {
     await syncDown();
     await syncUp();
-    await refreshConsumed();
     sync.lastSyncedAt = Date.now();
     return true;
   } catch (e) {
@@ -143,9 +148,14 @@ export async function autoSync(): Promise<void> {
   if (!sync.paired) return;
   try {
     await syncDown();
-    await refreshConsumed();
+    await syncUp(); // anything edited while offline goes up now
     sync.lastSyncedAt = Date.now();
   } catch {
     /* offline or relay down — the cached data is still fine to work with */
   }
+}
+
+/** Wire the automatic upload to every edit made in the loader. */
+export function startAutoUpload(): void {
+  setDraftChangeHook(scheduleUpload);
 }

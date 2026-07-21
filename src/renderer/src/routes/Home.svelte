@@ -299,14 +299,22 @@
     flex: 1;
     min-width: 0;
   }
+  /* Title/date is a single fixed top line — long dates used to wrap into a
+     four-line column and blow the card apart. */
   .row1 {
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
   }
   .kiln {
+    flex: 1;
+    min-width: 0;
     font-weight: 600;
     font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .pending {
     font-size: 10px;
@@ -316,6 +324,8 @@
     border: 1px solid color-mix(in srgb, var(--amber) 40%, var(--line));
     border-radius: 999px;
     padding: 2px 7px;
+    flex-shrink: 0;
+    white-space: nowrap;
   }
   /* Compact blue phone glyph — the text label ate too much of the card. */
   .phonebadge {

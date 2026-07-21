@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { app, go, loadApp } from "./lib/firing.svelte";
-  import { loadPhoneSync, phoneSyncOnOpen } from "./lib/phonesync.svelte";
+  import { loadPhoneSync, phoneSyncOnOpen, startAutoPush } from "./lib/phonesync.svelte";
   import PhonePanel from "./components/PhonePanel.svelte";
   import WhoIsParamo from "./components/WhoIsParamo.svelte";
   import { vault, openLink } from "./lib/storage";
@@ -64,6 +64,7 @@
     try {
       await loadApp();
       await loadPhoneSync();
+      startAutoPush();
     } catch (err) {
       console.error("loadApp failed", err);
     } finally {

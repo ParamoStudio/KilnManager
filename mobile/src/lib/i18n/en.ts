@@ -34,10 +34,10 @@ export const en = {
     statusSynced: "Synced",
     autoDeleteHint: "auto-deletes in a day",
     deleteSynced: "Clear synced",
-    syncNow: "Sync now",
-    syncing: "Syncing…",
-    lastSync: (time: string) => `Last synced ${time}`,
-    syncError: "Sync failed — check your connection",
+    syncNow: "Upload manually",
+    syncing: "Uploading…",
+    lastSync: (time: string) => `Uploads automatically · last ${time}`,
+    syncError: "Couldn't upload — will retry when you're back online",
   },
 
   loader: {
@@ -115,12 +115,6 @@ export const en = {
     notPaired: "Not paired",
   },
 
-  desktop: {
-    title: "This one's for your phone",
-    body: "Kiln Loader is the phone companion for Kiln Manager. Open it by scanning the QR code in the desktop app — that's what pairs it with your kilns and clients.",
-    getApp: "Don't have Kiln Manager yet? Download it here:",
-    repo: "github.com/ParamoStudio/KilnManager",
-  },
 
   fixture: {
     seedButton: "Load sample kilns & clients (dev)",

@@ -9,7 +9,7 @@
 import { contacts, importPhoneFiring } from "./firing.svelte";
 import { kilnStore } from "./kilns.svelte";
 import { settings } from "./settings.svelte";
-import { syncDirty } from "./syncflags.svelte";
+import { syncDirty, setDirtyHook } from "./syncflags.svelte";
 import { complexityKeys } from "./complexity";
 import { RELAY_BASE, MOBILE_APP_URL, bridgeConfigured } from "./syncconfig";
 import { storage } from "./storage";
@@ -147,15 +147,39 @@ export async function importFromPhone(): Promise<number> {
   return list.length;
 }
 
-/** Non-blocking pass on app open: push fresh data down + see what's waiting. */
+/**
+ * Non-blocking pass on app open: refresh the phone's copy of contacts/kilns,
+ * then pull down whatever it uploaded. Importing is safe to do automatically —
+ * firings keep their phone id, so a firing still being edited on the phone
+ * updates this same record rather than piling up duplicates.
+ */
 export async function phoneSyncOnOpen(): Promise<void> {
   if (!phone.paired) return;
   try {
     await pushDown(); // cheap payload; keep the phone current after every launch
-    await checkUp();
+    await importFromPhone();
   } catch (e) {
     phone.lastError = e instanceof Error ? e.message : String(e);
   }
+}
+
+/**
+ * Keep the phone's clients/kilns fresh while the app is open: any edit flags
+ * the data dirty and schedules a debounced push, so a client added at the
+ * computer shows up on the phone within seconds.
+ */
+let pushTimer: ReturnType<typeof setTimeout> | null = null;
+export function startAutoPush(): void {
+  setDirtyHook(() => {
+    if (!phone.paired) return;
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = setTimeout(() => {
+      pushTimer = null;
+      void pushDown().catch((e) => {
+        phone.lastError = e instanceof Error ? e.message : String(e);
+      });
+    }, 2000);
+  });
 }
 
 /** Manual "Check phone / sync now" from the UI, with busy + error surfaced. */

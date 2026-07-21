@@ -71,9 +71,15 @@ export interface SavedDraft {
   planner: PlannerDoc;
   /** Per-client notes, keyed by client name (round-trips to the desktop firing). */
   notes: Record<string, string>;
-  /** "draft" until the desktop confirms it received this firing (Stage B). */
+  /** "synced" once this exact version reached the relay; any edit flips it back. */
   status: "draft" | "synced";
+  /** When it last reached the relay (drives the one-day local cleanup). */
+  syncedAt?: number;
 }
+
+/** Synced firings are already safe on the relay/computer, so the phone drops
+ * them after a day to stay tidy. Edited ones are never auto-removed. */
+const SYNCED_TTL_MS = 24 * 60 * 60 * 1000;
 
 export const MYSELF = "Myself";
 export const MAX_DRAFTS = 5;
@@ -105,8 +111,18 @@ function emptyPlanner(kilnId: string, serviceId: string): PlannerDoc {
   return { kilnId, serviceId, levels: [], kilnMods: [], customDiscount: null, clientMods: {}, partners: [] };
 }
 
-export const draft = $state<{ active: boolean; title: string; planner: PlannerDoc; notes: Record<string, string> }>({
+export const draft = $state<{
+  active: boolean;
+  /** Stable for the firing's whole life — the phone, the relay and the desktop
+   * all key off this, so re-uploading an edited firing overwrites instead of
+   * creating a second one. */
+  id: string;
+  title: string;
+  planner: PlannerDoc;
+  notes: Record<string, string>;
+}>({
   active: false,
+  id: "",
   title: "",
   planner: emptyPlanner("", ""),
   notes: {},
@@ -116,14 +132,33 @@ export function startNewDraft(kilnId: string): void {
   const kiln = synced.kilns.find((k) => k.id === kilnId) ?? synced.kilns[0];
   if (!kiln) return;
   draft.active = true;
+  draft.id = newId("f");
   draft.title = "";
   draft.planner = emptyPlanner(kiln.id, kiln.services[0]?.id ?? "");
   draft.notes = {};
   clearSelection();
   persistDraft();
 }
-export function discardDraft(): void {
+/** Close the editor. The firing already lives in the list (and on the relay);
+ * a completely empty one is just dropped. */
+export function closeDraft(): void {
+  if (draft.planner.levels.length === 0 && !draft.title.trim()) {
+    drafts.list = drafts.list.filter((d) => d.id !== draft.id);
+    persistDrafts();
+  }
   draft.active = false;
+  draft.id = "";
+  draft.title = "";
+  draft.planner = emptyPlanner("", "");
+  draft.notes = {};
+  clearSelection();
+  persistDraft();
+}
+export function discardDraft(): void {
+  drafts.list = drafts.list.filter((d) => d.id !== draft.id);
+  persistDrafts();
+  draft.active = false;
+  draft.id = "";
   draft.title = "";
   draft.planner = emptyPlanner("", "");
   draft.notes = {};
@@ -153,10 +188,10 @@ export function deleteSyncedDrafts(): void {
 /** Flip a saved draft's sync status (used by the sync client). */
 export function setDraftStatus(id: string, status: "draft" | "synced"): void {
   const d = drafts.list.find((x) => x.id === id);
-  if (d && d.status !== status) {
-    d.status = status;
-    persistDrafts();
-  }
+  if (!d) return;
+  d.status = status;
+  if (status === "synced") d.syncedAt = Date.now();
+  persistDrafts();
 }
 /** Distinct clients assigned across a draft (Myself counts as one owner). */
 export function distinctClients(planner: PlannerDoc): number {
@@ -164,18 +199,17 @@ export function distinctClients(planner: PlannerDoc): number {
   for (const l of planner.levels) for (const s of l.segments) if (s) set.add(s.contactName);
   return set.size;
 }
-/** Pull a saved draft back out for editing — it leaves the saved list; saving
- * again adds it back (with a fresh id/timestamp, same as any new save). */
+/** Open a saved firing for editing. It KEEPS its id and stays in the list —
+ * edits overwrite it everywhere instead of spawning a duplicate. */
 export function resumeDraft(id: string): boolean {
   const d = drafts.list.find((x) => x.id === id);
   if (!d) return false;
   draft.active = true;
+  draft.id = d.id;
   draft.title = d.title;
   draft.planner = JSON.parse(JSON.stringify(d.planner)) as PlannerDoc;
   draft.notes = { ...(d.notes ?? {}) };
   clearSelection();
-  drafts.list = drafts.list.filter((x) => x.id !== id);
-  persistDrafts();
   persistDraft();
   return true;
 }
@@ -413,26 +447,40 @@ export function setClientNote(name: string, text: string): void {
 }
 
 // ---- Persistence ------------------------------------------------------------
-function persistDraft(): void {
-  void storage.write("draft", $state.snapshot(draft));
-}
-function persistDrafts(): void {
-  void storage.write("drafts", $state.snapshot(drafts.list));
+
+/** The sync client registers here so every edit can be pushed automatically.
+ * Kept as a hook (rather than importing sync) so there's no import cycle. */
+let changeHook: (() => void) | null = null;
+export function setDraftChangeHook(fn: (() => void) | null): void {
+  changeHook = fn;
 }
 
-export function saveDraft(title: string): boolean {
-  if (!draft.active || !canSaveNewDraft()) return false;
-  drafts.list.push({
-    id: newId("f"),
-    title: title.trim(),
-    createdAt: Date.now(),
+/** Mirror the live draft into the saved list. Any content change marks it
+ * unsynced again, which is what schedules the automatic re-upload. */
+function upsertActiveDraft(): void {
+  if (!draft.active || !draft.id) return;
+  const i = drafts.list.findIndex((d) => d.id === draft.id);
+  const entry: SavedDraft = {
+    id: draft.id,
+    title: draft.title.trim(),
+    createdAt: i >= 0 ? drafts.list[i]!.createdAt : Date.now(),
     planner: $state.snapshot(draft.planner) as PlannerDoc,
     notes: $state.snapshot(draft.notes) as Record<string, string>,
     status: "draft",
-  });
+  };
+  if (i >= 0) drafts.list[i] = entry;
+  else if (canSaveNewDraft()) drafts.list.push(entry);
+  else return;
   persistDrafts();
-  discardDraft();
-  return true;
+}
+
+function persistDraft(): void {
+  upsertActiveDraft();
+  void storage.write("draft", $state.snapshot(draft));
+  changeHook?.();
+}
+function persistDrafts(): void {
+  void storage.write("drafts", $state.snapshot(drafts.list));
 }
 
 export async function loadCached(): Promise<void> {
@@ -443,10 +491,18 @@ export async function loadCached(): Promise<void> {
   const cx = await storage.read<Record<ComplexityKey, number>>("complexity");
   if (cx) synced.complexity = { ...DEFAULT_COMPLEXITY, ...cx };
   const d = await storage.read<SavedDraft[]>("drafts");
-  if (Array.isArray(d)) drafts.list = d.map((x) => ({ ...x, notes: x.notes ?? {}, status: x.status ?? "draft" }));
-  const saved = await storage.read<{ active: boolean; title: string; planner: PlannerDoc; notes?: Record<string, string> }>("draft");
-  if (saved && saved.active) {
+  if (Array.isArray(d)) {
+    const now = Date.now();
+    drafts.list = d
+      .map((x) => ({ ...x, notes: x.notes ?? {}, status: x.status ?? "draft" }))
+      // Already on the computer and a day old → drop it, the phone is a
+      // notepad, not an archive.
+      .filter((x) => !(x.status === "synced" && x.syncedAt && now - x.syncedAt > SYNCED_TTL_MS));
+  }
+  const saved = await storage.read<{ active: boolean; id?: string; title: string; planner: PlannerDoc; notes?: Record<string, string> }>("draft");
+  if (saved && saved.active && saved.id) {
     draft.active = true;
+    draft.id = saved.id;
     draft.title = saved.title;
     draft.planner = saved.planner;
     draft.notes = saved.notes ?? {};

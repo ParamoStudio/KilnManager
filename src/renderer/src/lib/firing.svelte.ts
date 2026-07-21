@@ -364,6 +364,9 @@ export interface FiringRecord {
   clientNotes: Record<string, string>;
   /** Where the firing came from — set when imported from the phone loader. */
   source?: "phone";
+  /** The phone's stable id for this firing, so re-imports of an edited version
+   * update this record instead of creating a duplicate. */
+  phoneId?: string;
 }
 
 export const firings = $state<{ list: FiringRecord[]; activeId: string | null }>({
@@ -437,12 +440,34 @@ export function importPhoneFiring(item: {
 }): void {
   const p = item.firing ?? ({} as PlannerState);
   const kiln = kilnStore.list.find((k) => k.id === p.kilnId) ?? kilnStore.list[0];
+  // Same firing, edited on the phone → update the one we already have (unless
+  // it's already been closed/invoiced here, which we never overwrite).
+  const existing = item.id
+    ? firings.list.find((f) => f.phoneId === item.id && f.status === "current")
+    : undefined;
+  if (existing) {
+    existing.title = item.title ?? existing.title;
+    existing.clientNotes = item.notes ?? existing.clientNotes;
+    existing.planner = {
+      kilnId: p.kilnId || existing.planner.kilnId,
+      serviceId: p.serviceId || existing.planner.serviceId,
+      levels: p.levels ?? [],
+      kilnMods: p.kilnMods ?? existing.planner.kilnMods,
+      customDiscount: p.customDiscount ?? existing.planner.customDiscount,
+      clientMods: p.clientMods ?? existing.planner.clientMods,
+      partners: existing.planner.partners, // keep whatever was set up here
+    };
+    if (firings.activeId === existing.id) loadIntoPlanner(existing.planner);
+    saveApp();
+    return;
+  }
   const rec: FiringRecord = {
     id: `f${Date.now().toString(36)}${seq++}`,
     title: item.title ?? "",
     createdAt: Date.now(),
     status: "current",
     source: "phone",
+    phoneId: item.id,
     clientNotes: item.notes ?? {},
     planner: {
       kilnId: p.kilnId || kiln?.id || "",
