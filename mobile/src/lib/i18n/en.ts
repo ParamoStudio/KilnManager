@@ -115,6 +115,13 @@ export const en = {
     notPaired: "Not paired",
   },
 
+  desktop: {
+    title: "This one's for your phone",
+    body: "Kiln Loader is the phone companion for Kiln Manager. Open it by scanning the QR code in the desktop app — that's what pairs it with your kilns and clients.",
+    getApp: "Don't have Kiln Manager yet? Download it here:",
+    repo: "github.com/ParamoStudio/KilnManager",
+  },
+
   fixture: {
     seedButton: "Load sample kilns & clients (dev)",
     seeded: "Sample data loaded.",

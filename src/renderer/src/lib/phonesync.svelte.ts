@@ -43,13 +43,20 @@ export async function loadPhoneSync(): Promise<void> {
   phone.paired = !!(bridgeConfigured() && phone.token);
 }
 
-/** Generate a fresh pairing token. Endpoints are fixed at build time. */
+/** Generate a fresh pairing token. Endpoints are fixed at build time.
+ * Immediately seeds the phone's mailbox so the very first scan already finds
+ * this studio's kilns and clients waiting — no "press sync on both" dance. */
 export function generatePairing(): void {
   const bytes = new Uint8Array(18);
   crypto.getRandomValues(bytes);
   phone.token = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   phone.paired = !!(bridgeConfigured() && phone.token);
   persist();
+  if (phone.paired) {
+    void pushDown().catch((e) => {
+      phone.lastError = e instanceof Error ? e.message : String(e);
+    });
+  }
 }
 export function revokePairing(): void {
   phone.token = "";

@@ -39,10 +39,6 @@
   let innerWidth = $state(DESIGN_W);
   const tooSmall = $derived(innerWidth > 0 && innerWidth < MIN_W);
   const uiScale = $derived(Math.min(1, Math.max(MIN_W / DESIGN_W, innerWidth / DESIGN_W)));
-  $effect(() => {
-    // At the "too small" size we drop back to 1:1 so the warning reads clearly.
-    document.documentElement.style.zoom = tooSmall ? "1" : String(uiScale);
-  });
 
   const KOFI = "https://ko-fi.com/paramostudio";
   // External links (placeholders — swap for the real URLs).
@@ -123,6 +119,11 @@
   </div>
 {/if}
 
+<!-- Everything lives inside the scaled root: a plain CSS transform, so shrinking
+     the window is a GPU composite instead of a full relayout (no stepping), and
+     the root is sized as viewport/scale so it lands exactly on the viewport
+     with no leftover gap at the bottom. -->
+<div class="zoomroot" style="--s:{uiScale}">
 <div class="app">
   <header class="topbar">
     <h1 class="brand">
@@ -212,11 +213,21 @@
 {#if app.outputsFor}
   <OutputsPanel id={app.outputsFor} onclose={() => (app.outputsFor = null)} />
 {/if}
+</div>
 
 <style>
+  .zoomroot {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: calc(100vw / var(--s));
+    height: calc(100vh / var(--s));
+    transform: scale(var(--s));
+    transform-origin: top left;
+  }
   .app {
     position: relative;
-    height: 100vh;
+    height: 100%;
     display: flex;
     flex-direction: column;
     padding: 18px 26px 20px;

@@ -112,6 +112,13 @@ export const es: Dictionary = {
     notPaired: "Sin emparejar",
   },
 
+  desktop: {
+    title: "Esto es para tu móvil",
+    body: "Kiln Loader es el complemento para el móvil de Kiln Manager. Ábrelo escaneando el código QR de la app de escritorio — eso es lo que lo empareja con tus hornos y clientes.",
+    getApp: "¿Aún no tienes Kiln Manager? Descárgalo aquí:",
+    repo: "github.com/ParamoStudio/KilnManager",
+  },
+
   fixture: {
     seedButton: "Cargar hornos y clientes de ejemplo (dev)",
     seeded: "Datos de ejemplo cargados.",

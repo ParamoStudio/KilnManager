@@ -83,7 +83,14 @@
           <div class="info">
             <div class="row1">
               <span class="kiln">{titled || fmtFull(rec.createdAt)}</span>
-              {#if rec.source === "phone"}<span class="phonebadge">{t.phone.fromPhone}</span>{/if}
+              {#if rec.source === "phone"}
+                <span class="phonebadge" title={t.phone.fromPhone} aria-label={t.phone.fromPhone}>
+                  <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
+                    <rect x="7" y="2.5" width="10" height="19" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.8" />
+                    <line x1="10.6" y1="5.6" x2="13.4" y2="5.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                  </svg>
+                </span>
+              {/if}
               <span class="pending">{t.home.pending}</span>
             </div>
             <div class="title">{k.name} <span class="energy">· {energyLabel(k)}</span></div>
@@ -310,14 +317,17 @@
     border-radius: 999px;
     padding: 2px 7px;
   }
+  /* Compact blue phone glyph — the text label ate too much of the card. */
   .phonebadge {
-    font-size: 10px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
     color: var(--blue, #8ab6f0);
-    border: 1px solid color-mix(in srgb, var(--blue, #8ab6f0) 40%, var(--line));
+    border: 1px solid color-mix(in srgb, var(--blue, #8ab6f0) 45%, var(--line));
     border-radius: 999px;
-    padding: 2px 7px;
     margin-left: auto;
   }
   .title {
