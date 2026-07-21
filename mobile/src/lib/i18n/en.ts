@@ -116,6 +116,22 @@ export const en = {
     syncBody:
       "This phone isn't paired yet. On the computer, open Kiln Manager → Settings → “Load Kiln with Phone” and scan the QR code once. After that, “Sync now” sends your drafts to the computer and pulls in your latest kilns and clients — no accounts.",
     notPaired: "Not paired",
+
+    codeTitle: "Your pairing code",
+    codeBody:
+      "Keep this somewhere safe. If you add Kiln Loader to your home screen, the installed app starts out unpaired \u2014 some phones give it a storage of its own \u2014 and this code connects it in one step, without scanning again.",
+    codeCopy: "Copy code",
+    codeCopied: "Copied",
+    codeDone: "Got it",
+    haveCode: "Have a pairing code?",
+    enterTitle: "Enter your pairing code",
+    enterBody:
+      "Paste the code from the phone or browser that scanned the QR. A pair link works too.",
+    enterPlaceholder: "KL-\u2026",
+    enterPaste: "Paste",
+    enterConnect: "Connect",
+    enterBad: "That doesn't look like a pairing code.",
+    enterOk: "Paired. Loading your kilns\u2026",
   },
 
 

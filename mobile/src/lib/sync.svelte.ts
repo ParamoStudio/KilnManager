@@ -8,9 +8,14 @@
  *
  * Pairing is learned once by scanning a QR on the desktop — the QR opens the
  * PWA with `#pair=<token>~<encodedRelayBase>` in the URL. We persist both and
- * clear the hash. Nothing is ever typed on the phone.
+ * clear the hash.
+ *
+ * The QR pairs whichever browser scanned it, which isn't always the browser the
+ * user ends up in (see `paircode.ts`), so the same pairing can also be carried
+ * across as a code. That's a paste, not a typing exercise.
  */
 import { storage } from "./storage";
+import { encodePairing, decodePairing, type Pairing } from "./paircode";
 import {
   synced,
   drafts,
@@ -21,10 +26,6 @@ import {
   type ComplexityKey,
 } from "./loader.svelte";
 
-interface Pairing {
-  base: string; // relay base URL, e.g. https://kiln-relay.xyz.workers.dev
-  token: string;
-}
 interface DownPayload {
   contacts?: MobileContact[];
   kilns?: MobileKiln[];
@@ -40,12 +41,16 @@ export const sync = $state<{
    * batch yet. Not an error — the drafts simply stay pending and go through on
    * a later attempt — but the phone says so rather than looking stuck. */
   mailboxFull: boolean;
+  /** Set once, the first time this browser pairs, so the app can offer the
+   * pairing code before the user walks away with it. See `pairingCode()`. */
+  offerCode: boolean;
 }>({
   paired: false,
   busy: false,
   lastSyncedAt: null,
   lastError: "",
   mailboxFull: false,
+  offerCode: false,
 });
 
 let pairing: Pairing | null = null;
@@ -54,30 +59,64 @@ function channel(box: "down" | "up"): string {
   return `${pairing!.base.replace(/\/$/, "")}/channel/${pairing!.token}/${box}`;
 }
 
+/** The pairing as a string you can carry by hand. See `paircode.ts`. */
+export function pairingCode(): string {
+  return pairing ? encodePairing(pairing) : "";
+}
+
+/** Accepts a pairing code, or a pasted pair URL — people paste what they have. */
+export async function applyPairingCode(input: string): Promise<boolean> {
+  const p = decodePairing(input);
+  if (!p) return false;
+  await adoptPairing(p.token, p.base);
+  return true;
+}
+
+/**
+ * Store a pairing, wiping anything cached from a different computer first — a
+ * new token means a different vault (a studio that started fresh), and mixing
+ * two studios' kilns and clients would be worse than starting empty.
+ */
+async function adoptPairing(token: string, base: string): Promise<void> {
+  const previous = await storage.read<Pairing>("pairing");
+  pairing = { token, base };
+  if (previous && previous.token !== token) {
+    for (const key of ["kilns", "contacts", "complexity", "drafts", "draft"]) {
+      await storage.remove(key);
+    }
+    synced.kilns = [];
+    synced.contacts = [];
+    drafts.list = [];
+  }
+  await storage.write("pairing", pairing);
+  sync.paired = true;
+}
+
 /** Read the pairing from the QR (URL hash) on first open, else from storage. */
 export async function loadPairing(): Promise<void> {
   const m = typeof location !== "undefined" ? location.hash.match(/^#pair=([^~]+)~(.+)$/) : null;
   if (m) {
-    const previous = await storage.read<Pairing>("pairing");
-    pairing = { token: m[1]!, base: decodeURIComponent(m[2]!) };
-    // A different token means a different computer/vault (e.g. the studio
-    // started fresh). Drop everything cached from the old one so the phone
-    // never mixes two studios' kilns, clients or drafts.
-    if (previous && previous.token !== pairing.token) {
-      for (const key of ["kilns", "contacts", "complexity", "drafts", "draft"]) {
-        await storage.remove(key);
-      }
-      synced.kilns = [];
-      synced.contacts = [];
-      drafts.list = [];
-    }
-    await storage.write("pairing", pairing);
+    await adoptPairing(m[1]!, decodeURIComponent(m[2]!));
+    // Offer the code once per browser, right after the scan — that's the only
+    // moment the user is holding both devices and hasn't walked off yet.
+    if (!(await storage.read<boolean>("codeOffered"))) sync.offerCode = true;
     // Clean the URL so a refresh doesn't re-parse and the token isn't left visible.
     if (typeof history !== "undefined") history.replaceState(null, "", location.pathname + location.search);
   } else {
     pairing = (await storage.read<Pairing>("pairing")) ?? null;
   }
   sync.paired = !!(pairing && pairing.base && pairing.token);
+}
+
+/**
+ * Spend the one-shot offer — called when the sheet is actually on screen, not
+ * when pairing happens. Marking it at pairing time meant anything that stopped
+ * the sheet rendering burned the only chance the user had of learning the code
+ * exists.
+ */
+export async function markCodeOffered(): Promise<void> {
+  sync.offerCode = false;
+  await storage.write("codeOffered", true);
 }
 
 export async function unpair(): Promise<void> {

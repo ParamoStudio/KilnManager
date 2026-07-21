@@ -113,6 +113,22 @@ export const es: Dictionary = {
     syncBody:
       "Este móvil aún no está emparejado. En el ordenador, abre Kiln Manager → Ajustes → «Cargar horno con el móvil» y escanea el QR una vez. Después, «Sincronizar ahora» envía tus borradores al ordenador y recibe tus hornos y clientes actualizados — sin cuentas.",
     notPaired: "Sin emparejar",
+
+    codeTitle: "Tu c\u00f3digo de emparejamiento",
+    codeBody:
+      "Gu\u00e1rdalo en sitio seguro. Si a\u00f1ades Kiln Loader a la pantalla de inicio, la app instalada arranca sin emparejar \u2014 algunos m\u00f3viles le dan un almac\u00e9n propio \u2014 y este c\u00f3digo la conecta de un paso, sin volver a escanear.",
+    codeCopy: "Copiar c\u00f3digo",
+    codeCopied: "Copiado",
+    codeDone: "Entendido",
+    haveCode: "\u00bfTienes un c\u00f3digo de emparejamiento?",
+    enterTitle: "Introduce tu c\u00f3digo",
+    enterBody:
+      "Pega el c\u00f3digo del m\u00f3vil o navegador que escane\u00f3 el QR. Un enlace de emparejamiento tambi\u00e9n vale.",
+    enterPlaceholder: "KL-\u2026",
+    enterPaste: "Pegar",
+    enterConnect: "Conectar",
+    enterBad: "Esto no parece un c\u00f3digo de emparejamiento.",
+    enterOk: "Emparejado. Cargando tus hornos\u2026",
   },
 
 

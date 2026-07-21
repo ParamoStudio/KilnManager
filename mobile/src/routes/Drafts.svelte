@@ -10,7 +10,7 @@
     pendingCount,
     type SavedDraft,
   } from "../lib/loader.svelte";
-  import { sync, syncNow } from "../lib/sync.svelte";
+  import { sync, syncNow, pairingCode, applyPairingCode, markCodeOffered } from "../lib/sync.svelte";
   import { t } from "../lib/i18n.svelte";
   import { fly, fade } from "svelte/transition";
 
@@ -21,7 +21,57 @@
   }
 
   let confirmId = $state<string | null>(null);
-  let info = $state<"none" | "how" | "sync">("none");
+  let info = $state<"none" | "how" | "sync" | "code" | "enter">("none");
+
+  // The one-shot offer fires from the sync layer the first time this browser
+  // pairs; showing it is this screen's job.
+  let shown = false;
+  $effect(() => {
+    if (sync.offerCode && !shown) {
+      shown = true;
+      info = "code";
+      void markCodeOffered();
+    }
+  });
+
+  let copied = $state(false);
+  async function copyCode(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(pairingCode());
+      copied = true;
+      setTimeout(() => (copied = false), 2000);
+    } catch {
+      // Clipboard blocked (older iOS, permissions): the code is on screen
+      // anyway, so selecting it by hand still works.
+      copied = false;
+    }
+  }
+
+  let codeInput = $state("");
+  let enterState = $state<"idle" | "bad" | "ok">("idle");
+  async function pasteCode(): Promise<void> {
+    try {
+      codeInput = await navigator.clipboard.readText();
+      enterState = "idle";
+    } catch {
+      // Reading the clipboard needs permission the user may refuse; the field
+      // is a plain text input, so long-press → Paste always works.
+    }
+  }
+  async function connectCode(): Promise<void> {
+    if (!(await applyPairingCode(codeInput))) {
+      enterState = "bad";
+      return;
+    }
+    // Pairing is done and stored the moment the code parses; close on that,
+    // and let the sync run behind the panel. Waiting for the network here
+    // would leave a modal sitting there looking frozen — and someone who has
+    // just installed the app is exactly the person likely to have no signal.
+    info = "none";
+    codeInput = "";
+    enterState = "idle";
+    void syncNow();
+  }
 
   const kilnOf = (kilnId: string) => synced.kilns.find((k) => k.id === kilnId) ?? null;
 
@@ -122,6 +172,7 @@
     <span class="synced-line faint">{t.drafts.lastSync(fmtTime(sync.lastSyncedAt))}</span>
   {/if}
   <button class="howitworks" onclick={() => (info = "how")}>ⓘ {t.home.howItWorks}</button>
+  <button class="havecode" onclick={() => (info = "enter")}>{t.home.haveCode}</button>
 </div>
 
 {#if info !== "none"}
@@ -129,11 +180,48 @@
   <div class="sheet" role="dialog" transition:fly={{ y: 360, duration: 260 }}>
     <div class="handle"></div>
     <div class="shead">
-      <span class="stitle">{info === "how" ? t.home.infoTitle : t.home.syncTitle}</span>
+      <span class="stitle">
+        {#if info === "how"}{t.home.infoTitle}
+        {:else if info === "sync"}{t.home.syncTitle}
+        {:else if info === "code"}{t.home.codeTitle}
+        {:else}{t.home.enterTitle}{/if}
+      </span>
       <button class="x" onclick={() => (info = "none")} aria-label={t.common.close}>×</button>
     </div>
-    {#if info === "sync"}<span class="soon">{t.home.notPaired}</span>{/if}
-    <p class="sbody">{info === "how" ? t.home.infoBody : t.home.syncBody}</p>
+
+    {#if info === "how" || info === "sync"}
+      {#if info === "sync"}<span class="soon">{t.home.notPaired}</span>{/if}
+      <p class="sbody">{info === "how" ? t.home.infoBody : t.home.syncBody}</p>
+
+    {:else if info === "code"}
+      <p class="sbody">{t.home.codeBody}</p>
+      <div class="codebox">{pairingCode()}</div>
+      <div class="srow">
+        <button class="sbtn primary" onclick={copyCode}>
+          {copied ? `✓ ${t.home.codeCopied}` : t.home.codeCopy}
+        </button>
+        <button class="sbtn" onclick={() => (info = "none")}>{t.home.codeDone}</button>
+      </div>
+
+    {:else}
+      <p class="sbody">{t.home.enterBody}</p>
+      <input
+        class="codein"
+        bind:value={codeInput}
+        oninput={() => (enterState = "idle")}
+        placeholder={t.home.enterPlaceholder}
+        autocapitalize="off"
+        autocorrect="off"
+        spellcheck="false"
+      />
+      {#if enterState === "bad"}<span class="cerr">{t.home.enterBad}</span>{/if}
+      <div class="srow">
+        <button class="sbtn" onclick={pasteCode}>{t.home.enterPaste}</button>
+        <button class="sbtn primary" onclick={connectCode} disabled={!codeInput.trim()}>
+          {t.home.enterConnect}
+        </button>
+      </div>
+    {/if}
   </div>
 {/if}
 
@@ -387,5 +475,71 @@
     line-height: 1.6;
     color: var(--text-dim);
     margin: 0;
+  }
+
+  /* Quieter than "How it works": most people never need it, and the ones who
+     do are looking for it. */
+  .havecode {
+    align-self: center;
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-size: 12.5px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 2px 12px 6px;
+  }
+
+  /* The code itself: monospace and selectable, so it still works if the
+     clipboard API is blocked and the user copies it by hand. */
+  .codebox {
+    user-select: all;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px;
+    line-height: 1.5;
+    word-break: break-all;
+    background: var(--panel);
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+    padding: 12px;
+    color: var(--text);
+  }
+  .codein {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 14px;
+    background: var(--panel);
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+    padding: 13px 12px;
+    color: var(--text);
+    width: 100%;
+  }
+  .codein:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--amber) 55%, var(--line));
+  }
+  .cerr {
+    font-size: 12.5px;
+    color: var(--amber);
+  }
+  .srow {
+    display: flex;
+    gap: 10px;
+  }
+  .sbtn {
+    flex: 1;
+    background: none;
+    border: 1px solid var(--line-soft);
+    border-radius: 999px;
+    padding: 13px 14px;
+    font-size: 14px;
+    color: var(--text-dim);
+  }
+  .sbtn.primary {
+    border-color: color-mix(in srgb, var(--amber) 55%, var(--line));
+    color: var(--amber);
+  }
+  .sbtn:disabled {
+    opacity: 0.4;
   }
 </style>
