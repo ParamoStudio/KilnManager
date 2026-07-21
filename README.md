@@ -12,12 +12,15 @@ then produces a clean ticket for each of them.
 
 **[→ Download the latest version](https://github.com/ParamoStudio/KilnManager/releases/latest)**
 
-| Your computer      | Download                                              |
-| ------------------ | ----------------------------------------------------- |
-| Mac (Apple Silicon) | `Páramo Kiln Manager-x.y.z-arm64.dmg`                |
-| Mac (Intel)         | `Páramo Kiln Manager-x.y.z-x64.dmg`                  |
-| Windows             | `Páramo Kiln Manager Setup x.y.z.exe`                |
-| Linux               | `Páramo Kiln Manager-x.y.z.AppImage`                 |
+| Your computer        | Download                                  |
+| -------------------- | ----------------------------------------- |
+| Mac (Apple Silicon)  | `Paramo.Kiln.Manager-x.y.z-arm64.dmg`     |
+| Mac (Intel)          | `Paramo.Kiln.Manager-x.y.z-x64.dmg`       |
+| Windows              | `Paramo.Kiln.Manager.Setup.x.y.z.exe`     |
+| Linux                | `Paramo.Kiln.Manager-x.y.z.AppImage`      |
+
+Not sure which Mac you have? Apple menu → About This Mac: "Apple M1/M2/M3…"
+means Apple Silicon, "Intel" means Intel.
 
 On **Mac**, open the `.dmg` and drag the app into Applications. The first time
 you open it, macOS will say it can't check the app for malicious software: this
