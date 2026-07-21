@@ -36,11 +36,16 @@ export const sync = $state<{
   busy: boolean;
   lastSyncedAt: number | null;
   lastError: string;
+  /** The relay's mailbox is full: the desktop hasn't collected the previous
+   * batch yet. Not an error — the drafts simply stay pending and go through on
+   * a later attempt — but the phone says so rather than looking stuck. */
+  mailboxFull: boolean;
 }>({
   paired: false,
   busy: false,
   lastSyncedAt: null,
   lastError: "",
+  mailboxFull: false,
 });
 
 let pairing: Pairing | null = null;
@@ -108,15 +113,27 @@ export async function syncDown(): Promise<void> {
  * — editing a firing five times still yields exactly one firing. */
 export async function syncUp(): Promise<void> {
   if (!sync.paired) return;
+  let full = false;
   for (const d of drafts.list.filter((x) => x.status === "draft" && x.planner.levels.length > 0)) {
     const res = await fetch(channel("up"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: d.id, title: d.title, firing: d.planner, notes: d.notes, createdAt: d.createdAt }),
     });
-    if (res.ok) setDraftStatus(d.id, "synced");
-    // A 409 (relay full) or network error just leaves it a draft to retry later.
+    if (res.ok) {
+      setDraftStatus(d.id, "synced");
+      continue;
+    }
+    // 409 means the mailbox is full — the desktop hasn't collected the last
+    // batch. Stop here rather than hammering the relay with the rest; they all
+    // stay drafts and go up on a later attempt, in order.
+    if (res.status === 409) {
+      full = true;
+      break;
+    }
+    // Any other failure (network, relay down) also just leaves it a draft.
   }
+  sync.mailboxFull = full;
 }
 
 /**

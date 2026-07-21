@@ -7,6 +7,7 @@
     resumeDraft,
     distinctClients,
     MAX_DRAFTS,
+    pendingCount,
     type SavedDraft,
   } from "../lib/loader.svelte";
   import { sync, syncNow } from "../lib/sync.svelte";
@@ -30,6 +31,7 @@
     [...drafts.list].sort((a, b) => (a.status === "synced" ? 0 : 1) - (b.status === "synced" ? 0 : 1)),
   );
   const hasSynced = $derived(drafts.list.some((d) => d.status === "synced"));
+  const pending = $derived(pendingCount());
 
   function meta(d: SavedDraft): string {
     const n = distinctClients(d.planner);
@@ -103,8 +105,8 @@
     {/if}
   {/if}
 
-  {#if drafts.list.length >= MAX_DRAFTS}
-    <p class="warn">{t.drafts.capReached(drafts.list.length)}</p>
+  {#if pending >= MAX_DRAFTS}
+    <p class="warn">{t.drafts.capReached(pending)}</p>
   {:else}
     <button class="newbtn" onclick={onnew} disabled={synced.kilns.length === 0}>{t.nav.newFiring}</button>
   {/if}
@@ -112,7 +114,9 @@
   <button class="syncnow" class:busy={sync.busy} onclick={onSync} disabled={sync.busy}>
     ⟳ {sync.busy ? t.drafts.syncing : t.drafts.syncNow}
   </button>
-  {#if sync.lastError}
+  {#if sync.mailboxFull}
+    <span class="synced-line warn">{t.drafts.mailboxFull}</span>
+  {:else if sync.lastError}
     <span class="synced-line err">{t.drafts.syncError}</span>
   {:else if sync.lastSyncedAt}
     <span class="synced-line faint">{t.drafts.lastSync(fmtTime(sync.lastSyncedAt))}</span>

@@ -26,7 +26,10 @@ export const es: Dictionary = {
     shelvesCount: (n: number) => `${n} ${n === 1 ? "balda" : "baldas"}`,
     clientsCount: (n: number) => `${n} ${n === 1 ? "cliente" : "clientes"}`,
     unassigned: "sin asignar",
-    capReached: (n: number) => `Tienes ${n} borradores — sincroniza con tu ordenador antes de añadir más.`,
+    capReached: (n: number) =>
+      `${n} horneadas esperando aquí. Abre Kiln Manager en el ordenador para recogerlas y podrás empezar otra.`,
+    mailboxFull:
+      "El ordenador aún no ha recogido las anteriores, así que estas esperan turno. Abre Kiln Manager y pasarán.",
     statusDraft: "Borrador",
     statusSynced: "Sincronizada",
     autoDeleteHint: "se borra en un día",

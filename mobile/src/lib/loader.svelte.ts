@@ -82,7 +82,10 @@ export interface SavedDraft {
 const SYNCED_TTL_MS = 24 * 60 * 60 * 1000;
 
 export const MYSELF = "Myself";
-export const MAX_DRAFTS = 5;
+/** Per phone, deliberately small. The phone is a notepad you carry to the kiln,
+ * not an archive: keeping at most a handful unsynced means less to lose if it's
+ * dropped in a bucket of slip, and it nudges you to bring them in. */
+export const MAX_DRAFTS = 3;
 
 /** Default complexity factors, matching the desktop defaults. Structure, not
  * price — synced (read-only) from desktop in Stage B; seeded here for now. */
@@ -196,8 +199,14 @@ const newId = (p: string): string => {
   return `${p}${Date.now().toString(36)}${seq++}${rand}`;
 };
 
+/** Only firings the computer hasn't collected yet count against the cap. Ones
+ * already synced are just receipts waiting to expire — being blocked by those
+ * would be nonsense, since there's nothing left to go and fetch. */
+export function pendingCount(): number {
+  return drafts.list.filter((d) => d.status !== "synced").length;
+}
 export function canSaveNewDraft(): boolean {
-  return drafts.list.length < MAX_DRAFTS;
+  return pendingCount() < MAX_DRAFTS;
 }
 export function deleteDraft(id: string): void {
   drafts.list = drafts.list.filter((d) => d.id !== id);

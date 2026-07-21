@@ -29,7 +29,10 @@ export const en = {
     shelvesCount: (n: number) => `${n} ${n === 1 ? "shelf" : "shelves"}`,
     clientsCount: (n: number) => `${n} ${n === 1 ? "client" : "clients"}`,
     unassigned: "unassigned",
-    capReached: (n: number) => `You have ${n} drafts — sync with your computer before adding more.`,
+    capReached: (n: number) =>
+      `${n} firings waiting here. Open Kiln Manager on your computer to bring them in, then you can start another.`,
+    mailboxFull:
+      "The computer hasn't collected the last batch yet, so these are waiting their turn. Open Kiln Manager and they'll go through.",
     statusDraft: "Draft",
     statusSynced: "Synced",
     autoDeleteHint: "auto-deletes in a day",
