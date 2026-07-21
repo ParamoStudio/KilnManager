@@ -106,6 +106,12 @@ export const en = {
     startNewFiring: "Start new firing",
     chooseAKiln: "Choose a kiln",
     cancel: "Cancel",
+    searchLog: "Search",
+    searchPlaceholder: "Kiln, client, month, year…",
+    searchAll: (n: number) => `${n} firings in the log`,
+    searchResults: (n: number) => `${n} ${n === 1 ? "match" : "matches"}`,
+    searchNone: "Nothing matches that.",
+    logMore: (n: number) => `${n} older — search the log`,
     firingLog: "Firing log",
     closedFiringsWillAppear: "Closed firings will appear here.",
     viewExpenses: "View Expenses",
@@ -546,6 +552,16 @@ export const en = {
     importNow: (n: number) => `Import ${n}`,
     imported: (n: number) => `Imported ${n} ${n === 1 ? "firing" : "firings"} from your phone`,
     fromPhone: "From phone",
+    checking: "Checking your phone…",
+    nothingNew: "Nothing new on the phone",
+    gotNew: (n: number) => `${n} new ${n === 1 ? "firing" : "firings"} from your phone`,
+    gotUpdated: (n: number) => `${n} updated`,
+    pendingSplit: (nw: number, up: number) =>
+      nw > 0 && up > 0
+        ? `${nw} new · ${up} to update`
+        : up > 0
+          ? `${up} ${up === 1 ? "firing" : "firings"} to update`
+          : `${nw} new ${nw === 1 ? "firing" : "firings"}`,
   },
 };
 

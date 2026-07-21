@@ -3,6 +3,7 @@
   import { app, go, loadApp } from "./lib/firing.svelte";
   import { loadPhoneSync, phoneSyncOnOpen, startAutoPush } from "./lib/phonesync.svelte";
   import PhonePanel from "./components/PhonePanel.svelte";
+  import SyncNotice from "./components/SyncNotice.svelte";
   import WhoIsParamo from "./components/WhoIsParamo.svelte";
   import { vault, openLink } from "./lib/storage";
   import { settings, markKofiSupported } from "./lib/settings.svelte";
@@ -197,6 +198,7 @@
 {#if ready && app.firstKilnOpen}
   <FirstKilnPrompt />
 {/if}
+<SyncNotice />
 {#if phoneOpen}
   <PhonePanel onclose={() => (phoneOpen = false)} />
 {/if}

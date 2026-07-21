@@ -18,6 +18,8 @@
   import { eur, fmtDay, fmtFull } from "../lib/format";
   import KilnThumb from "../components/KilnThumb.svelte";
   import FuelPricePanel from "../components/FuelPricePanel.svelte";
+  import FiringSearch from "../components/FiringSearch.svelte";
+  import { groupByMonth } from "../lib/firinglog";
 
   const current = $derived(currentFirings());
   const closed = $derived(closedFirings());
@@ -40,6 +42,12 @@
 
   let picking = $state(false);
   let confirmDelete = $state<string | null>(null);
+  let searching = $state(false);
+
+  /** The log shows only the newest few; the search panel is the way into the
+   * rest, which is where years of firings actually live. */
+  const LOG_LIMIT = 20;
+  const recentLog = $derived.by(() => groupByMonth(closed.slice(0, LOG_LIMIT)));
 
   const kilnOf = (rec: FiringRecord) => kilnStore.list.find((k) => k.id === rec.planner.kilnId) ?? kilnStore.list[0]!;
   const energyLabel = (k: (typeof kilnStore.list)[number]): string =>
@@ -81,8 +89,10 @@
         <div class="card" role="button" tabindex="0" onclick={() => openFiring(rec.id)}>
           <div class="thumb"><KilnThumb shape={k.shape} /></div>
           <div class="info">
-            <div class="row1">
-              <span class="kiln">{titled || fmtFull(rec.createdAt)}</span>
+            <!-- The title gets a header row of its own: it always fits, wrapping
+                 if it must. Everything else lines up underneath. -->
+            <div class="ftitle">
+              <span class="ft-text">{titled || fmtFull(rec.createdAt)}</span>
               {#if rec.source === "phone"}
                 <span class="phonebadge" title={t.phone.fromPhone} aria-label={t.phone.fromPhone}>
                   <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
@@ -142,25 +152,38 @@
 
   <!-- Firing log -->
   <section class="col panel">
-    <span class="col-title">{t.home.firingLog}</span>
+    <div class="log-head">
+      <span class="col-title">{t.home.firingLog}</span>
+      <button class="searchbtn" onclick={() => (searching = true)} disabled={closed.length === 0}>
+        {t.home.searchLog}
+      </button>
+    </div>
 
     <div class="list">
       {#if closed.length === 0}
         <p class="faint empty">{t.home.closedFiringsWillAppear}</p>
       {/if}
-      {#each closed as rec (rec.id)}
-        {@const k = kilnOf(rec)}
-        {@const s = summary(rec)}
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <div class="log-row" role="button" tabindex="0" onclick={() => (app.outputsFor = rec.id)}>
-          <KilnThumb shape={k.shape} size={30} />
-          <div class="info">
-            <div class="kiln">{rec.title || k.name}</div>
-            {#if k.location}<div class="faint loc">{k.location}</div>{/if}
-            <div class="faint meta">{fmt(rec.closedAt ?? rec.createdAt)} · {s.clients} · {eur(s.rounded)} <span class="real">({eur(s.real)})</span></div>
+      <!-- Most recent only; months keep it scannable, the search panel handles
+           the years' worth that build up behind it. -->
+      {#each recentLog as group (group.key)}
+        <div class="monthsep"><span>{group.label}</span></div>
+        {#each group.rows as rec (rec.id)}
+          {@const k = kilnOf(rec)}
+          {@const s = summary(rec)}
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <div class="log-row" role="button" tabindex="0" onclick={() => (app.outputsFor = rec.id)}>
+            <KilnThumb shape={k.shape} size={30} />
+            <div class="info">
+              <div class="kiln">{rec.title || k.name}</div>
+              {#if k.location}<div class="faint loc">{k.location}</div>{/if}
+              <div class="faint meta">{fmt(rec.closedAt ?? rec.createdAt)} · {s.clients} · {eur(s.rounded)} <span class="real">({eur(s.real)})</span></div>
+            </div>
           </div>
-        </div>
+        {/each}
       {/each}
+      {#if closed.length > LOG_LIMIT}
+        <button class="more" onclick={() => (searching = true)}>{t.home.logMore(closed.length - LOG_LIMIT)}</button>
+      {/if}
     </div>
 
     <!-- Month review: running total this month, anchored at the bottom -->
@@ -179,8 +202,60 @@
   </section>
 </div>
 
+{#if searching}
+  <FiringSearch onclose={() => (searching = false)} />
+{/if}
 
 <style>
+  .log-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .searchbtn {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 5px 11px;
+    color: var(--text-dim);
+    font-size: 11.5px;
+  }
+  .searchbtn:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--text-faint);
+  }
+  .searchbtn:disabled {
+    opacity: 0.35;
+  }
+  /* Month separators keep the log scannable as it grows. */
+  .monthsep {
+    display: flex;
+    align-items: center;
+    padding: 12px 2px 5px;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    border-bottom: 1px solid var(--line-soft);
+    margin-bottom: 4px;
+  }
+  .monthsep:first-child {
+    padding-top: 2px;
+  }
+  .more {
+    margin-top: 10px;
+    background: none;
+    border: 1px dashed var(--line);
+    border-radius: 9px;
+    padding: 9px;
+    color: var(--text-faint);
+    font-size: 12px;
+  }
+  .more:hover {
+    color: var(--text);
+    border-color: var(--text-faint);
+  }
   .home {
     height: 100%;
     display: grid;
@@ -299,22 +374,20 @@
     flex: 1;
     min-width: 0;
   }
-  /* Title/date is a single fixed top line — long dates used to wrap into a
-     four-line column and blow the card apart. */
-  .row1 {
+  /* Header: the full title plus its status chips, wrapping as one block. The
+     title is never clipped and nothing gets squeezed against the chips. */
+  .ftitle {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
-    min-width: 0;
+    gap: 6px;
+    margin-bottom: 4px;
   }
-  .kiln {
-    flex: 1;
-    min-width: 0;
+  .ft-text {
     font-weight: 600;
-    font-size: 14px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 14.5px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
   }
   .pending {
     font-size: 10px;
@@ -338,12 +411,11 @@
     color: var(--blue, #8ab6f0);
     border: 1px solid color-mix(in srgb, var(--blue, #8ab6f0) 45%, var(--line));
     border-radius: 999px;
-    margin-left: auto;
   }
   .title {
     font-size: 13px;
     color: var(--text-dim);
-    margin: 2px 0;
+    margin-bottom: 2px;
   }
   .loc {
     font-size: 11.5px;

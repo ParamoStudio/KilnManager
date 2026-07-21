@@ -53,7 +53,19 @@ function channel(box: "down" | "up"): string {
 export async function loadPairing(): Promise<void> {
   const m = typeof location !== "undefined" ? location.hash.match(/^#pair=([^~]+)~(.+)$/) : null;
   if (m) {
+    const previous = await storage.read<Pairing>("pairing");
     pairing = { token: m[1]!, base: decodeURIComponent(m[2]!) };
+    // A different token means a different computer/vault (e.g. the studio
+    // started fresh). Drop everything cached from the old one so the phone
+    // never mixes two studios' kilns, clients or drafts.
+    if (previous && previous.token !== pairing.token) {
+      for (const key of ["kilns", "contacts", "complexity", "drafts", "draft"]) {
+        await storage.remove(key);
+      }
+      synced.kilns = [];
+      synced.contacts = [];
+      drafts.list = [];
+    }
     await storage.write("pairing", pairing);
     // Clean the URL so a refresh doesn't re-parse and the token isn't left visible.
     if (typeof history !== "undefined") history.replaceState(null, "", location.pathname + location.search);

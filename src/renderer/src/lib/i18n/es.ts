@@ -90,6 +90,12 @@ export const es: Dictionary = {
     startNewFiring: "Nueva horneada",
     chooseAKiln: "Elige un horno",
     cancel: "Cancelar",
+    searchLog: "Buscar",
+    searchPlaceholder: "Horno, cliente, mes, año…",
+    searchAll: (n: number) => `${n} horneadas en el registro`,
+    searchResults: (n: number) => `${n} ${n === 1 ? "resultado" : "resultados"}`,
+    searchNone: "Nada coincide con eso.",
+    logMore: (n: number) => `${n} más antiguas — busca en el registro`,
     firingLog: "Registro de horneadas",
     closedFiringsWillAppear: "Las horneadas cerradas aparecerán aquí.",
     viewExpenses: "Ver gastos",
@@ -502,5 +508,15 @@ export const es: Dictionary = {
     importNow: (n: number) => `Importar ${n}`,
     imported: (n: number) => `Importadas ${n} ${n === 1 ? "horneada" : "horneadas"} del móvil`,
     fromPhone: "Del móvil",
+    checking: "Comprobando tu móvil…",
+    nothingNew: "Nada nuevo en el móvil",
+    gotNew: (n: number) => `${n} ${n === 1 ? "horneada nueva" : "horneadas nuevas"} del móvil`,
+    gotUpdated: (n: number) => `${n} actualizada${n === 1 ? "" : "s"}`,
+    pendingSplit: (nw: number, up: number) =>
+      nw > 0 && up > 0
+        ? `${nw} nueva${nw === 1 ? "" : "s"} · ${up} por actualizar`
+        : up > 0
+          ? `${up} horneada${up === 1 ? "" : "s"} por actualizar`
+          : `${nw} horneada${nw === 1 ? "" : "s"} nueva${nw === 1 ? "" : "s"}`,
   },
 };

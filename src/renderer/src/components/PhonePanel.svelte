@@ -73,7 +73,7 @@
 
     <div class="pending">
       {#if phone.pending > 0}
-        <span class="pcount">{t.phone.pending(phone.pending)}</span>
+        <span class="pcount">{t.phone.pendingSplit(phone.pendingNew, phone.pendingUpdate)}</span>
         <button class="import" onclick={doImport}>{t.phone.importNow(phone.pending)}</button>
       {:else if imported > 0}
         <span class="faint">{t.phone.imported(imported)}</span>

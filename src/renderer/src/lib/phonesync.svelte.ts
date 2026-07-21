@@ -6,7 +6,7 @@
  * See relay/worker.ts for the endpoints, and mobile/src/lib/sync.svelte.ts for
  * the phone half. This is plain HTTPS fetch — no Electron/native access needed.
  */
-import { contacts, importPhoneFiring } from "./firing.svelte";
+import { contacts, firings, importPhoneFiring } from "./firing.svelte";
 import { kilnStore } from "./kilns.svelte";
 import { settings } from "./settings.svelte";
 import { syncDirty, setDirtyHook } from "./syncflags.svelte";
@@ -22,14 +22,25 @@ export const phone = $state<{
   token: string;
   paired: boolean;
   pending: number; // firings waiting on the relay
+  pendingNew: number; // …of those, ones we've never seen
+  pendingUpdate: number; // …and ones that update a firing already here
   busy: boolean;
   lastError: string;
+  /** Drives the little "checking the phone…" notice so the sync is visible. */
+  phase: "idle" | "checking" | "done";
+  lastCreated: number;
+  lastUpdated: number;
 }>({
   token: "",
   paired: false,
   pending: 0,
+  pendingNew: 0,
+  pendingUpdate: 0,
   busy: false,
   lastError: "",
+  phase: "idle",
+  lastCreated: 0,
+  lastUpdated: 0,
 });
 
 function persist(): void {
@@ -106,13 +117,18 @@ export async function pushDown(): Promise<void> {
   syncDirty.kilns = false;
 }
 
-/** How many phone firings are waiting (updates phone.pending). */
+/** How many phone firings are waiting, split into brand-new vs. edits to a
+ * firing we already hold — the phone can tell you which, so it should. */
 export async function checkUp(): Promise<number> {
   if (!phone.paired) return 0;
   const res = await fetch(channel("up"), { method: "GET" });
   if (!res.ok) throw new Error(`up ${res.status}`);
-  const list = (await res.json()) as unknown[];
-  phone.pending = Array.isArray(list) ? list.length : 0;
+  const list = (await res.json()) as { id?: string }[];
+  const rows = Array.isArray(list) ? list : [];
+  const known = new Set(firings.list.filter((f) => f.status === "current" && f.phoneId).map((f) => f.phoneId));
+  phone.pendingUpdate = rows.filter((x) => x.id && known.has(x.id)).length;
+  phone.pendingNew = rows.length - phone.pendingUpdate;
+  phone.pending = rows.length;
   return phone.pending;
 }
 
@@ -130,10 +146,15 @@ export async function importFromPhone(): Promise<number> {
   if (!res.ok) throw new Error(`up ${res.status}`);
   const list = (await res.json()) as UpItem[];
   if (!Array.isArray(list) || list.length === 0) {
-    phone.pending = 0;
+    phone.pending = phone.pendingNew = phone.pendingUpdate = 0;
     return 0;
   }
+  const known = new Set(firings.list.filter((f) => f.status === "current" && f.phoneId).map((f) => f.phoneId));
+  let created = 0;
+  let updated = 0;
   for (const item of list) {
+    if (item.id && known.has(item.id)) updated++;
+    else created++;
     importPhoneFiring({
       id: item.id,
       title: item.title,
@@ -143,7 +164,9 @@ export async function importFromPhone(): Promise<number> {
   }
   // Confirm consumption so the phone drops them on its next check.
   await fetch(channel("up"), { method: "DELETE" });
-  phone.pending = 0;
+  phone.pending = phone.pendingNew = phone.pendingUpdate = 0;
+  phone.lastCreated = created;
+  phone.lastUpdated = updated;
   return list.length;
 }
 
@@ -155,12 +178,24 @@ export async function importFromPhone(): Promise<number> {
  */
 export async function phoneSyncOnOpen(): Promise<void> {
   if (!phone.paired) return;
+  phone.phase = "checking";
+  phone.lastError = "";
+  phone.lastCreated = phone.lastUpdated = 0;
+  // Hold the notice on screen long enough to actually be read, even when the
+  // round-trip takes 200 ms — otherwise the sync is invisible and the user has
+  // no idea it happened.
+  const shown = new Promise((r) => setTimeout(r, 2200));
   try {
     await pushDown(); // cheap payload; keep the phone current after every launch
     await importFromPhone();
   } catch (e) {
     phone.lastError = e instanceof Error ? e.message : String(e);
   }
+  await shown;
+  phone.phase = "done";
+  setTimeout(() => {
+    if (phone.phase === "done") phone.phase = "idle";
+  }, 3200);
 }
 
 /**
