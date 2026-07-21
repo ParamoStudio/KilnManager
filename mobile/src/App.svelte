@@ -74,9 +74,10 @@
     {#if ready}
       {#if screen === "drafts"}
         <Drafts onnew={() => (screen = "pick")} onresume={() => (screen = "loading")} />
-        <!-- Dev fixture only when unpaired: once a computer is paired, its real
-             kilns and clients are the only thing that should ever show up. -->
-        {#if synced.kilns.length === 0 && !sync.paired}
+        <!-- Dev fixture, and only when running `dev:mobile`. It used to show
+             for anyone unpaired — which is exactly what a first-time user is,
+             so the published app was offering strangers fake kilns. -->
+        {#if import.meta.env.DEV && synced.kilns.length === 0 && !sync.paired}
           <button class="seed" onclick={doSeed}>{t.fixture.seedButton}</button>
         {/if}
       {:else if screen === "pick"}
