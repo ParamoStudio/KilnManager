@@ -1,6 +1,6 @@
 {
   "name": "kiln-manager",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "type": "module",
   "description": "Páramo Kiln Manager — visual kiln load planner & fair cost distribution for ceramic studios.",

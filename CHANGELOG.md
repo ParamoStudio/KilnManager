@@ -15,6 +15,60 @@ nothing until someone redeploys it.
 
 ---
 
+## v1.0.3 — 22 July 2026
+
+### Fixed: the ticket logos kept disappearing
+
+They vanished after a restart, having seemed to work for a firing or two. Two
+faults, both worth fixing on their own:
+
+**Saves were racing.** Saving the ticket panel called a setter that saved on its
+own halfway through, starting a write whose snapshot predated the logos, and
+then a second write with them. Each write is a temp file plus a rename, and the
+renames can complete in either order — so the older snapshot could land last and
+quietly undo the newer one. The panel now sets every field and writes once, and
+the app serialises writes per file, so the last save always wins. That second
+part protects every setting, not just the logos.
+
+**Nothing said when a save failed.** Writes were fire-and-forget: a failure left
+the value in memory for the rest of the session and gone after a restart, with
+nothing on screen ever having mentioned it. Saves are now checked and reported.
+
+### Logos live in your folder
+
+They're files in `<your data folder>/Brand/` now — one per slot, replaced when
+you upload a new one — instead of being buried inside `settings.json` as text
+that every unrelated save had to carry around. You can see them, back them up
+and swap them without opening the app. Uploading and removing take effect
+immediately: what's on screen is what's in the folder.
+
+Any logos still inside `settings.json` are moved across once on startup.
+
+### Partners can take a cut from one client
+
+A guest studio usually brings a person, not a kiln-load, so taking their cut
+across the whole firing also took it from clients who had nothing to do with
+them. The same tiers now appear twice: **whole firing** works as before, and
+**one client only** waits for you to click that client's shelf — the same
+gesture the client modifiers use. It's removed from the client's own panel, and
+the % badge on a shelf now means "this client has something attached", whether
+that's a price modifier or a partner.
+
+A per-client cut comes out of the profit that client produced: their price minus
+their share of the kiln's costs, shared by load like everything else here.
+
+### Also
+
+- **Tells you when there's a new version.** On opening, the app compares itself
+  against the latest release and shows a quiet line with a download link. Not an
+  auto-updater — the builds are unsigned, and swapping your app behind your back
+  is not the place to start. Silent when offline, and it remembers a dismissal.
+- The data folder's **"Move / new…"** is now **"New…"**, in the accent: moving
+  is starting a new folder, and it's the one button there with consequences.
+- The Ceramic Lab link works, pointing at its repository until the site is up.
+
+---
+
 ## Phone loader — 22 July 2026
 
 Not tied to a desktop release: the phone loader is served from GitHub Pages and
