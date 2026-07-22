@@ -98,6 +98,14 @@ free: **phone button → Advanced**, and follow
 How the whole bridge works — and how to rebuild it for a different app — is
 written up in [The phone-bridge pattern](docs/pairing-bridge-pattern.md).
 
+## Try it in the browser
+
+A free, distilled build of this app runs inside [Páramo Ceramic
+Lab](https://github.com/ParamoStudio/CeramicLab): one kiln, two firings at a
+time, five in the log, and each finished firing downloads as a zip of client
+invoices plus its figures. Same engine, same numbers — build it with `npm run
+build:lab`. Integration notes: [lab handoff](docs/lab-handoff.md).
+
 ## Development
 
 Only needed if you want to work on the app. To just use it, see

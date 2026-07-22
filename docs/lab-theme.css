@@ -1,0 +1,81 @@
+/* ---------------------------------------------------------------------------
+ * Kiln Manager · Lab build — theme override
+ *
+ * Drop this in AFTER the app's own stylesheet and it restyles the whole tool.
+ * Every colour in the interface comes from the custom properties below; there
+ * are essentially no hard-coded colours in the components, so you should not
+ * need to touch a single one of them.
+ *
+ *   <link rel="stylesheet" href="assets/index-*.css">
+ *   <link rel="stylesheet" href="lab-theme.css">   <-- this file, second
+ *
+ * The values here are a monochrome starting point, close to Páramo Ceramic
+ * Lab's own black-and-white palette. Change them freely.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* --- Surfaces ---------------------------------------------------------
+   * --bg      the page behind everything
+   * --panel   cards and panels sitting on the background
+   * --panel-2 controls inside a panel (inputs, chips, secondary buttons)
+   * --line    visible borders and separators
+   * --line-soft  the quieter border, used on large calm surfaces
+   */
+  --bg: #000000;
+  --panel: #0a0a0a;
+  --panel-2: #131313;
+  --line: #2b2b2b;
+  --line-soft: #1c1c1c;
+
+  /* --- Text -------------------------------------------------------------
+   * Three weights of emphasis, nothing else. --text-faint is used for units,
+   * hints and anything that must recede; keep it legible.
+   */
+  --text: #f4f4f4;
+  --text-dim: #a8a8a8;
+  --text-faint: #6d6d6d;
+
+  /* --- Accent -----------------------------------------------------------
+   * ONE accent drives every affordance: primary buttons, active tabs,
+   * selected shelves, the "get the app" pill, warnings. Set it to white for
+   * a fully monochrome tool, or to a single hue to give the tool an identity
+   * inside the site.
+   */
+  --amber: #ffffff;
+
+  /* Used for "synced/ok" ticks and positive states. Keep it distinguishable
+   * from --amber or those states stop reading as different. */
+  --green: #d6d6d6;
+
+  /* Rarely surfaced; kept for completeness. */
+  --violet: #bdbdbd;
+  --blue: #9e9e9e;
+  --accent: #e8e6e1;
+
+  /* --- Shape ------------------------------------------------------------ */
+  --radius: 14px;
+  --radius-sm: 9px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Client colours — read this before going fully monochrome.
+ *
+ * Inside the kiln, each client in a firing is identified BY COLOUR. It is not
+ * decoration: with four or five people in one load it is the only thing that
+ * makes the drawing readable at a glance, and the same colour keys the client
+ * to the breakdown underneath.
+ *
+ * The palette is a plain array in `src/renderer/src/lib/colors.ts` (12 entries,
+ * assigned in order of appearance). If you want the kiln monochrome too,
+ * replace them with a light-to-dark grey ramp there — but expect it to get
+ * hard to read past three or four clients. The recommendation is to keep the
+ * interface monochrome and let the kiln keep its colours, desaturated to sit
+ * inside the site: the kiln is the instrument's readout, and the colour there
+ * is information.
+ * ------------------------------------------------------------------------- */
+
+/* If the host page sets a font, let the tool inherit it. The app itself only
+ * asks for system fonts and loads no webfonts. */
+body {
+  font-family: inherit;
+}
