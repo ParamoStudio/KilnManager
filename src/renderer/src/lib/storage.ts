@@ -39,6 +39,9 @@ declare global {
       outputsShare(absPath: string): Promise<void>;
       outputsOpenFolder(): Promise<void>;
       appVersion(): Promise<string>;
+      brandRead(): Promise<{ top: string; bottom: string }>;
+      brandWrite(kind: "top" | "bottom", dataUri: string): Promise<boolean>;
+      brandClear(kind: "top" | "bottom"): Promise<boolean>;
       openExternal(url: string): Promise<void>;
       marketElectricity(zone: string): Promise<ElectricityRef | { ok: false }>;
       marketPropane(region: string): Promise<PropaneRef | { ok: false }>;

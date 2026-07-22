@@ -14,6 +14,22 @@ const MARKER = ".paramo-kiln.json";
 
 let vaultPath: string | null = null;
 
+/** One promise chain per storage key — see the write handler. */
+const writeQueues = new Map<string, Promise<void>>();
+
+async function doWrite(key: string, value: unknown): Promise<void> {
+  // Onboarding is supposed to gate every write, so getting here means something
+  // wrote before the vault existed. Say so instead of pretending it saved — a
+  // silently dropped write looks fine until the next restart.
+  if (!vaultPath) throw new Error("No vault selected — nothing was saved");
+  await fs.mkdir(vaultPath, { recursive: true });
+  // Atomic: a unique temp file + rename, so a crash never leaves a half file.
+  const target = fileFor(key);
+  const tmp = `${target}.${randomUUID()}.tmp`;
+  await fs.writeFile(tmp, JSON.stringify(value, null, 2), "utf8");
+  await fs.rename(tmp, target);
+}
+
 function pointerFile(): string {
   return join(app.getPath("userData"), "vault-pointer.json");
 }
@@ -122,17 +138,20 @@ export function registerStorage(): void {
   });
 
   ipcMain.handle("storage:write", async (_e, key: string, value: unknown) => {
-    // Onboarding is supposed to gate every write, so getting here means
-    // something wrote before the vault existed. Say so instead of pretending
-    // it saved — a silently dropped write looks fine until the next restart.
-    if (!vaultPath) throw new Error("No vault selected — nothing was saved");
-    await fs.mkdir(vaultPath, { recursive: true });
-    // Write atomically: a UNIQUE temp file + rename, so a crash never corrupts
-    // data and two near-simultaneous writes to the same key can't interleave.
-    const target = fileFor(key);
-    const tmp = `${target}.${randomUUID()}.tmp`;
-    await fs.writeFile(tmp, JSON.stringify(value, null, 2), "utf8");
-    await fs.rename(tmp, target);
+    // Serialised per key. A write is temp-file + rename, and two overlapping
+    // writes could complete their renames in either order — so an older
+    // snapshot could land last and quietly undo the newer one. Chaining them
+    // means the last call wins, which is what every caller assumes.
+    const prev = writeQueues.get(key) ?? Promise.resolve();
+    const next = prev.then(
+      () => doWrite(key, value),
+      () => doWrite(key, value),
+    );
+    writeQueues.set(
+      key,
+      next.catch(() => {}),
+    );
+    return next;
   });
 
   ipcMain.handle("storage:list", async () => {

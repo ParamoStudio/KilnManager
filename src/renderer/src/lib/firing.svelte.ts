@@ -2,7 +2,17 @@ import type { Firing, Allocation, KilnProfile, FiringService, KilnModifier, Appl
 import { consumedHeightCm } from "@core";
 import { kilnStore, loadKilns } from "./kilns.svelte";
 import { type ComplexityKey } from "./complexity";
-import { cx, loadSettings, fuelCostFor, fuelDefFor, resolvePartner, defaultTierRef } from "./settings.svelte";
+import {
+  cx,
+  loadSettings,
+  saveSettings,
+  settings,
+  fuelCostFor,
+  fuelDefFor,
+  resolvePartner,
+  defaultTierRef,
+} from "./settings.svelte";
+import { loadBrand, migrateLogosFromSettings } from "./brand.svelte";
 import { loadPayments } from "./payments.svelte";
 import { loadLocale } from "./i18n.svelte";
 import { markContactsDirty } from "./syncflags.svelte";
@@ -617,6 +627,16 @@ export async function loadApp(): Promise<void> {
   await loadLocale(); // first: so seed localization + labels use the active language
   await loadKilns();
   await loadSettings();
+  await loadBrand();
+  // Logos used to live inside settings.json; move any stragglers into the
+  // Brand folder once, then stop carrying them around in every settings save.
+  if (settings.logoTop || settings.logoBottom) {
+    await migrateLogosFromSettings(settings.logoTop, settings.logoBottom, () => {
+      settings.logoTop = "";
+      settings.logoBottom = "";
+      saveSettings();
+    });
+  }
   const pending = await storage.read<FiringRecord[]>("PendingFirings");
   const log = await storage.read<FiringRecord[]>("FiringsLog");
   if (Array.isArray(pending) || Array.isArray(log)) {

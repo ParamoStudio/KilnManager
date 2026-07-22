@@ -10,6 +10,7 @@
   import { buildTicketHtml, type TicketData, type TicketLine } from "../lib/ticket";
   import { monthlyData } from "../lib/expenses.svelte";
   import { t } from "../lib/i18n.svelte";
+  import { brand } from "../lib/brand.svelte";
   import { outputs, isDesktop } from "../lib/storage";
 
   let { id, onclose }: { id: string; onclose: () => void } = $props();
@@ -78,8 +79,8 @@
     lines.push({ label: t.ticket.total, value: eur(roundUp50(c.price)), strong: true });
     return {
       studioName: settings.studioName,
-      logoTop: settings.logoTop || undefined,
-      logoBottom: settings.logoBottom || undefined,
+      logoTop: brand.top || undefined,
+      logoBottom: brand.bottom || undefined,
       note: settings.ticketNote || undefined,
       client: name,
       date: new Date(rec.closedAt ?? rec.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }),

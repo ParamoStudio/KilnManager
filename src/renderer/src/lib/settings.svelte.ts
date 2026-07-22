@@ -99,8 +99,13 @@ export function effectiveTicketMessage(): string {
 }
 /** Save the message; snaps back to "" (follow the language) if it exactly
  * matches the active language's own default, so it keeps auto-translating. */
+/** Empty means "use the built-in template", so storing the template verbatim
+ * would freeze the current language. Pure: callers decide when to save. */
+export function normalizeTicketMessage(value: string): string {
+  return value.trim() === t.ticket.defaultMessageTemplate.trim() ? "" : value;
+}
 export function setTicketMessage(value: string): void {
-  settings.ticketMessage = value.trim() === t.ticket.defaultMessageTemplate.trim() ? "" : value;
+  settings.ticketMessage = normalizeTicketMessage(value);
   saveSettings();
 }
 

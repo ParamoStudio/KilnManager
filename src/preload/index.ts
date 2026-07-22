@@ -22,6 +22,11 @@ const kilnAPI = {
   outputsShare: (absPath: string): Promise<void> => ipcRenderer.invoke("outputs:share", absPath),
   outputsOpenFolder: (): Promise<void> => ipcRenderer.invoke("outputs:openFolder"),
   appVersion: (): Promise<string> => ipcRenderer.invoke("app:version"),
+  // Ticket logos, kept as files in <vault>/Brand
+  brandRead: (): Promise<{ top: string; bottom: string }> => ipcRenderer.invoke("brand:read"),
+  brandWrite: (kind: "top" | "bottom", dataUri: string): Promise<boolean> =>
+    ipcRenderer.invoke("brand:write", kind, dataUri),
+  brandClear: (kind: "top" | "bottom"): Promise<boolean> => ipcRenderer.invoke("brand:clear", kind),
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke("app:openExternal", url),
   marketElectricity: (zone: string): Promise<unknown> => ipcRenderer.invoke("market:electricity", zone),
   marketPropane: (region: string): Promise<unknown> => ipcRenderer.invoke("market:propane", region),

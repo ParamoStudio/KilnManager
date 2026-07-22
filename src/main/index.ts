@@ -2,6 +2,7 @@ import { app, BrowserWindow, nativeImage } from "electron";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { registerStorage } from "./storage.js";
+import { registerBrand } from "./brand.js";
 import { registerOutputs } from "./outputs.js";
 import { registerMarket } from "./market.js";
 
@@ -46,6 +47,7 @@ app.whenReady().then(() => {
     app.dock.setIcon(appIcon);
   }
   registerStorage();
+  registerBrand();
   registerOutputs();
   registerMarket();
   createWindow();

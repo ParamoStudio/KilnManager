@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { settings, saveSettingsChecked, setTicketMessage } from "../lib/settings.svelte";
+  import { settings, saveSettingsChecked, normalizeTicketMessage } from "../lib/settings.svelte";
   import { prepareLogo } from "../lib/image";
+  import { brand, setBrandLogo, clearBrandLogo } from "../lib/brand.svelte";
   import { buildTicketHtml, type TicketData } from "../lib/ticket";
   import { t } from "../lib/i18n.svelte";
 
@@ -10,8 +11,8 @@
   let studioName = $state(settings.studioName);
   let ticketNote = $state(settings.ticketNote);
   let ticketMessage = $state(settings.ticketMessage);
-  let logoTop = $state(settings.logoTop);
-  let logoBottom = $state(settings.logoBottom);
+  let logoTop = $state(brand.top);
+  let logoBottom = $state(brand.bottom);
   let sizeWarn = $state("");
 
   // Shrink on the way in rather than refusing big files: a logo only prints a
@@ -61,14 +62,21 @@
 
   let saveError = $state("");
   async function save(): Promise<void> {
+    // Set every field first, then write ONCE. Calling a setter that saves on
+    // its own halfway through started a second, unawaited write whose snapshot
+    // predated the rest of the edits — two writes racing, and whichever landed
+    // last won. That's what kept eating the logos.
     settings.studioName = studioName.trim() || "My Studio";
     settings.ticketNote = ticketNote;
-    setTicketMessage(ticketMessage);
-    settings.logoTop = logoTop;
-    settings.logoBottom = logoBottom;
-    // Wait for the write and only close if it landed. Closing on a failed save
-    // is what hid this: everything looked right until the next restart.
-    if (await saveSettingsChecked()) onclose();
+    settings.ticketMessage = normalizeTicketMessage(ticketMessage);
+
+    // Logos are files of their own now, so they're saved separately and a
+    // failure there is reported rather than silently dropped.
+    const logosOk =
+      (logoTop ? await setBrandLogo("top", logoTop) : await clearBrandLogo("top")) &&
+      (logoBottom ? await setBrandLogo("bottom", logoBottom) : await clearBrandLogo("bottom"));
+
+    if ((await saveSettingsChecked()) && logosOk) onclose();
     else saveError = t.customizeTicket.saveFailed;
   }
 </script>
