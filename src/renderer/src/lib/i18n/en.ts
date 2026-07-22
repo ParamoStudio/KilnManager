@@ -296,6 +296,8 @@ export const en = {
 
   // ---- CustomizeTicket.svelte ------------------------------------------------
   customizeTicket: {
+    logoSaveFailed: "Couldn't store that logo — nothing was changed.",
+    logoRemoveFailed: "Couldn't remove that logo — it's still there.",
     ariaLabel: "Customize client ticket",
     title: "Customize Client Ticket",
     subtitle: "What your clients receive. Everything here is optional but logos and a note make it yours.",

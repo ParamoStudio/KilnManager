@@ -273,6 +273,8 @@ export const es: Dictionary = {
   },
 
   customizeTicket: {
+    logoSaveFailed: "No se pudo guardar ese logo — no se cambió nada.",
+    logoRemoveFailed: "No se pudo quitar ese logo — sigue ahí.",
     ariaLabel: "Personalizar ticket de cliente",
     title: "Personalizar ticket de cliente",
     subtitle: "Lo que reciben tus clientes. Todo es opcional, pero los logos y una nota lo hacen tuyo.",

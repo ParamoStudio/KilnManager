@@ -1,7 +1,7 @@
 <script lang="ts">
   import { settings, saveSettingsChecked, normalizeTicketMessage } from "../lib/settings.svelte";
   import { prepareLogo } from "../lib/image";
-  import { brand, setBrandLogo, clearBrandLogo } from "../lib/brand.svelte";
+  import { brand, setBrandLogo, clearBrandLogo, type LogoKind } from "../lib/brand.svelte";
   import { buildTicketHtml, type TicketData } from "../lib/ticket";
   import { t } from "../lib/i18n.svelte";
 
@@ -15,10 +15,16 @@
   let logoBottom = $state(brand.bottom);
   let sizeWarn = $state("");
 
-  // Shrink on the way in rather than refusing big files: a logo only prints a
-  // couple of centimetres wide, and a multi-megabyte data URI inside
-  // settings.json is what made these vanish in the first place.
-  async function readImage(file: File | undefined, set: (v: string) => void): Promise<void> {
+  /**
+   * Logos are files in the vault, not draft fields, so uploading and removing
+   * take effect at once instead of waiting for Save. Treating a file as a
+   * pending edit is what made "Remove" look like it had done nothing: the
+   * thumbnail vanished, but the file only went if you then pressed Save.
+   *
+   * Shrunk on the way in — a logo prints a couple of centimetres wide, so
+   * there's nothing to gain from carrying the original.
+   */
+  async function pickImage(file: File | undefined, kind: LogoKind): Promise<void> {
     if (!file) return;
     sizeWarn = "";
     const prepared = await prepareLogo(file);
@@ -30,7 +36,22 @@
       sizeWarn = t.customizeTicket.imageTooLarge;
       return;
     }
-    set(prepared.dataUri);
+    if (!(await setBrandLogo(kind, prepared.dataUri))) {
+      sizeWarn = t.customizeTicket.logoSaveFailed;
+      return;
+    }
+    if (kind === "top") logoTop = prepared.dataUri;
+    else logoBottom = prepared.dataUri;
+  }
+
+  async function removeImage(kind: LogoKind): Promise<void> {
+    sizeWarn = "";
+    if (!(await clearBrandLogo(kind))) {
+      sizeWarn = t.customizeTicket.logoRemoveFailed;
+      return;
+    }
+    if (kind === "top") logoTop = "";
+    else logoBottom = "";
   }
 
   const previewData = $derived<TicketData>({
@@ -70,13 +91,8 @@
     settings.ticketNote = ticketNote;
     settings.ticketMessage = normalizeTicketMessage(ticketMessage);
 
-    // Logos are files of their own now, so they're saved separately and a
-    // failure there is reported rather than silently dropped.
-    const logosOk =
-      (logoTop ? await setBrandLogo("top", logoTop) : await clearBrandLogo("top")) &&
-      (logoBottom ? await setBrandLogo("bottom", logoBottom) : await clearBrandLogo("bottom"));
-
-    if ((await saveSettingsChecked()) && logosOk) onclose();
+    // The logos are already on disk by now — see pickImage/removeImage.
+    if (await saveSettingsChecked()) onclose();
     else saveError = t.customizeTicket.saveFailed;
   }
 </script>
@@ -101,11 +117,11 @@
       <div class="logo">
         {#if logoTop}
           <img class="thumb" src={logoTop} alt="Top logo" />
-          <button class="link" onclick={() => (logoTop = "")}>{t.customizeTicket.remove}</button>
+          <button class="link" onclick={() => removeImage("top")}>{t.customizeTicket.remove}</button>
         {:else}
           <label class="upload">
             {t.customizeTicket.upload}
-            <input type="file" accept="image/*" onchange={(e) => readImage(e.currentTarget.files?.[0], (v) => (logoTop = v))} />
+            <input type="file" accept="image/*" onchange={(e) => pickImage(e.currentTarget.files?.[0], "top")} />
           </label>
           <span class="hint">{t.customizeTicket.logoTopHint}</span>
         {/if}
@@ -117,11 +133,11 @@
       <div class="logo">
         {#if logoBottom}
           <img class="thumb" src={logoBottom} alt="Footer logo" />
-          <button class="link" onclick={() => (logoBottom = "")}>{t.customizeTicket.remove}</button>
+          <button class="link" onclick={() => removeImage("bottom")}>{t.customizeTicket.remove}</button>
         {:else}
           <label class="upload">
             {t.customizeTicket.upload}
-            <input type="file" accept="image/*" onchange={(e) => readImage(e.currentTarget.files?.[0], (v) => (logoBottom = v))} />
+            <input type="file" accept="image/*" onchange={(e) => pickImage(e.currentTarget.files?.[0], "bottom")} />
           </label>
           <span class="hint">{t.customizeTicket.logoBottomHint}</span>
         {/if}
