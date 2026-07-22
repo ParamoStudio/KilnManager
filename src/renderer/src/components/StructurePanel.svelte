@@ -17,6 +17,8 @@
     modSign,
     partnerTierActive,
     togglePartnerTier,
+    startClientPartner,
+    clientPartnerTierPending,
     activeFiring,
     setActiveTitle,
     closeActiveFiring,
@@ -153,6 +155,10 @@
     </button>
     {#if partnersOpen}
       <div class="acc-body">
+        <!-- The same tiers, twice: taking a cut of the whole firing is a
+             different arrangement from taking one from a single client, and a
+             guest studio usually brings a person, not a kiln-load. -->
+        <span class="scope-label">{t.structurePanel.partnersFullKiln}</span>
         {#each settings.partners as p (p.id)}
           <div class="partner-row">
             <span class="pname">{p.name}</span>
@@ -166,6 +172,29 @@
             </div>
           </div>
         {/each}
+
+        {#if settings.partners.length > 0}
+          <span class="scope-label">{t.structurePanel.partnersPerClient}</span>
+          {#each settings.partners as p (p.id)}
+            {#if p.tiers.length > 0}
+              <div class="partner-row">
+                <span class="pname">{p.name}</span>
+                <div class="tierchips">
+                  {#each p.tiers as tier (tier.id)}
+                    <button
+                      class="tier"
+                      class:armed={clientPartnerTierPending(p.id, tier.id)}
+                      onclick={() => startClientPartner(p.id, tier.id)}
+                    >
+                      {tier.name} <span class="tpct">{pct(tier.pct)}</span>
+                    </button>
+                  {/each}
+                </div>
+              </div>
+            {/if}
+          {/each}
+          {#if ui.pendingClientPartner}<span class="hint faint">{t.structurePanel.clickShelfToApply}</span>{/if}
+        {/if}
         {#if settings.partners.length === 0}<span class="faint none">{t.structurePanel.noPartnersAddInSettings}</span>{/if}
       </div>
     {/if}
@@ -371,6 +400,20 @@
   .tier:hover {
     border-color: var(--text-faint);
     color: var(--text);
+  }
+  /* Armed = waiting for you to say which client, so it reads as a question,
+     not as an applied setting. Dashed, to differ from .active. */
+  .tier.armed {
+    border-style: dashed;
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+  .scope-label {
+    font-size: 10.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-top: 4px;
   }
   .tier.active {
     border-color: var(--amber);

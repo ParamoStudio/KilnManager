@@ -105,7 +105,7 @@ export function computeFiring(firing: Firing): FiringResult {
 
   // 4. Accounting is based on what is actually collected (after client mods).
   const collectedRevenue = roundCents(clients.reduce((a, c) => a + c.price, 0));
-  const accounting = computeAccounting(collectedRevenue, firing);
+  const accounting = computeAccounting(collectedRevenue, firing, clients);
 
   return {
     totalKLU,
@@ -118,15 +118,41 @@ export function computeFiring(firing: Firing): FiringResult {
   };
 }
 
-export function computeAccounting(revenue: number, firing: Firing): AccountingResult {
+export function computeAccounting(
+  revenue: number,
+  firing: Firing,
+  /** Needed only for per-client partner cuts; firing-wide cuts don't use it. */
+  clients: ClientResult[] = [],
+): AccountingResult {
   const kilnCosts = roundCents(firing.costItems.reduce((a, c) => a + c.amount, 0));
   const grossProfit = roundCents(revenue - kilnCosts);
 
-  const partnerCuts = firing.partners.map((p) => ({
+  const partnerCuts: AccountingResult["partnerCuts"] = firing.partners.map((p) => ({
     name: p.name,
     pct: p.pct,
     amount: roundCents(grossProfit * p.pct),
   }));
+
+  // A per-client partner takes their cut of the profit *that client* produced,
+  // not of the firing's. The client's share of the kiln's costs follows their
+  // share of the load (KLU), the same basis everything else in this app is
+  // split on — charging them by revenue instead would quietly move cost onto
+  // whoever paid most, which isn't what "fair share of the kiln" means here.
+  for (const c of clients) {
+    for (const p of firing.clientPartners?.[c.contactName] ?? []) {
+      // Never below zero. A client can run at a loss (the studio's own work
+      // occupies the kiln without paying for it), and a negative cut would
+      // mean the partner paying the studio — nobody agreed to that.
+      const clientProfit = Math.max(0, c.price - kilnCosts * c.sharePct);
+      partnerCuts.push({
+        name: p.name,
+        pct: p.pct,
+        amount: roundCents(clientProfit * p.pct),
+        client: c.contactName,
+      });
+    }
+  }
+
   const partnerTotal = partnerCuts.reduce((a, p) => a + p.amount, 0);
 
   return {

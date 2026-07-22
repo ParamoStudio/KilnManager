@@ -354,6 +354,7 @@ export const en = {
 
   // ---- OutputsPanel.svelte ------------------------------------------------------
   outputsPanel: {
+    ofClientProfit: (p: string) => `${p} of their profit`,
     ariaLabel: "Firing outputs",
     close: "Close",
     navFiring: "Firing",
@@ -413,6 +414,8 @@ export const en = {
 
   // ---- StructurePanel.svelte ------------------------------------------------------
   structurePanel: {
+    partnersFullKiln: "Whole firing",
+    partnersPerClient: "One client only",
     firing: "Firing",
     titlePlaceholder: "Untitled firing",
     kilnSummary: (kilnName: string, dims: string, height: string) => `${kilnName} · ${dims} · ${height}`,
@@ -434,6 +437,8 @@ export const en = {
 
   // ---- AssignPanel.svelte ------------------------------------------------------
   assignPanel: {
+    partnersFor: (name: string) => `Partners · ${name}`,
+    removePartner: "Remove partner",
     title: "Assign",
     hintNoSelection: "Click shelves in the kiln to select them. Click a client's shelf to edit all of theirs.",
     shelvesCount: (n: number) => `${n} ${n === 1 ? "shelf" : "shelves"}`,

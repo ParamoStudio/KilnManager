@@ -33,7 +33,9 @@ export interface PlannerState {
   kilnMods: string[]; // active full-kiln modifier ids (surcharge or discount)
   customDiscount: { mode: "percent" | "fixed"; value: number } | null; // firing-wide failsafe
   clientMods: Record<string, string[]>; // client name → applied client-modifier ids
-  partners: { partnerId: string; tierId: string }[]; // applied partner + chosen tier
+  partners: { partnerId: string; tierId: string }[]; // partners taking a cut of the whole firing
+  /** Client name → partners taking a cut of just that client's profit. */
+  clientPartners: Record<string, { partnerId: string; tierId: string }[]>;
 }
 
 function initialState(): PlannerState {
@@ -45,6 +47,7 @@ function initialState(): PlannerState {
     kilnMods: [],
     customDiscount: null,
     clientMods: {},
+    clientPartners: {},
     partners: [],
   };
 }
@@ -185,6 +188,7 @@ export function clientHasMods(name: string | null): boolean {
 }
 /** Arm "pick a shelf" mode for a client modifier (shows the kiln banner). */
 export function startClientMod(id: string): void {
+  ui.pendingClientPartner = null;
   ui.pendingClientMod = ui.pendingClientMod === id ? null : id;
 }
 export function cancelClientMod(): void {
@@ -214,6 +218,50 @@ export function togglePartnerTier(partnerId: string, tierId: string): void {
   if (i < 0) planner.partners.push({ partnerId, tierId });
   else if (planner.partners[i]!.tierId === tierId) planner.partners.splice(i, 1);
   else planner.partners[i] = { partnerId, tierId };
+}
+
+// ---- Per-client partners (same "pick a shelf" gesture as client modifiers) ----
+
+/** Partner tiers attached to one client, resolved for display. */
+export function partnersForClient(name: string): { partnerId: string; tierId: string; label: string; pct: number }[] {
+  return (planner.clientPartners[name] ?? []).flatMap((r) => {
+    const resolved = resolvePartner(r);
+    return resolved ? [{ ...r, label: resolved.name, pct: resolved.pct }] : [];
+  });
+}
+export function clientHasPartners(name: string | null): boolean {
+  return !!name && (planner.clientPartners[name]?.length ?? 0) > 0;
+}
+export function clientPartnerTierPending(partnerId: string, tierId: string): boolean {
+  const p = ui.pendingClientPartner;
+  return !!p && p.partnerId === partnerId && p.tierId === tierId;
+}
+/** Arm "pick a shelf" mode for a partner tier (shows the same kiln banner). */
+export function startClientPartner(partnerId: string, tierId: string): void {
+  ui.pendingClientMod = null;
+  ui.pendingClientPartner = clientPartnerTierPending(partnerId, tierId) ? null : { partnerId, tierId };
+}
+export function cancelClientPartner(): void {
+  ui.pendingClientPartner = null;
+}
+/** Apply the armed partner tier to whoever owns the clicked zone. */
+export function applyPendingClientPartnerAt(levelId: string, segIdx: number): void {
+  const ref = ui.pendingClientPartner;
+  if (!ref) return;
+  const owner = planner.levels.find((l) => l.id === levelId)?.segments[segIdx]?.contactName ?? null;
+  if (owner && owner !== MYSELF) {
+    const list = planner.clientPartners[owner] ?? [];
+    // One tier per partner per client: picking another tier replaces it, the
+    // same rule the firing-wide toggle follows.
+    const next = list.filter((x) => x.partnerId !== ref.partnerId);
+    planner.clientPartners[owner] = [...next, ref];
+  }
+  ui.pendingClientPartner = null;
+}
+export function removeClientPartner(name: string, partnerId: string): void {
+  const list = (planner.clientPartners[name] ?? []).filter((x) => x.partnerId !== partnerId);
+  if (list.length) planner.clientPartners[name] = list;
+  else delete planner.clientPartners[name];
 }
 
 export function removeClientMod(name: string, id: string): void {
@@ -263,6 +311,7 @@ export function coreFiringFrom(p: PlannerState): Firing {
         return null;
       })
       .filter((x): x is { name: string; pct: number } => !!x),
+    clientPartners: resolveClientPartners(p),
     levels,
   };
 }
@@ -281,6 +330,16 @@ function resolveModifiers(kiln: KilnProfile, p: PlannerState): { label: string; 
     out.push({ label: "Custom discount", mode: p.customDiscount.mode, amount: -p.customDiscount.value });
   }
   return out;
+}
+
+/** Per-client partner cuts → a map of engine Partner lines by client name. */
+function resolveClientPartners(p: PlannerState): Record<string, { name: string; pct: number }[]> {
+  const map: Record<string, { name: string; pct: number }[]> = {};
+  for (const [name, refs] of Object.entries(p.clientPartners ?? {})) {
+    const arr = refs.map((r) => resolvePartner(r)).filter((x): x is { name: string; pct: number } => !!x);
+    if (arr.length) map[name] = arr;
+  }
+  return map;
 }
 
 /** Per-client modifiers → a map of engine AppliedModifier lines by client name. */
@@ -382,6 +441,7 @@ function loadIntoPlanner(state: PlannerState): void {
   planner.customDiscount = state.customDiscount ?? null;
   planner.clientMods = state.clientMods ?? {};
   planner.partners = state.partners ?? [];
+  planner.clientPartners = state.clientPartners ?? {};
 }
 
 export function activeFiring(): FiringRecord | null {
@@ -414,6 +474,7 @@ export function newFiring(kilnId: string): void {
       kilnMods: [],
       customDiscount: null,
       clientMods: {},
+      clientPartners: {},
       partners: (() => {
         const d = defaultTierRef();
         return d ? [d] : [];
@@ -455,7 +516,10 @@ export function importPhoneFiring(item: {
       kilnMods: p.kilnMods ?? existing.planner.kilnMods,
       customDiscount: p.customDiscount ?? existing.planner.customDiscount,
       clientMods: p.clientMods ?? existing.planner.clientMods,
-      partners: existing.planner.partners, // keep whatever was set up here
+      // Both kinds of partner cut are desktop-only decisions — the phone never
+      // sends them, so a re-import must not erase them.
+      partners: existing.planner.partners,
+      clientPartners: existing.planner.clientPartners ?? {},
     };
     if (firings.activeId === existing.id) loadIntoPlanner(existing.planner);
     saveApp();
@@ -476,6 +540,7 @@ export function importPhoneFiring(item: {
       kilnMods: p.kilnMods ?? [],
       customDiscount: p.customDiscount ?? null,
       clientMods: p.clientMods ?? {},
+      clientPartners: {},
       partners:
         p.partners && p.partners.length
           ? p.partners
@@ -587,6 +652,7 @@ export const ui = $state<{
   hoverZone: ZoneRef | null;
   /** When set, clicking a shelf applies this client-modifier to its owner. */
   pendingClientMod: string | null;
+  pendingClientPartner: { partnerId: string; tierId: string } | null;
 }>({
   selection: [],
   primaryZone: null,
@@ -595,6 +661,7 @@ export const ui = $state<{
   shelfEditorAnchor: null,
   hoverZone: null,
   pendingClientMod: null,
+  pendingClientPartner: null,
 });
 
 // ---- Contacts book (the Agenda mini-app) ----------------------------------

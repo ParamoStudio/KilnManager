@@ -126,7 +126,16 @@ export interface Firing {
   /** Per-client adjustments (keyed by client name), applied to that client's share. */
   clientModifiers?: Record<string, AppliedModifier[]>;
   costItems: CostItem[];
+  /** Partners taking a cut of the whole firing's profit. */
   partners: Partner[];
+  /**
+   * Partners taking a cut of ONE client's profit (keyed by client name).
+   *
+   * A guest studio often brings a particular client rather than sharing the
+   * whole firing — a firing-wide cut would then take from people who have
+   * nothing to do with them.
+   */
+  clientPartners?: Record<string, Partner[]>;
   date?: string; // ISO date
   notes?: string;
 }
@@ -147,7 +156,8 @@ export interface AccountingResult {
   revenue: number; // base price ± modifiers (what clients pay in total)
   kilnCosts: number; // Σ cost items
   grossProfit: number; // revenue − kilnCosts
-  partnerCuts: { name: string; pct: number; amount: number }[];
+  /** `client` is set for a cut taken from one client's profit only. */
+  partnerCuts: { name: string; pct: number; amount: number; client?: string }[];
   netToYou: number; // grossProfit − Σ partner cuts
 }
 

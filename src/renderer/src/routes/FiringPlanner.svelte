@@ -1,6 +1,14 @@
 <script lang="ts">
   import { computeFiring } from "@core";
-  import { ui, toCoreFiring, clearSelection, clientScopeMods, cancelClientMod } from "../lib/firing.svelte";
+  import {
+    ui,
+    toCoreFiring,
+    clearSelection,
+    clientScopeMods,
+    cancelClientMod,
+    cancelClientPartner,
+  } from "../lib/firing.svelte";
+  import { settings } from "../lib/settings.svelte";
   import { t } from "../lib/i18n.svelte";
   import KilnSvg from "../components/KilnSvg.svelte";
   import StructurePanel from "../components/StructurePanel.svelte";
@@ -13,9 +21,24 @@
   const result = $derived(computeFiring(toCoreFiring()));
 
   const pendingMod = $derived(clientScopeMods().find((m) => m.id === ui.pendingClientMod) ?? null);
+  // A partner tier is armed the same way a client modifier is, so it reuses the
+  // same banner and the same "click a shelf to say who" gesture.
+  const pendingPartner = $derived.by(() => {
+    const ref = ui.pendingClientPartner;
+    if (!ref) return null;
+    const p = settings.partners.find((x) => x.id === ref.partnerId);
+    const tier = p?.tiers.find((x) => x.id === ref.tierId);
+    return p && tier ? `${p.name} · ${tier.name}` : null;
+  });
+  const pickingLabel = $derived(pendingMod?.name ?? pendingPartner);
   function stageClick(): void {
     if (ui.pendingClientMod) cancelClientMod();
+    else if (ui.pendingClientPartner) cancelClientPartner();
     else clearSelection();
+  }
+  function cancelPick(): void {
+    cancelClientMod();
+    cancelClientPartner();
   }
 </script>
 
@@ -24,10 +47,10 @@
     <aside class="rail"><StructurePanel {result} /></aside>
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <section class="stage" role="presentation" onclick={stageClick}>
-      {#if pendingMod}
+      {#if pickingLabel}
         <div class="pick-banner">
-          <span class="ptext">{t.firingPlanner.pickPrefix}&nbsp;<b>{pendingMod.name}</b>&nbsp;{t.firingPlanner.pickSuffix}</span>
-          <button class="pcancel" onclick={(e) => { e.stopPropagation(); cancelClientMod(); }}>{t.firingPlanner.cancel}</button>
+          <span class="ptext">{t.firingPlanner.pickPrefix}&nbsp;<b>{pickingLabel}</b>&nbsp;{t.firingPlanner.pickSuffix}</span>
+          <button class="pcancel" onclick={(e) => { e.stopPropagation(); cancelPick(); }}>{t.firingPlanner.cancel}</button>
         </div>
       {/if}
       <KilnSvg />

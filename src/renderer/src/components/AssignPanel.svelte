@@ -20,6 +20,8 @@
     setHoverZone,
     modsForClient,
     removeClientMod,
+    partnersForClient,
+    removeClientPartner,
     modSign,
     type ZoneRef,
   } from "../lib/firing.svelte";
@@ -27,7 +29,7 @@
   import { cx } from "../lib/settings.svelte";
   import { t } from "../lib/i18n.svelte";
   import { colorForIndex } from "../lib/colors";
-  import { eur } from "../lib/format";
+  import { eur, pct } from "../lib/format";
 
   const count = $derived(ui.selection.length);
   const owners = $derived(selectionOwners());
@@ -143,6 +145,23 @@
         {/each}
       </div>
     </div>
+
+    <!-- Partner cuts live in the same place as the client's modifiers and are
+         removed the same way: from the client, not from the partners list. -->
+    {#if partnersForClient(owner).length > 0}
+      <div class="block">
+        <span class="label">{t.assignPanel.partnersFor(owner)}</span>
+        <div class="cmods">
+          {#each partnersForClient(owner) as cp (cp.partnerId)}
+            <div class="cmrow">
+              <span class="cmname">{cp.label}</span>
+              <span class="cmval part">{pct(cp.pct)}</span>
+              <button class="cmx" onclick={() => removeClientPartner(owner, cp.partnerId)} aria-label={t.assignPanel.removePartner}>×</button>
+            </div>
+          {/each}
+        </div>
+      </div>
+    {/if}
 
     {#if modsForClient(owner).length > 0}
       <div class="block">
@@ -372,6 +391,11 @@
     flex: 1;
     font-size: 13px;
     min-width: 0;
+  }
+  /* A partner cut isn't a price change for the client — it comes out of the
+     studio's side — so it doesn't borrow the +/− language of a modifier. */
+  .cmval.part {
+    color: var(--text-dim);
   }
   .cmval {
     font-size: 13px;

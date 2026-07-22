@@ -326,6 +326,7 @@ export const es: Dictionary = {
   },
 
   outputsPanel: {
+    ofClientProfit: (p: string) => `${p} de su beneficio`,
     ariaLabel: "Salidas de la horneada",
     close: "Cerrar",
     navFiring: "Horneada",
@@ -383,6 +384,8 @@ export const es: Dictionary = {
   },
 
   structurePanel: {
+    partnersFullKiln: "Toda la horneada",
+    partnersPerClient: "Solo un cliente",
     firing: "Horneada",
     titlePlaceholder: "Horneada sin título",
     kilnSummary: (kilnName: string, dims: string, height: string) => `${kilnName} · ${dims} · ${height}`,
@@ -403,6 +406,8 @@ export const es: Dictionary = {
   },
 
   assignPanel: {
+    partnersFor: (name: string) => `Socios · ${name}`,
+    removePartner: "Quitar socio",
     title: "Asignar",
     hintNoSelection: "Haz clic en las baldas del horno para seleccionarlas. Haz clic en la balda de un cliente para editar todas las suyas.",
     shelvesCount: (n: number) => `${n} ${n === 1 ? "balda" : "baldas"}`,

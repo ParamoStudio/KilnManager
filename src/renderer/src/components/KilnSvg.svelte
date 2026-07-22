@@ -16,7 +16,9 @@
     zoneLabel,
     MYSELF,
     applyPendingClientModAt,
+  applyPendingClientPartnerAt,
     clientHasMods,
+    clientHasPartners,
   } from "../lib/firing.svelte";
   import { cx } from "../lib/settings.svelte";
   import { t } from "../lib/i18n.svelte";
@@ -170,16 +172,18 @@
       {@const narrow = colW < 128}
       {@const nameFs = Math.max(7, Math.min(bandH > 40 ? 15 : 12, colW * 0.095))}
       {@const idFs = Math.max(8, Math.min(12, colW * 0.11))}
-      {@const hasMods = !!owner && clientHasMods(owner)}
+      <!-- One pill for 'this client has something attached', whether that's a
+           price modifier or a partner taking a cut. -->
+      {@const hasMods = !!owner && (clientHasMods(owner) || clientHasPartners(owner))}
       {@const midY = (row.ySpaceTop + row.yPlate) / 2}
       {@const cxFs = Math.max(8, nameFs * 0.72)}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <g
         class="zone"
-        class:armed={ui.pendingClientMod}
+        class:armed={ui.pendingClientMod || ui.pendingClientPartner}
         role="button"
         tabindex="-1"
-        onclick={(e) => { e.stopPropagation(); if (ui.pendingClientMod) applyPendingClientModAt(row.id, k); else toggleSelection(row.id, k); }}
+        onclick={(e) => { e.stopPropagation(); if (ui.pendingClientMod) applyPendingClientModAt(row.id, k); else if (ui.pendingClientPartner) applyPendingClientPartnerAt(row.id, k); else toggleSelection(row.id, k); }}
         ondblclick={(e) => { e.stopPropagation(); openShelfEditor(row.id, { x: e.clientX, y: e.clientY }); }}
       >
         <rect

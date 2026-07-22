@@ -244,8 +244,12 @@
         <h2>{t.outputsPanel.partnersTitle}</h2>
         {#if result.accounting.partnerCuts.length}
           <div class="ptable">
-            {#each result.accounting.partnerCuts as p (p.name)}
-              <div class="prow"><span>{p.name}</span><span class="faint">{t.outputsPanel.ofGross(pct(p.pct))}</span><span class="r">{eur(p.amount)}</span></div>
+            {#each result.accounting.partnerCuts as p, i (`${p.name}-${p.client ?? ""}-${i}`)}
+              <div class="prow">
+                <span>{p.name}{#if p.client}<span class="faint"> · {p.client}</span>{/if}</span>
+                <span class="faint">{p.client ? t.outputsPanel.ofClientProfit(pct(p.pct)) : t.outputsPanel.ofGross(pct(p.pct))}</span>
+                <span class="r">{eur(p.amount)}</span>
+              </div>
             {/each}
             <div class="prow total"><span>{t.outputsPanel.toPartners}</span><span></span><span class="r">{eur(result.accounting.partnerCuts.reduce((a, p) => a + p.amount, 0))}</span></div>
           </div>
@@ -260,8 +264,11 @@
           {#each fixedCosts as c (c.name)}
             <div class="row"><span class="muted">{c.name}</span><span class="neg">−{eur(c.amount)}</span></div>
           {/each}
-          {#each result.accounting.partnerCuts as p (p.name)}
-            <div class="row"><span class="muted">{t.outputsPanel.partnerOut(p.name)}</span><span class="neg">−{eur(p.amount)}</span></div>
+          {#each result.accounting.partnerCuts as p, i (`${p.name}-${p.client ?? ""}-${i}`)}
+            <div class="row">
+              <span class="muted">{t.outputsPanel.partnerOut(p.client ? `${p.name} · ${p.client}` : p.name)}</span>
+              <span class="neg">−{eur(p.amount)}</span>
+            </div>
           {/each}
           <div class="row total"><span>{t.outputsPanel.netToYou}</span><span>{eur(result.accounting.netToYou)}</span></div>
         </div>
