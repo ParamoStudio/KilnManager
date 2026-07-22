@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, type Component } from "svelte";
   import { app, go, loadApp } from "./lib/firing.svelte";
   import { loadPhoneSync, phoneSyncOnOpen, startAutoPush } from "./lib/phonesync.svelte";
-  import PhonePanel from "./components/PhonePanel.svelte";
-  import WhoIsParamo from "./components/WhoIsParamo.svelte";
+
   import { vault, openLink } from "./lib/storage";
   import { update, checkForUpdate, dismissUpdate, RELEASES_PAGE } from "./lib/update.svelte";
+  import { LAB, APP_URL } from "./lib/lab";
+  import LabNotice from "./components/LabNotice.svelte";
   import { settings, markKofiSupported } from "./lib/settings.svelte";
   import { t } from "./lib/i18n.svelte";
   import { kilnStore } from "./lib/kilns.svelte";
@@ -26,8 +27,22 @@
   // launch; opening the Ko-fi page marks it supported and hides it for good.
   let kofiDismissed = $state(false);
   const showKofi = $derived(ready && !settings.kofiSupported && !kofiDismissed);
+  // Imported on demand: keeps the QR library and the relay client out of the
+  // lab build entirely, rather than shipping code that merely never runs.
+  let PhonePanel = $state<Component<{ onclose: () => void }> | null>(null);
+  let WhoIsParamo = $state<Component<{ onclose: () => void }> | null>(null);
+  async function openPhone(): Promise<void> {
+    PhonePanel ??= (await import("./components/PhonePanel.svelte")).default;
+    phoneOpen = true;
+  }
+  async function openWho(): Promise<void> {
+    WhoIsParamo ??= (await import("./components/WhoIsParamo.svelte")).default;
+    whoOpen = true;
+  }
+
   let phoneOpen = $state(false);
   let whoOpen = $state(false);
+  let labBook = $state(false);
 
   /**
    * The layout is designed for a roomy desktop window. Rather than reflow every
@@ -64,16 +79,20 @@
   async function bootstrap(): Promise<void> {
     try {
       await loadApp();
-      await loadPhoneSync();
-      startAutoPush();
+      if (!LAB) {
+        await loadPhoneSync();
+        startAutoPush();
+      }
     } catch (err) {
       console.error("loadApp failed", err);
     } finally {
       ready = true;
       if (kilnStore.list.length === 0) app.firstKilnOpen = true;
       // Non-blocking: refresh the phone's data + see if firings are waiting.
-      void phoneSyncOnOpen();
-      void checkForUpdate();
+      if (!LAB) {
+        void phoneSyncOnOpen();
+        void checkForUpdate();
+      }
     }
   }
 
@@ -134,7 +153,7 @@
     </h1>
 
     <div class="topright">
-      <button class="agenda-tab" onclick={() => (app.agendaOpen = true)} title={t.app.clientBookShortcut}>
+      <button class="agenda-tab" onclick={() => (LAB ? (labBook = true) : (app.agendaOpen = true))} title={t.app.clientBookShortcut}>
         <svg viewBox="0 0 24 24" width="23" height="23" aria-hidden="true" class="ag-ic">
           <rect x="4" y="3.5" width="15" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.4" />
           <line x1="8" y1="3.5" x2="8" y2="20.5" stroke="currentColor" stroke-width="1.4" />
@@ -143,20 +162,25 @@
         </svg>
         {t.app.clientBook}
       </button>
-      <button class="sqbtn" onclick={() => (phoneOpen = true)} title={t.phone.title} aria-label={t.phone.title}>
+      {#if !LAB}<button class="sqbtn" onclick={openPhone} title={t.phone.title} aria-label={t.phone.title}>
         <svg viewBox="0 0 24 24" width="21" height="21" aria-hidden="true">
           <rect x="7" y="2.5" width="10" height="19" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.4" />
           <line x1="10.6" y1="5.4" x2="13.4" y2="5.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
           <circle cx="12" cy="18.2" r="1" fill="currentColor" />
         </svg>
       </button>
-      <button class="sqbtn" onclick={() => (whoOpen = true)} title={t.app.whoTitle} aria-label={t.app.whoTitle}>
+      <button class="sqbtn" onclick={openWho} title={t.app.whoTitle} aria-label={t.app.whoTitle}>
         <span class="qmark">?</span>
-      </button>
+      </button>{/if}
+      {#if LAB}
+        <!-- Permanent and quiet. It's the only advertising in here, and it
+             points at something free. -->
+        <button class="getapp" onclick={() => openLink(APP_URL)}>{t.lab.getTheApp} →</button>
+      {/if}
     </div>
   </header>
 
-  {#if update.available}
+  {#if update.available && !LAB}
     <div class="upd" role="note">
       <span class="upd-txt">
         {t.app.updateAvailable(update.latest)}
@@ -166,7 +190,7 @@
     </div>
   {/if}
 
-  {#if showKofi}
+  {#if showKofi && !LAB}
     <div class="kofi" role="note">
       <span class="kofi-txt">
         {t.app.kofiText}
@@ -209,10 +233,14 @@
 {#if ready && app.firstKilnOpen}
   <FirstKilnPrompt />
 {/if}
-{#if phoneOpen}
+{#if labBook}
+  <LabNotice title={t.lab.bookTitle} body={t.lab.bookBody} onclose={() => (labBook = false)} />
+{/if}
+
+{#if phoneOpen && PhonePanel}
   <PhonePanel onclose={() => (phoneOpen = false)} />
 {/if}
-{#if whoOpen}
+{#if whoOpen && WhoIsParamo}
   <WhoIsParamo onclose={() => (whoOpen = false)} />
 {/if}
 {#if app.agendaOpen}
@@ -268,6 +296,19 @@
     font-size: 12.5px;
     text-decoration: underline;
     text-underline-offset: 3px;
+  }
+  .getapp {
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 13px;
+    color: var(--text-dim);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .getapp:hover {
+    border-color: var(--text-faint);
+    color: var(--text);
   }
   .topbar {
     position: relative;

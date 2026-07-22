@@ -11,6 +11,7 @@
   import { monthlyData } from "../lib/expenses.svelte";
   import { t } from "../lib/i18n.svelte";
   import { brand } from "../lib/brand.svelte";
+  import { LAB } from "../lib/lab";
   import { outputs, isDesktop } from "../lib/storage";
 
   let { id, onclose }: { id: string; onclose: () => void } = $props();
@@ -109,6 +110,57 @@
     const amount = c ? Math.round(roundUp50(c.price)) : 0;
     return `${name}_${amount}eur_${dateFolder}.pdf`;
   };
+
+  // ---- Lab: the whole firing leaves as one zip ----
+  let zipping = $state(false);
+  let zipNote = $state("");
+  async function downloadBundle(): Promise<void> {
+    if (!rec || !kiln || !result || !service || zipping) return;
+    zipping = true;
+    zipNote = "";
+    try {
+      const { downloadFiringBundle } = await import("../lib/labexport");
+      const stamp = new Date(rec.closedAt ?? rec.createdAt).toISOString().slice(0, 10);
+      await downloadFiringBundle({
+        name: `${rec.title || kiln.name} ${stamp}`,
+        tickets: chargedClients.map((c) => ({
+          name: fileFor(c.contactName).replace(/\.pdf$/, ""),
+          html: buildTicketHtml(ticketData(c.contactName)!),
+        })),
+        sheet: { name: "Firing", rows: sheetRows() },
+      });
+    } catch (e) {
+      zipNote = e instanceof Error ? e.message : String(e);
+    } finally {
+      zipping = false;
+    }
+  }
+
+  /** The firing's figures as a flat table — the lab's stand-in for the app's
+   * running workbook, which only makes sense across months. */
+  function sheetRows(): (string | number | null)[][] {
+    if (!rec || !kiln || !result || !service) return [];
+    const rows: (string | number | null)[][] = [
+      [t.lab.sheetFiring, rec.title || kiln.name],
+      [t.lab.sheetKiln, kiln.name],
+      [t.lab.sheetService, service.name],
+      [t.lab.sheetDate, new Date(rec.closedAt ?? rec.createdAt).toISOString().slice(0, 10)],
+      [],
+      [t.lab.sheetClient, t.lab.sheetShare, t.lab.sheetCharged],
+    ];
+    for (const c of result.clients) {
+      rows.push([c.contactName, Number((c.sharePct * 100).toFixed(1)), c.charged ? roundUp50(c.price) : 0]);
+    }
+    rows.push([]);
+    rows.push([t.lab.sheetCollected, null, result.accounting.revenue]);
+    rows.push([t.lab.sheetCosts, null, result.accounting.kilnCosts]);
+    rows.push([t.lab.sheetGross, null, result.accounting.grossProfit]);
+    for (const p of result.accounting.partnerCuts) {
+      rows.push([p.client ? `${p.name} · ${p.client}` : p.name, Number((p.pct * 100).toFixed(1)), -p.amount]);
+    }
+    rows.push([t.outputsPanel.netToYou, null, result.accounting.netToYou]);
+    return rows;
+  }
 
   async function exportTicket(name: string): Promise<string | null> {
     const d = ticketData(name);
@@ -286,12 +338,21 @@
           <div class="ticketrow">
             <div class="tprev"><iframe class="tframe" srcdoc={ticketHtml} title="Ticket preview"></iframe></div>
             <div class="tactions">
-              <button class="tbtn primary" onclick={doOpen} disabled={!isDesktop}>{t.outputsPanel.openPdf}</button>
-              <button class="tbtn" onclick={doShare} disabled={!isDesktop}>{t.outputsPanel.share}</button>
-              <button class="tbtn" onclick={copyMessage}>{copied ? t.outputsPanel.messageCopied : t.outputsPanel.copyMessage}</button>
-              <button class="tbtn" onclick={doReveal} disabled={!isDesktop}>{t.outputsPanel.revealInFinder}</button>
-              {#if exportedNote}<span class="faint enote">{exportedNote}</span>{/if}
-              {#if !isDesktop}<span class="faint enote">{t.outputsPanel.openPdfDesktopOnly}</span>{/if}
+              {#if LAB}
+                <button class="tbtn primary" onclick={downloadBundle} disabled={zipping}>
+                  {zipping ? t.lab.preparing : t.lab.downloadBundle}
+                </button>
+                <button class="tbtn" onclick={copyMessage}>{copied ? t.outputsPanel.messageCopied : t.outputsPanel.copyMessage}</button>
+                <span class="faint enote">{t.lab.bundleHint}</span>
+                {#if zipNote}<span class="faint enote">{zipNote}</span>{/if}
+              {:else}
+                <button class="tbtn primary" onclick={doOpen} disabled={!isDesktop}>{t.outputsPanel.openPdf}</button>
+                <button class="tbtn" onclick={doShare} disabled={!isDesktop}>{t.outputsPanel.share}</button>
+                <button class="tbtn" onclick={copyMessage}>{copied ? t.outputsPanel.messageCopied : t.outputsPanel.copyMessage}</button>
+                <button class="tbtn" onclick={doReveal} disabled={!isDesktop}>{t.outputsPanel.revealInFinder}</button>
+                {#if exportedNote}<span class="faint enote">{exportedNote}</span>{/if}
+                {#if !isDesktop}<span class="faint enote">{t.outputsPanel.openPdfDesktopOnly}</span>{/if}
+              {/if}
               <div class="msgprev faint">“{messageFor(selClient ?? "")}”</div>
             </div>
           </div>

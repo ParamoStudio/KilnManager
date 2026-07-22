@@ -14,6 +14,37 @@ export const es: Dictionary = {
     remove: "Quitar",
   },
 
+  lab: {
+    sheetFiring: "Horneada",
+    sheetKiln: "Horno",
+    sheetService: "Servicio",
+    sheetDate: "Fecha",
+    sheetClient: "Cliente",
+    sheetShare: "% de carga",
+    sheetCharged: "Cobrado",
+    sheetCollected: "Ingresado",
+    sheetCosts: "Costes del horno",
+    sheetGross: "Beneficio bruto",
+    downloadBundle: "Descargar esta horneada",
+    preparing: "Preparando\u2026",
+    bundleHint: "Un zip con la factura de cada cliente y los n\u00fameros de la horneada.",
+    getTheApp: "Descargar la app",
+    keepUsing: "Seguir aqu\u00ed",
+    bookTitle: "La agenda vive en la app",
+    bookBody:
+      "Una agenda es una lista de personas reales que se queda ah\u00ed, y un navegador no es buen sitio para guardarla \u2014 lo que se guarda aqu\u00ed lo puede leer la web y lo puede borrar el navegador. En esta versi\u00f3n das nombre a los clientes mientras cargas, y esos nombres no salen de la horneada en la que est\u00e1s. La app de escritorio s\u00ed lleva una agenda, en una carpeta tuya.",
+    kilnTitle: "Aqu\u00ed, un horno",
+    kilnBody:
+      "Esta versi\u00f3n calcula un horno, suficiente para ver exactamente c\u00f3mo funciona y para seguir us\u00e1ndola si solo tienes uno. La app lleva los que quieras, cada uno con sus servicios, costes y modificadores.",
+    currentTitle: (n: number) => `Aqu\u00ed el l\u00edmite son ${n} horneadas a la vez`,
+    currentBody: "Cierra una antes de empezar otra. La app lleva las que lleve tu taller.",
+    logTitle: "El registro est\u00e1 lleno",
+    logBody:
+      "Cinco horneadas cerradas es lo que guarda esta versi\u00f3n, a prop\u00f3sito: el almacenamiento de un navegador puede borrarse sin avisar, as\u00ed que no es sitio para un archivo. Exporta la m\u00e1s antigua \u2014 te llevas sus facturas de cliente y sus n\u00fameros \u2014 o descartala, y esta ocupa su lugar.",
+    exportOldest: "Exportar la m\u00e1s antigua y cerrar",
+    discardOldest: "Descartar la m\u00e1s antigua",
+    logFullShort: (n: number) => `Registro lleno (${n}) \u2014 exporta o descarta una para cerrar otra`,
+  },
   app: {
     tabHome: "Inicio",
     tabExpenses: "Gastos",
@@ -408,6 +439,8 @@ export const es: Dictionary = {
   },
 
   assignPanel: {
+    nameClientPlaceholder: "Nombre del cliente\u2026",
+    useName: (n: string) => `Usar \u201c${n}\u201d`,
     partnersFor: (name: string) => `Socios · ${name}`,
     removePartner: "Quitar socio",
     title: "Asignar",

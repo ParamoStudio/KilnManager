@@ -22,9 +22,13 @@
     activeFiring,
     setActiveTitle,
     closeActiveFiring,
+    logIsFull,
+    oldestClosedFiring,
+    deleteFiring,
   } from "../lib/firing.svelte";
   import { settings } from "../lib/settings.svelte";
   import { t } from "../lib/i18n.svelte";
+  import LabNotice from "./LabNotice.svelte";
   import { eur, pct } from "../lib/format";
   import PriceSummary from "./PriceSummary.svelte";
 
@@ -59,7 +63,26 @@
     }
     clearTimeout(timer);
     confirming = false;
+    // Lab: never drop the oldest firing on its own. Make the choice explicit
+    // — export it (invoices and figures) or discard it — and only then close.
+    if (logIsFull()) {
+      labFull = true;
+      return;
+    }
     closeActiveFiring(); // opens the Outputs panel for the closed firing
+  }
+
+  let labFull = $state(false);
+  function exportOldestThenClose(): void {
+    const old = oldestClosedFiring();
+    labFull = false;
+    if (old) app.outputsFor = old.id; // the panel is where the export lives
+  }
+  function discardOldestThenClose(): void {
+    const old = oldestClosedFiring();
+    if (old) deleteFiring(old.id);
+    labFull = false;
+    closeActiveFiring();
   }
 </script>
 
@@ -208,7 +231,34 @@
   </div>
 </div>
 
+{#if labFull}
+  <LabNotice title={t.lab.logTitle} body={t.lab.logBody} onclose={() => (labFull = false)}>
+    <div class="labrow">
+      <button class="labbtn" onclick={exportOldestThenClose}>{t.lab.exportOldest}</button>
+      <button class="labbtn" onclick={discardOldestThenClose}>{t.lab.discardOldest}</button>
+    </div>
+  </LabNotice>
+{/if}
+
 <style>
+  .labrow {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .labbtn {
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 10px 14px;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .labbtn:hover {
+    border-color: var(--text-faint);
+    color: var(--text);
+  }
+
   .rail {
     display: flex;
     flex-direction: column;

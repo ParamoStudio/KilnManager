@@ -17,6 +17,8 @@
     "package:linux": "npm run build && electron-builder --linux",
     "dev:web": "vite",
     "build:web": "vite build",
+    "dev:lab": "VITE_LAB=1 vite --config vite.lab.config.ts",
+    "build:lab": "VITE_LAB=1 vite build --config vite.lab.config.ts",
     "dev:mobile": "vite --config vite.mobile.config.ts",
     "build:mobile": "vite build --config vite.mobile.config.ts",
     "preview:mobile": "vite preview --config vite.mobile.config.ts",
@@ -42,6 +44,9 @@
   "dependencies": {
     "@types/qrcode": "^1.5.6",
     "exceljs": "^4.4.0",
+    "fflate": "^0.8.3",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "qrcode": "^1.5.4"
   }
 }

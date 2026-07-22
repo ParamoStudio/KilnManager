@@ -4,6 +4,7 @@
   import { brand, setBrandLogo, clearBrandLogo, type LogoKind } from "../lib/brand.svelte";
   import { buildTicketHtml, type TicketData } from "../lib/ticket";
   import { t } from "../lib/i18n.svelte";
+  import { LAB } from "../lib/lab";
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -112,6 +113,7 @@
       <span class="hint">{t.customizeTicket.workshopNameHint}</span>
     </label>
 
+    {#if !LAB}
     <div class="field">
       <span class="fl">{t.customizeTicket.logoTop}</span>
       <div class="logo">
@@ -143,6 +145,7 @@
         {/if}
       </div>
     </div>
+    {/if}
 
     <label class="field">
       <span class="fl">{t.customizeTicket.noteLabel}</span>

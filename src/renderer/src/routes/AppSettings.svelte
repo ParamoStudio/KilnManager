@@ -19,6 +19,7 @@
   } from "../lib/settings.svelte";
   import { eur, num, fmtDay } from "../lib/format";
   import { vault, isDesktop } from "../lib/storage";
+  import { LAB } from "../lib/lab";
   import {
     t,
     LOCALES,
@@ -179,7 +180,7 @@
       </div>
       <p class="faint small">{t.appSettings.currencyHint}</p>
 
-      {#if isDesktop}
+      {#if isDesktop && !LAB}
         <span class="side-title mt">{t.appSettings.dataFolder}</span>
         <p class="faint explain">{t.appSettings.dataFolderExplain}</p>
         <div class="vault">

@@ -7,6 +7,7 @@
     closedFirings,
     coreFiringFrom,
     newFiring,
+    canStartFiring,
     openFiring,
     deleteFiring,
     type FiringRecord,
@@ -21,6 +22,8 @@
   import FiringSearch from "../components/FiringSearch.svelte";
   import SyncNotice from "../components/SyncNotice.svelte";
   import { groupByMonth } from "../lib/firinglog";
+  import { LAB_MAX_CURRENT } from "../lib/lab";
+  import LabNotice from "../components/LabNotice.svelte";
 
   const current = $derived(currentFirings());
   const closed = $derived(closedFirings());
@@ -67,7 +70,13 @@
   }
   const fmt = fmtDay;
 
+  let labCap = $state(false);
+
   function startNew(): void {
+    if (!canStartFiring()) {
+      labCap = true;
+      return;
+    }
     if (kilnStore.list.length === 0) app.firstKilnOpen = true;
     else if (kilnStore.list.length === 1) newFiring(kilnStore.list[0]!.id);
     else picking = true;
@@ -212,6 +221,14 @@
 
 {#if searching}
   <FiringSearch onclose={() => (searching = false)} />
+{/if}
+
+{#if labCap}
+  <LabNotice
+    title={t.lab.currentTitle(LAB_MAX_CURRENT)}
+    body={t.lab.currentBody}
+    onclose={() => (labCap = false)}
+  />
 {/if}
 
 <style>

@@ -13,6 +13,7 @@
     clearPrimaryZone,
     recentContacts,
     newClientForAssign,
+    firingClientNames,
     clientNote,
     setClientNote,
     clientNames,
@@ -30,6 +31,7 @@
   import { t } from "../lib/i18n.svelte";
   import { colorForIndex } from "../lib/colors";
   import { eur, pct } from "../lib/format";
+  import { LAB } from "../lib/lab";
 
   const count = $derived(ui.selection.length);
   const owners = $derived(selectionOwners());
@@ -39,11 +41,20 @@
   let reassignOpen = $state(false);
   let pending = $state<string | null>(null);
 
+  // Desktop searches the client book. Lab has no book — you type a name, and
+  // the only suggestions are the names already in this firing.
   const results = $derived(
-    query.trim()
-      ? contacts.list.filter((c) => `${c.name} ${c.surname ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()))
-      : recentContacts(4),
+    LAB
+      ? firingClientNames()
+          .filter((n) => n.toLowerCase().includes(query.trim().toLowerCase()))
+          .map((n) => ({ id: n, name: n, surname: "" }))
+      : query.trim()
+        ? contacts.list.filter((c) => `${c.name} ${c.surname ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()))
+        : recentContacts(4),
   );
+  /** Lab: the typed name is itself a valid choice. */
+  const typedName = $derived(query.trim());
+  const canUseTyped = $derived(LAB && !!typedName && !results.some((r) => r.name === typedName));
 
   const segOf = (z: ZoneRef): { contactName: string; complexity: ComplexityKey } | null =>
     planner.levels.find((l) => l.id === z.levelId)?.segments[z.segIdx] ?? null;
@@ -99,8 +110,19 @@
             <button class="backpill" onclick={() => (pending = null)}>{t.assignPanel.back}</button>
           </div>
         {:else}
-          <input class="search" bind:value={query} placeholder={t.assignPanel.searchClientsPlaceholder} />
+          <input
+            class="search"
+            bind:value={query}
+            placeholder={LAB ? t.assignPanel.nameClientPlaceholder : t.assignPanel.searchClientsPlaceholder}
+            onkeydown={(e) => { if (LAB && e.key === "Enter" && typedName) pending = typedName; }}
+          />
           <div class="results">
+            {#if canUseTyped}
+              <button class="client" onclick={() => (pending = typedName)}>
+                <span class="dot" style="--z:var(--text-faint)"></span>
+                <span class="cn">{t.assignPanel.useName(typedName)}</span>
+              </button>
+            {/if}
             {#each results as c (c.id)}
               {#if c.name !== owner}
                 <button class="client" onclick={() => (pending = c.name)}>
@@ -110,7 +132,7 @@
               {/if}
             {/each}
           </div>
-          <button class="new" onclick={newClientForAssign}>{t.assignPanel.newClient}</button>
+          {#if !LAB}<button class="new" onclick={newClientForAssign}>{t.assignPanel.newClient}</button>{/if}
           <button class="self" onclick={assignSelectionToSelf}>{t.assignPanel.assignToMyself}</button>
         {/if}
       {/if}
@@ -224,7 +246,7 @@
         {/each}
         {#if results.length === 0}<p class="faint none">{t.assignPanel.noMatch}</p>{/if}
       </div>
-      <button class="new" onclick={newClientForAssign}>{t.assignPanel.newClient}</button>
+      {#if !LAB}<button class="new" onclick={newClientForAssign}>{t.assignPanel.newClient}</button>{/if}
       <button class="self" onclick={assignSelectionToSelf}>{t.assignPanel.assignToMyself}</button>
     </div>
   {/if}

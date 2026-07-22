@@ -17,6 +17,7 @@ import { loadPayments } from "./payments.svelte";
 import { loadLocale } from "./i18n.svelte";
 import { markContactsDirty } from "./syncflags.svelte";
 import { storage } from "./storage";
+import { LAB, LAB_MAX_CURRENT, LAB_MAX_LOG } from "./lab";
 
 // ---- Planner state (renderer-only, richer than the core Firing) -----------
 
@@ -410,6 +411,21 @@ export const app = $state<{
 });
 
 /** Open the agenda to create a client and assign the current selection to them. */
+/**
+ * Every client name used in the firing being planned. In lab mode this is the
+ * entire client list: names are typed as you load and never leave the firing,
+ * so nothing about a real person is stored between sessions.
+ */
+export function firingClientNames(): string[] {
+  const out: string[] = [];
+  for (const l of planner.levels) {
+    for (const seg of l.segments) {
+      if (seg && seg.contactName !== MYSELF && !out.includes(seg.contactName)) out.push(seg.contactName);
+    }
+  }
+  return out;
+}
+
 export function newClientForAssign(): void {
   app.agendaAddFor = "assign";
   app.agendaOpen = true;
@@ -469,7 +485,25 @@ export function closedFirings(): FiringRecord[] {
     .sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0));
 }
 
+/**
+ * Lab limits. Both are checked before acting and reported to the user rather
+ * than silently enforced — the rule is that nothing of theirs ever disappears
+ * without them having chosen it.
+ */
+export function canStartFiring(): boolean {
+  return !LAB || currentFirings().length < LAB_MAX_CURRENT;
+}
+export function logIsFull(): boolean {
+  return LAB && closedFirings().length >= LAB_MAX_LOG;
+}
+/** The one that has to go (or be exported) before another can be closed. */
+export function oldestClosedFiring(): FiringRecord | null {
+  const closed = closedFirings();
+  return closed.length ? closed[closed.length - 1]! : null;
+}
+
 export function newFiring(kilnId: string): void {
+  if (!canStartFiring()) return;
   const kiln = kilnStore.list.find((k) => k.id === kilnId) ?? kilnStore.list[0]!;
   const rec: FiringRecord = {
     id: `f${Date.now().toString(36)}${seq++}`,
@@ -576,6 +610,9 @@ export function openFiring(id: string): void {
 export function closeActiveFiring(): void {
   const rec = activeFiring();
   if (!rec) return;
+  // The caller is expected to have dealt with a full log first (see
+  // logIsFull); refusing here is the backstop, not the message.
+  if (logIsFull()) return;
   rec.planner = $state.snapshot(planner) as PlannerState; // sync working edits
   rec.status = "closed";
   rec.closedAt = Date.now();

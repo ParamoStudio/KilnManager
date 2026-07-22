@@ -12,6 +12,10 @@
   import { app } from "../lib/firing.svelte";
   import { settings, fuelDefFor, fuelKeyForKiln, fuelCostFor } from "../lib/settings.svelte";
   import { t } from "../lib/i18n.svelte";
+  import { LAB, LAB_MAX_KILNS } from "../lib/lab";
+  import LabNotice from "../components/LabNotice.svelte";
+
+  let labCap = $state(false);
   import { eur } from "../lib/format";
   import KilnThumb from "../components/KilnThumb.svelte";
   import PostCylinder from "../components/PostCylinder.svelte";
@@ -135,11 +139,19 @@
           </div>
         </div>
       {/each}
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <div class="kcard new" role="button" tabindex="0" onclick={openNew}>
-        <span class="plus">+</span>
-        <span>{t.kilnProfiles.newKiln}</span>
-      </div>
+      {#if !LAB || kilnStore.list.length < LAB_MAX_KILNS}
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <div class="kcard new" role="button" tabindex="0" onclick={openNew}>
+          <span class="plus">+</span>
+          <span>{t.kilnProfiles.newKiln}</span>
+        </div>
+      {:else}
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <div class="kcard new" role="button" tabindex="0" onclick={() => (labCap = true)}>
+          <span class="plus">+</span>
+          <span>{t.kilnProfiles.newKiln}</span>
+        </div>
+      {/if}
     </div>
   </div>
 {:else}
@@ -298,6 +310,10 @@
 
 {#if modsOpen && editingId}
   <KilnModifiersPanel kilnId={editingId} onclose={() => (modsOpen = false)} />
+{/if}
+
+{#if labCap}
+  <LabNotice title={t.lab.kilnTitle} body={t.lab.kilnBody} onclose={() => (labCap = false)} />
 {/if}
 
 <style>

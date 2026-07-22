@@ -26,6 +26,38 @@ export const en = {
   },
 
   // ---- App.svelte -----------------------------------------------------------
+  lab: {
+    sheetFiring: "Firing",
+    sheetKiln: "Kiln",
+    sheetService: "Service",
+    sheetDate: "Date",
+    sheetClient: "Client",
+    sheetShare: "Share %",
+    sheetCharged: "Charged",
+    sheetCollected: "Collected",
+    sheetCosts: "Kiln costs",
+    sheetGross: "Gross profit",
+    downloadBundle: "Download this firing",
+    preparing: "Preparing\u2026",
+    bundleHint: "A zip with every client's invoice and the firing's figures.",
+    getTheApp: "Get the app",
+    keepUsing: "Keep going here",
+    bookTitle: "The client book lives in the app",
+    bookBody:
+      "A client book is a list of real people that sticks around, and a browser is not a good place to keep one \u2014 anything stored here can be read by the site and wiped by the browser. In this version you name clients as you load, and those names go no further than the firing you're in. The desktop app keeps a proper book, in a folder you own.",
+    kilnTitle: "One kiln here",
+    kilnBody:
+      "This version prices one kiln, which is enough to see exactly how it works and to keep using it if that's all you fire. The app handles as many as you like, each with its own services, costs and modifiers.",
+    currentTitle: (n: number) => `${n} firings at once is the limit here`,
+    currentBody:
+      "Close one before starting another. The app runs as many as your studio does.",
+    logTitle: "The log is full",
+    logBody:
+      "Five closed firings is all this version keeps, on purpose: a browser's storage can be cleared without warning, so it's no place to build an archive. Export the oldest one \u2014 you'll get its client invoices and its figures \u2014 or discard it, and this one takes its place.",
+    exportOldest: "Export the oldest, then close",
+    discardOldest: "Discard the oldest",
+    logFullShort: (n: number) => `Log full (${n}) \u2014 export or discard one to close another`,
+  },
   app: {
     tabHome: "Home",
     tabExpenses: "Expenses",
@@ -439,6 +471,8 @@ export const en = {
 
   // ---- AssignPanel.svelte ------------------------------------------------------
   assignPanel: {
+    nameClientPlaceholder: "Client name\u2026",
+    useName: (n: string) => `Use \u201c${n}\u201d`,
     partnersFor: (name: string) => `Partners · ${name}`,
     removePartner: "Remove partner",
     title: "Assign",
