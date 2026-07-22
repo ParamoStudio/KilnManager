@@ -53,6 +53,8 @@ export const es: Dictionary = {
     kofiText: "Este programa es de código abierto y gratuito. ¿Te resulta útil?",
     kofiLink: "Apóyame si te apetece",
     dismiss: "Descartar",
+    updateAvailable: (v: string) => `Ha salido la versión ${v} — tú tienes una anterior.`,
+    updateGet: "Descargar",
   },
 
   agenda: {
@@ -245,7 +247,7 @@ export const es: Dictionary = {
     dataFolderExplain: "Todo se guarda aquí como archivos JSON planos — tuyos para abrir, respaldar o mover.",
     revealInFinder: "Ver en Finder",
     locateExisting: "Localizar existente…",
-    moveOrNew: "Mover / nueva…",
+    moveOrNew: "Nueva…",
     partners: "Socios",
     partnersExplain:
       "Colaboradores que se llevan una parte acordada del beneficio bruto, cada uno con tiers con nombre (p. ej. su cliente vs. tu cliente). Solo aparecen en tu desglose interno. Marca un tier con ★ para aplicarlo por defecto en cada horneada nueva (desmárcalo por horneada si hace falta).",
@@ -290,7 +292,9 @@ export const es: Dictionary = {
     messageHint: (client: string, total: string) => `Usa <b>${client}</b> y <b>${total}</b> como marcadores.`,
     messageFollowsLanguage: "Sigue el idioma de la app — déjalo vacío para que siga traduciéndose solo.",
     messageCustomized: "Personalizado — este texto ya no seguirá el idioma de la app.",
-    imageTooLarge: "Esa imagen es grande (>1,5 MB) — un PNG/SVG más pequeño mantiene el archivo ligero.",
+    imageTooLarge: "Incluso reducida, esa imagen pesa demasiado para guardarla. Prueba con un PNG m\u00e1s simple o un SVG.",
+    imageUnreadable: "No se pudo leer ese archivo como imagen.",
+    saveFailed: "No se pudo guardar \u2014 no se escribi\u00f3 nada. Comprueba que tu carpeta de datos sea accesible.",
     save: "Guardar",
     cancel: "Cancelar",
     livePreview: "Vista previa",

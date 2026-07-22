@@ -38,6 +38,7 @@ declare global {
       outputsOpenFile(absPath: string): Promise<string>;
       outputsShare(absPath: string): Promise<void>;
       outputsOpenFolder(): Promise<void>;
+      appVersion(): Promise<string>;
       openExternal(url: string): Promise<void>;
       marketElectricity(zone: string): Promise<ElectricityRef | { ok: false }>;
       marketPropane(region: string): Promise<PropaneRef | { ok: false }>;

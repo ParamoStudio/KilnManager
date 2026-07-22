@@ -122,7 +122,10 @@ export function registerStorage(): void {
   });
 
   ipcMain.handle("storage:write", async (_e, key: string, value: unknown) => {
-    if (!vaultPath) return; // not ready yet — the onboarding gates this
+    // Onboarding is supposed to gate every write, so getting here means
+    // something wrote before the vault existed. Say so instead of pretending
+    // it saved — a silently dropped write looks fine until the next restart.
+    if (!vaultPath) throw new Error("No vault selected — nothing was saved");
     await fs.mkdir(vaultPath, { recursive: true });
     // Write atomically: a UNIQUE temp file + rename, so a crash never corrupts
     // data and two near-simultaneous writes to the same key can't interleave.

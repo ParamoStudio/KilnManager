@@ -65,6 +65,8 @@ export const en = {
     kofiText: "This program is open source and free to use. Enjoying it?",
     kofiLink: "Support me if you feel like it",
     dismiss: "Dismiss",
+    updateAvailable: (v: string) => `Version ${v} is out — you're running an older one.`,
+    updateGet: "Download it",
   },
 
   // ---- AgendaCard.svelte (the "Client Book" modal) --------------------------
@@ -265,7 +267,7 @@ export const en = {
     dataFolderExplain: "Everything is stored as plain JSON files here — yours to open, back up, or move.",
     revealInFinder: "Reveal in Finder",
     locateExisting: "Locate existing…",
-    moveOrNew: "Move / new…",
+    moveOrNew: "New…",
     partners: "Partners",
     partnersExplain:
       "Collaborators who take an agreed cut of the gross profit, each with named tiers (e.g. their client vs. your client). Shown only in your internal breakdown. Mark a tier with ★ to apply it by default on every new firing (uncheck it per firing if needed).",
@@ -313,7 +315,9 @@ export const en = {
     messageHint: (client: string, total: string) => `Use <b>${client}</b> and <b>${total}</b> as placeholders.`,
     messageFollowsLanguage: "Following the app language — leave empty to keep translating automatically.",
     messageCustomized: "Customized — this text will no longer follow the app language.",
-    imageTooLarge: "That image is large (>1.5 MB) — a smaller PNG/SVG keeps the file light.",
+    imageTooLarge: "Even shrunk, that image is too heavy to store. Try a simpler PNG or an SVG.",
+    imageUnreadable: "That file couldn't be read as an image.",
+    saveFailed: "Couldn't save \u2014 nothing was written. Check your data folder is reachable.",
     save: "Save",
     cancel: "Cancel",
     livePreview: "Live preview",

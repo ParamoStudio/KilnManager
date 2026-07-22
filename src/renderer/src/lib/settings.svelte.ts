@@ -249,7 +249,26 @@ export function resetComplexity(): void {
 }
 
 export function saveSettings(): void {
-  void storage.write("settings", $state.snapshot(settings));
+  void saveSettingsChecked();
+}
+
+/**
+ * Same save, but you can wait for it and find out whether it worked.
+ *
+ * This used to be fire-and-forget everywhere, which meant a failed write was
+ * completely invisible: the UI closed as if saved, the value lived on in
+ * memory for the rest of the session, and it was only gone after a restart —
+ * with nothing on screen ever having said so. Anything that would upset a user
+ * to lose (the ticket logos, notably) should await this and report.
+ */
+export async function saveSettingsChecked(): Promise<boolean> {
+  try {
+    await storage.write("settings", $state.snapshot(settings));
+    return true;
+  } catch (e) {
+    console.error("Could not save settings", e);
+    return false;
+  }
 }
 
 export async function loadSettings(): Promise<void> {

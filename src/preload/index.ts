@@ -21,6 +21,7 @@ const kilnAPI = {
   outputsOpenFile: (absPath: string): Promise<string> => ipcRenderer.invoke("outputs:openFile", absPath),
   outputsShare: (absPath: string): Promise<void> => ipcRenderer.invoke("outputs:share", absPath),
   outputsOpenFolder: (): Promise<void> => ipcRenderer.invoke("outputs:openFolder"),
+  appVersion: (): Promise<string> => ipcRenderer.invoke("app:version"),
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke("app:openExternal", url),
   marketElectricity: (zone: string): Promise<unknown> => ipcRenderer.invoke("market:electricity", zone),
   marketPropane: (region: string): Promise<unknown> => ipcRenderer.invoke("market:propane", region),

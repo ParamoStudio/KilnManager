@@ -11,15 +11,17 @@
   let { onclose }: { onclose: () => void } = $props();
 
   const LINKS = {
-    // Repo exists; the site itself isn't published yet. Flip `toolsetLive`
-    // to true once Pages is serving it.
-    toolset: "https://paramostudio.github.io/CeramicLab/",
+    // Points at the repo, not the Pages site: the repo exists today and the
+    // site doesn't, and a link that 404s is worse than one that lands
+    // somewhere honest. Swap to https://paramostudio.github.io/CeramicLab/
+    // once Pages is serving it.
+    toolset: "https://github.com/ParamoStudio/CeramicLab",
     github: "https://github.com/ParamoStudio",
     kilnMonitor: "https://github.com/ParamoStudio/KilnMonitor",
     shop: "https://paramo.studio",
     kofi: "https://ko-fi.com/paramostudio",
   };
-  const toolsetLive = false;
+  const toolsetLive = true;
 </script>
 
 <button class="scrim" onclick={onclose} aria-label={t.common.close} transition:fade={{ duration: 150 }}></button>

@@ -5,6 +5,7 @@
   import PhonePanel from "./components/PhonePanel.svelte";
   import WhoIsParamo from "./components/WhoIsParamo.svelte";
   import { vault, openLink } from "./lib/storage";
+  import { update, checkForUpdate, dismissUpdate, RELEASES_PAGE } from "./lib/update.svelte";
   import { settings, markKofiSupported } from "./lib/settings.svelte";
   import { t } from "./lib/i18n.svelte";
   import { kilnStore } from "./lib/kilns.svelte";
@@ -72,6 +73,7 @@
       if (kilnStore.list.length === 0) app.firstKilnOpen = true;
       // Non-blocking: refresh the phone's data + see if firings are waiting.
       void phoneSyncOnOpen();
+      void checkForUpdate();
     }
   }
 
@@ -154,6 +156,16 @@
     </div>
   </header>
 
+  {#if update.available}
+    <div class="upd" role="note">
+      <span class="upd-txt">
+        {t.app.updateAvailable(update.latest)}
+        <button class="upd-link" onclick={() => openLink(RELEASES_PAGE)}>{t.app.updateGet}</button>
+      </span>
+      <button class="kofi-x" onclick={dismissUpdate} aria-label={t.app.dismiss}>×</button>
+    </div>
+  {/if}
+
   {#if showKofi}
     <div class="kofi" role="note">
       <span class="kofi-txt">
@@ -234,6 +246,28 @@
     padding: 18px 26px 20px;
     gap: 14px;
     overflow: hidden;
+  }
+  /* Same band as the Ko-fi note, in the accent: an out-of-date app is worth
+     one calm line, not a modal. */
+  .upd {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 7px 14px;
+    border-bottom: 1px solid color-mix(in srgb, var(--amber) 30%, var(--line));
+    background: color-mix(in srgb, var(--amber) 7%, transparent);
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+  .upd-link {
+    background: none;
+    border: none;
+    padding: 0 0 0 4px;
+    color: var(--amber);
+    font-size: 12.5px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
   .topbar {
     position: relative;

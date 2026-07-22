@@ -187,7 +187,7 @@
           <div class="vrow">
             <button class="vbtn" onclick={() => vault.reveal()}>{t.appSettings.revealInFinder}</button>
             <button class="vbtn" onclick={() => changeVault("locate")}>{t.appSettings.locateExisting}</button>
-            <button class="vbtn" onclick={() => changeVault("create")}>{t.appSettings.moveOrNew}</button>
+            <button class="vbtn accent" onclick={() => changeVault("create")}>{t.appSettings.moveOrNew}</button>
           </div>
         </div>
       {/if}
@@ -510,6 +510,15 @@
   .vbtn:hover {
     border-color: var(--text-faint);
     color: var(--text);
+  }
+  /* Starting a new vault moves where everything lives — the one button here
+     with consequences, so it carries the accent. */
+  .vbtn.accent {
+    border-color: color-mix(in srgb, var(--amber) 55%, var(--line));
+    color: var(--amber);
+  }
+  .vbtn.accent:hover {
+    border-color: var(--amber);
   }
   .reset {
     align-self: flex-start;

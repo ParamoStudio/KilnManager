@@ -1,4 +1,4 @@
-import { ipcMain, BrowserWindow, shell } from "electron";
+import { app, ipcMain, BrowserWindow, shell } from "electron";
 import { promises as fs } from "node:fs";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -256,6 +256,9 @@ export function registerOutputs(): void {
   });
 
   // Open an external https link in the user's browser (e.g. the Ko-fi page).
+  // The renderer can't read package.json in a packaged build; ask the app.
+  ipcMain.handle("app:version", () => app.getVersion());
+
   ipcMain.handle("app:openExternal", async (_e, url: string) => {
     if (typeof url === "string" && /^https?:\/\//.test(url)) await shell.openExternal(url);
   });

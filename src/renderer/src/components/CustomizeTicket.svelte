@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { settings, saveSettings, setTicketMessage } from "../lib/settings.svelte";
+  import { settings, saveSettingsChecked, setTicketMessage } from "../lib/settings.svelte";
+  import { prepareLogo } from "../lib/image";
   import { buildTicketHtml, type TicketData } from "../lib/ticket";
   import { t } from "../lib/i18n.svelte";
 
@@ -13,15 +14,22 @@
   let logoBottom = $state(settings.logoBottom);
   let sizeWarn = $state("");
 
-  function readImage(file: File | undefined, set: (v: string) => void): void {
+  // Shrink on the way in rather than refusing big files: a logo only prints a
+  // couple of centimetres wide, and a multi-megabyte data URI inside
+  // settings.json is what made these vanish in the first place.
+  async function readImage(file: File | undefined, set: (v: string) => void): Promise<void> {
     if (!file) return;
-    if (!file.type.startsWith("image/")) return;
-    if (file.size > 1_500_000) {
-      sizeWarn = t.customizeTicket.imageTooLarge;
+    sizeWarn = "";
+    const prepared = await prepareLogo(file);
+    if (!prepared) {
+      sizeWarn = t.customizeTicket.imageUnreadable;
+      return;
     }
-    const reader = new FileReader();
-    reader.onload = () => set(String(reader.result));
-    reader.readAsDataURL(file);
+    if (prepared.bytes > 1_500_000) {
+      sizeWarn = t.customizeTicket.imageTooLarge;
+      return;
+    }
+    set(prepared.dataUri);
   }
 
   const previewData = $derived<TicketData>({
@@ -51,14 +59,17 @@
       .replace(/\{total\}/g, "47,00 €"),
   );
 
-  function save(): void {
+  let saveError = $state("");
+  async function save(): Promise<void> {
     settings.studioName = studioName.trim() || "My Studio";
     settings.ticketNote = ticketNote;
     setTicketMessage(ticketMessage);
     settings.logoTop = logoTop;
     settings.logoBottom = logoBottom;
-    saveSettings();
-    onclose();
+    // Wait for the write and only close if it landed. Closing on a failed save
+    // is what hid this: everything looked right until the next restart.
+    if (await saveSettingsChecked()) onclose();
+    else saveError = t.customizeTicket.saveFailed;
   }
 </script>
 
@@ -124,6 +135,7 @@
     </label>
 
     {#if sizeWarn}<span class="warn">{sizeWarn}</span>{/if}
+    {#if saveError}<span class="warn">{saveError}</span>{/if}
 
     <div class="actions">
       <button class="save" onclick={save}>{t.customizeTicket.save}</button>
