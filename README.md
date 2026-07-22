@@ -95,6 +95,9 @@ your data never touched someone else's infrastructure, you can run your own for
 free: **phone button → Advanced**, and follow
 [Running your own relay](docs/self-hosting-relay.md).
 
+How the whole bridge works — and how to rebuild it for a different app — is
+written up in [The phone-bridge pattern](docs/pairing-bridge-pattern.md).
+
 ## Development
 
 Only needed if you want to work on the app. To just use it, see
