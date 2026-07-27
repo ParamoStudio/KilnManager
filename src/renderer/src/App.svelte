@@ -7,6 +7,8 @@
   import { update, checkForUpdate, dismissUpdate, RELEASES_PAGE } from "./lib/update.svelte";
   import { LAB, APP_URL } from "./lib/lab";
   import LabNotice from "./components/LabNotice.svelte";
+  import LabWelcome from "./components/LabWelcome.svelte";
+  import { storage } from "./lib/storage";
   import { settings, markKofiSupported } from "./lib/settings.svelte";
   import { t } from "./lib/i18n.svelte";
   import { kilnStore } from "./lib/kilns.svelte";
@@ -43,6 +45,22 @@
   let phoneOpen = $state(false);
   let whoOpen = $state(false);
   let labBook = $state(false);
+  let labWelcome = $state(false);
+  // First run in the lab build: show the intro card once, then remember.
+  $effect(() => {
+    if (LAB && ready && !welcomeChecked) {
+      welcomeChecked = true;
+      void storage.read<boolean>("labWelcomeSeen").then((seen) => {
+        if (!seen) labWelcome = true;
+      });
+    }
+  });
+  let welcomeChecked = false;
+  function closeWelcome(): void {
+    labWelcome = false;
+    void storage.write("labWelcomeSeen", true);
+    if (kilnStore.list.length === 0) app.firstKilnOpen = true;
+  }
 
   /**
    * The layout is designed for a roomy desktop window. Rather than reflow every
@@ -87,7 +105,7 @@
       console.error("loadApp failed", err);
     } finally {
       ready = true;
-      if (kilnStore.list.length === 0) app.firstKilnOpen = true;
+      if (kilnStore.list.length === 0 && !LAB) app.firstKilnOpen = true;
       // Non-blocking: refresh the phone's data + see if firings are waiting.
       if (!LAB) {
         void phoneSyncOnOpen();
@@ -175,7 +193,7 @@
       {#if LAB}
         <!-- Permanent and quiet. It's the only advertising in here, and it
              points at something free. -->
-        <button class="getapp" onclick={() => openLink(APP_URL)}>{t.lab.getTheApp} →</button>
+        <button class="getapp" onclick={() => openLink(APP_URL)}>↓ {t.lab.downloadApp}</button>
       {/if}
     </div>
   </header>
@@ -233,6 +251,10 @@
 {#if ready && app.firstKilnOpen}
   <FirstKilnPrompt />
 {/if}
+{#if labWelcome}
+  <LabWelcome onclose={closeWelcome} />
+{/if}
+
 {#if labBook}
   <LabNotice title={t.lab.bookTitle} body={t.lab.bookBody} onclose={() => (labBook = false)} />
 {/if}

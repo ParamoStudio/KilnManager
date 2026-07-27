@@ -26,7 +26,24 @@ export const en = {
   },
 
   // ---- App.svelte -----------------------------------------------------------
+  labWelcome: {
+    eyebrow: "Free web version",
+    title: "What is Kiln Manager?",
+    lede: "A lightweight tool for keeping control of what your studio's kiln firings cost, and for making the firing service you offer students and clients easier to run and to document. This is the free web version \u2014 try it, or use it for the odd firing, right here.",
+    featuresHead: "The desktop app also has",
+    featPhone: "Load the kiln from your phone",
+    featBook: "A client book",
+    featUnlimited: "Unlimited kilns & firings",
+    featLog: "A full firing log",
+    featExcel: "Expenses to Excel",
+    featLocal: "Everything on your computer",
+    privacy: "Everything lives on your own machine. No data goes to anyone else \u2014 ever. It's open source, so you can read every line on GitHub and even build it yourself.",
+    continue: "Continue",
+    download: "Download the app",
+    openSource: "See the source on GitHub",
+  },
   lab: {
+    downloadApp: "Download app",
     sheetFiring: "Firing",
     sheetKiln: "Kiln",
     sheetService: "Service",
