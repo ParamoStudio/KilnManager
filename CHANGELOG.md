@@ -15,6 +15,38 @@ nothing until someone redeploys it.
 
 ---
 
+## v1.1.1 — 31 July 2026
+
+### Rounding is gentler: 20 cents, not 50
+
+Invoices round up to the next **20 cents** now. Still always up, so a rounded
+invoice never comes in under what the firing cost — but the step is the most
+anyone can be overcharged by, and at 50 cents that could be 49, which stops
+being a tidy-up and starts being a surcharge. 10,78 → 10,80. 10,98 → 11,00.
+
+### Fixed: a discount put the unrounded price back on the invoice
+
+An invoice with a discount was still showing computed cent figures — a
+`13,47 €` line and a `−2,69 €` line above a rounded total. So the exact price
+was visible after all, and the numbers on the page couldn't add up to the total.
+
+A modifier now says what it *is* rather than what it works out to:
+
+```
+Coworker Taller · −20%
+TOTAL                        10,80 €
+```
+
+One money figure on the invoice, as intended. The client can see the discount
+they were given, and nothing invites them to check arithmetic that rounding
+makes impossible.
+
+### Fixed: the window couldn't be dragged
+
+The app runs without a native title bar, so there was nothing to grab — you
+could not move the window. The header is now the drag handle, like any other Mac
+app, with its buttons still clickable.
+
 ## v1.1.0 — 31 July 2026
 
 ### A closed firing can be corrected or deleted

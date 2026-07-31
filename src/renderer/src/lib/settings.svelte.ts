@@ -4,7 +4,7 @@
  * kiln profiles, not here.
  */
 import type { FuelKind, KilnProfile, FiringService } from "@core";
-import { electricFiringCost, electricKWh, roundUp50 } from "@core";
+import { electricFiringCost, electricKWh, roundUpInvoice } from "@core";
 import { COMPLEXITY, complexityKeys, type ComplexityKey } from "./complexity";
 import { storage } from "./storage";
 import { t } from "./i18n.svelte";
@@ -302,7 +302,7 @@ export function invoiceClientName(name: string): string {
 
 /** A client's charged total, rounded or not according to the studio's choice. */
 export function chargedTotal(exact: number): number {
-  return settings.roundPrices ? roundUp50(exact) : Math.round(exact * 100) / 100;
+  return settings.roundPrices ? roundUpInvoice(exact) : Math.round(exact * 100) / 100;
 }
 
 export function resetComplexity(): void {

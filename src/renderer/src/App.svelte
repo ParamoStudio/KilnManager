@@ -332,6 +332,11 @@
     border-color: var(--text-faint);
     color: var(--text);
   }
+  /* macOS runs this window with `titleBarStyle: "hiddenInset"` — there's no
+     native title bar, so without this the window simply can't be moved. The
+     header becomes the grab handle; every control inside it has to opt back out
+     or it stops receiving clicks. Ignored by browsers, so the web builds are
+     unaffected. */
   .topbar {
     position: relative;
     display: flex;
@@ -339,6 +344,10 @@
     justify-content: center;
     flex-shrink: 0;
     min-height: 40px;
+    -webkit-app-region: drag;
+  }
+  .topbar button {
+    -webkit-app-region: no-drag;
   }
   /* Ko-fi nudge: a floating pill under the title — narrow, out of flow so
      dismissing it never reshuffles the layout. */

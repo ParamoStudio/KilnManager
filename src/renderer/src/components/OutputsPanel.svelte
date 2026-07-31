@@ -70,22 +70,18 @@
     if (!c) return null;
     const base = result.totalKLU > 0 ? (result.serviceRevenue * c.klu) / result.totalKLU : 0;
     const mods = clientMods(name);
-    const fixedSum = mods.reduce((a, m) => a + (m.family === "discount" ? -1 : 1) * (m.mode === "fixed" ? m.value : 0), 0);
-    // The header already names the service and the firing's total, so a bare
-    // "Bizcocho 28,61" above "TOTAL 29,00" is the same thing twice — and the
-    // unrounded figure is internal. With no modifiers there is one price on the
-    // invoice, full stop. Modifier lines DO earn their place: they explain a
-    // discount or surcharge, so then the base is shown for the maths to follow.
-    const lines: TicketLine[] = [];
-    if (mods.length > 0) {
-      lines.push({ label: service.name, value: eur(base) });
-      for (const m of mods) {
-        const sign = m.family === "discount" ? -1 : 1;
-        const val = m.mode === "fixed" ? sign * m.value : sign * (base + fixedSum) * (m.value / 100);
-        const label = `${m.name} (${m.mode === "percent" ? `${m.value}%` : eur(m.value)})`;
-        lines.push({ label, value: `${val < 0 ? "−" : "+"}${eur(Math.abs(val))}` });
-      }
-    }
+    // Exactly ONE money figure on the invoice: the total.
+    //
+    // The header already names the service and the firing's total, so a line
+    // repeating it was the same thing twice. Modifiers used to print their
+    // computed share (−3,25 €), which put an unrounded cent figure back on the
+    // client's receipt and invited them to add up numbers that can't sum to a
+    // rounded total. They now say what they are — a name and a −20% — and let
+    // the total speak for the money.
+    const lines: TicketLine[] = mods.map((m) => ({
+      label: `${m.name} · ${m.family === "discount" ? "−" : "+"}${m.mode === "percent" ? `${m.value}%` : eur(m.value)}`,
+      value: "",
+    }));
     lines.push({ label: t.ticket.total, value: eur(chargedTotal(c.price)), strong: true });
     return {
       studioName: settings.studioName,

@@ -3,9 +3,21 @@ export function roundCents(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-/** Round a money amount UP to the next 0.50 (client-facing invoicing). */
-export function roundUp50(n: number): number {
-  return Math.ceil(n / 0.5 - 1e-9) * 0.5;
+/**
+ * Round a money amount UP to the next 20 cents — the client-facing figure.
+ *
+ * Always up, so a rounded invoice never comes in under what the firing cost.
+ * Twenty rather than fifty because the step is the most anyone can be
+ * overcharged by: at 50 it could be 49 cents, which stops being a tidy-up and
+ * starts being a surcharge. 10.98 → 11.00, 10.12 → 10.20.
+ *
+ * The epsilon stops a value that is already a clean multiple from being pushed
+ * to the next one by floating-point noise (0.20 × 3 is not exactly 0.60).
+ */
+export const INVOICE_STEP = 0.2;
+
+export function roundUpInvoice(n: number): number {
+  return roundCents(Math.ceil(n / INVOICE_STEP - 1e-9) * INVOICE_STEP);
 }
 
 /**
