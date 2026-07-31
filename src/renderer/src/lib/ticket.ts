@@ -102,7 +102,11 @@ export function buildTicketHtml(d: TicketData): string {
     .amt { font-variant-numeric: tabular-nums; }
     .share { display:flex; align-items:center; gap: 16px; margin: 6px 2px 26px; }
     .share .txt { font-size: 13px; color:#444; line-height:1.5; }
-    .share .pctbig { font-size: 20px; font-weight:700; color:#111; }
+    /* The share reads as one sentence: the number is emphasis, not a headline,
+       so it sits in a pill at text size rather than shouting in 20px. */
+    .share .pctbig { font-size: 13px; font-weight:700; color:#111;
+      border:1px solid #cfcfcf; border-radius: 999px; padding: 2px 8px; margin: 0 2px;
+      white-space: nowrap; }
     .note { font-size: 14px; color:#222; margin: 2px 2px 18px; line-height:1.6; white-space: pre-line; }
     .thanks { font-size: 14px; color:#333; margin: 4px 2px 0; line-height:1.6; }
     .foot { margin-top: 40px; padding-top: 16px; border-top: 1.5px solid #111; text-align:center; }
@@ -119,7 +123,7 @@ export function buildTicketHtml(d: TicketData): string {
     <div class="box items">${lineRows}</div>
     <div class="share">
       ${miniKiln(d.shape, d.sharePct)}
-      <div class="txt">${esc(t.ticket.yourPiecesFilled)} <span class="pctbig">${Math.round(d.sharePct * 100)}%</span><br/>${esc(t.ticket.ofThisFiring)}</div>
+      <div class="txt">${esc(t.ticket.yourPiecesFilled)} <span class="pctbig">${Math.round(d.sharePct * 100)}%</span> ${esc(t.ticket.ofThisFiring)}</div>
     </div>
     <div class="thanks">${escBr(d.note || d.thanks)}</div>
     ${d.logoBottom ? `<div class="foot"><img src="${d.logoBottom}" alt=""/></div>` : ""}

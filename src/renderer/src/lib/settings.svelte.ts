@@ -3,7 +3,8 @@
  * edited in App Settings and persisted. Kiln-specific prices/costs live in the
  * kiln profiles, not here.
  */
-import type { FuelKind, KilnProfile } from "@core";
+import type { FuelKind, KilnProfile, FiringService } from "@core";
+import { electricFiringCost, electricKWh, roundUp50 } from "@core";
 import { COMPLEXITY, complexityKeys, type ComplexityKey } from "./complexity";
 import { storage } from "./storage";
 import { t } from "./i18n.svelte";
@@ -61,6 +62,18 @@ export interface AppSettings {
   biddingZone: string;
   /** Set once the user opens the Ko-fi page — the support nudge stops showing. */
   kofiSupported: boolean;
+  /**
+   * Round each client's total up to the nearest 50 cents. On by default: it
+   * keeps invoices tidy and the exact figure is internal anyway.
+   */
+  roundPrices: boolean;
+  /**
+   * Print the client's whole name on the invoice. Off by default: studios often
+   * append a private reminder to a contact's name ("Marta — the tall vases")
+   * and that has no business being on the client's own receipt, so only the
+   * first word is printed.
+   */
+  showFullClientName: boolean;
 }
 
 /** ENTSO-E bidding zones offered in the selector (code → label). */
@@ -135,6 +148,8 @@ function defaultSettings(): AppSettings {
     electricityHigh: 0.2,
     biddingZone: "ES",
     kofiSupported: false,
+    roundPrices: true,
+    showFullClientName: false,
     complexity: {
       simple: { ...COMPLEXITY.simple },
       medium: { ...COMPLEXITY.medium },
@@ -190,9 +205,40 @@ export function fuelDefFor(k: Pick<KilnProfile, "energy" | "gasType">): FuelDef 
   const kind = fuelKeyForKiln(k);
   return { ...settings.fuels[kind], label: t.fuels[kind].label, unit: t.fuels[kind].unit };
 }
-/** Variable fuel € for one firing = the service's consumption × current price. */
-export function fuelCostFor(k: Pick<KilnProfile, "energy" | "gasType">, fuelUse: number): number {
-  return (fuelUse || 0) * settings.fuels[fuelKeyForKiln(k)].price;
+/**
+ * Variable fuel € for one firing.
+ *
+ * Bottled gas and wood are bought by the unit, so the service records how many
+ * units it burns. Electricity isn't: nobody knows their kiln's kWh per firing,
+ * but everybody knows its kW rating, how long the firing runs and how hot it
+ * goes — so an electric kiln is costed from those. See core/electric.ts.
+ */
+export function fuelCostFor(
+  k: Pick<KilnProfile, "energy" | "gasType" | "electricSystem" | "powerKw">,
+  service: Pick<FiringService, "fuelUse" | "hours" | "maxTempC">,
+): number {
+  const kind = fuelKeyForKiln(k);
+  if (kind === "electricity") {
+    return electricFiringCost(
+      k.powerKw ?? 0,
+      service.hours ?? 0,
+      service.maxTempC ?? 0,
+      k.electricSystem ?? "relay",
+      settings.fuels.electricity.price,
+    );
+  }
+  return (service.fuelUse || 0) * settings.fuels[kind].price;
+}
+
+/** The consumption figure to show alongside the cost (kWh, bottles, kg…). */
+export function fuelUseFor(
+  k: Pick<KilnProfile, "energy" | "gasType" | "electricSystem" | "powerKw">,
+  service: Pick<FiringService, "fuelUse" | "hours" | "maxTempC">,
+): number {
+  if (fuelKeyForKiln(k) === "electricity") {
+    return electricKWh(k.powerKw ?? 0, service.hours ?? 0, service.maxTempC ?? 0, k.electricSystem ?? "relay");
+  }
+  return service.fuelUse || 0;
 }
 
 /** Record a newly-observed fuel price: set it live + log it to the history. */
@@ -246,6 +292,17 @@ export function resolvePartner(ref: { partnerId: string; tierId: string }): { na
   const p = settings.partners.find((x) => x.id === ref.partnerId);
   const t = p?.tiers.find((x) => x.id === ref.tierId);
   return p && t ? { name: `${p.name} · ${t.name}`, pct: t.pct } : null;
+}
+
+/** The client name as it should appear on an invoice. */
+export function invoiceClientName(name: string): string {
+  if (settings.showFullClientName) return name;
+  return name.trim().split(/\s+/)[0] ?? name;
+}
+
+/** A client's charged total, rounded or not according to the studio's choice. */
+export function chargedTotal(exact: number): number {
+  return settings.roundPrices ? roundUp50(exact) : Math.round(exact * 100) / 100;
 }
 
 export function resetComplexity(): void {
@@ -302,6 +359,9 @@ export async function loadSettings(): Promise<void> {
     settings.electricityHigh = typeof saved.electricityHigh === "number" ? saved.electricityHigh : 0.2;
     settings.biddingZone = typeof saved.biddingZone === "string" ? saved.biddingZone : "ES";
     settings.kofiSupported = saved.kofiSupported === true;
+    // Both default to the tidy/private choice when a vault predates them.
+    settings.roundPrices = saved.roundPrices !== false;
+    settings.showFullClientName = saved.showFullClientName === true;
   }
   localizeSeedPartner();
 }

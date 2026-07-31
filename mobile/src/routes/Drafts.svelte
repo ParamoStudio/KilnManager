@@ -164,7 +164,9 @@
   <button class="syncnow" class:busy={sync.busy} onclick={onSync} disabled={sync.busy}>
     ⟳ {sync.busy ? t.drafts.syncing : t.drafts.syncNow}
   </button>
-  {#if sync.mailboxFull}
+  {#if sync.lastClosed > 0}
+    <span class="synced-line faint">{t.drafts.closedOnComputer(sync.lastClosed)}</span>
+  {:else if sync.mailboxFull}
     <span class="synced-line warn">{t.drafts.mailboxFull}</span>
   {:else if sync.lastError}
     <span class="synced-line err">{t.drafts.syncError}</span>

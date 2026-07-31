@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { FiringResult, KilnModifier } from "@core";
-  import { roundUp50 } from "@core";
+  import { chargedTotal } from "../lib/settings.svelte";
   import { planner, currentService, occupiedVolumeFraction, fullKilnMods, modSign } from "../lib/firing.svelte";
   import { t } from "../lib/i18n.svelte";
   import { eur, pct } from "../lib/format";
@@ -15,7 +15,7 @@
   const activeKilnMods = $derived(fullKilnMods().filter((m: KilnModifier) => planner.kilnMods.includes(m.id)));
   const hasClientMods = $derived(Object.values(planner.clientMods ?? {}).some((a) => a.length > 0));
   // What is actually collected: each charged amount rounded up to the next 0.50.
-  const roundedTotal = $derived(result.clients.reduce((a, c) => a + (c.charged ? roundUp50(c.price) : 0), 0));
+  const roundedTotal = $derived(result.clients.reduce((a, c) => a + (c.charged ? chargedTotal(c.price) : 0), 0));
 </script>
 
 <div class="summary">

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { computeFiring, roundUp50 } from "@core";
+  import { computeFiring } from "@core";
   import {
     app,
     go,
@@ -13,7 +13,7 @@
     type FiringRecord,
   } from "../lib/firing.svelte";
   import { kilnStore } from "../lib/kilns.svelte";
-  import { fuelDefFor } from "../lib/settings.svelte";
+  import { fuelDefFor, chargedTotal } from "../lib/settings.svelte";
   import { monthlyData } from "../lib/expenses.svelte";
   import { t, localeTag } from "../lib/i18n.svelte";
   import { eur, fmtDay, fmtFull } from "../lib/format";
@@ -61,7 +61,7 @@
   function summary(rec: FiringRecord): { clients: number; rounded: number; real: number } {
     try {
       const r = computeFiring(coreFiringFrom(rec.planner));
-      const rounded = r.clients.reduce((a, c) => a + (c.charged ? roundUp50(c.price) : 0), 0);
+      const rounded = r.clients.reduce((a, c) => a + (c.charged ? chargedTotal(c.price) : 0), 0);
       return { clients: r.clients.length, rounded, real: r.accounting.revenue };
     } catch {
       // A malformed/legacy record must never blank the whole screen.

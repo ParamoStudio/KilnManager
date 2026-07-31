@@ -6,7 +6,7 @@
  * See relay/worker.ts for the endpoints, and mobile/src/lib/sync.svelte.ts for
  * the phone half. This is plain HTTPS fetch — no Electron/native access needed.
  */
-import { contacts, firings, importPhoneFiring } from "./firing.svelte";
+import { contacts, firings, importPhoneFiring, closedPhoneIds } from "./firing.svelte";
 import { kilnStore } from "./kilns.svelte";
 import { settings } from "./settings.svelte";
 import { syncDirty, setDirtyHook } from "./syncflags.svelte";
@@ -44,6 +44,8 @@ export const phone = $state<{
   phase: "idle" | "checking" | "done";
   lastCreated: number;
   lastUpdated: number;
+  /** Edits that arrived for a firing already closed here — ignored, not lost. */
+  lastStale: number;
 }>({
   token: "",
   customRelay: "",
@@ -56,6 +58,7 @@ export const phone = $state<{
   phase: "idle",
   lastCreated: 0,
   lastUpdated: 0,
+  lastStale: 0,
 });
 
 function persist(): void {
@@ -161,6 +164,10 @@ function buildDown(): unknown {
       services: k.services.map((s) => ({ id: s.id, name: s.name })), // no basePrice/fuelUse
     })),
     complexity: Object.fromEntries(complexityKeys.map((key) => [key, settings.complexity[key].factor])),
+    // Firings that are finished here. The phone drops its copies of these, so it
+    // stops offering to edit something already invoiced — the only way it can
+    // learn that, since nothing else travels back up the channel.
+    closedIds: closedPhoneIds(),
   };
 }
 
@@ -209,24 +216,28 @@ export async function importFromPhone(): Promise<number> {
     phone.pending = phone.pendingNew = phone.pendingUpdate = 0;
     return 0;
   }
-  const known = new Set(firings.list.filter((f) => f.status === "current" && f.phoneId).map((f) => f.phoneId));
   let created = 0;
   let updated = 0;
+  let stale = 0;
   for (const item of list) {
-    if (item.id && known.has(item.id)) updated++;
-    else created++;
-    importPhoneFiring({
+    const outcome = importPhoneFiring({
       id: item.id,
       title: item.title,
       firing: item.firing as never,
       notes: item.notes,
     });
+    if (outcome === "created") created++;
+    else if (outcome === "updated") updated++;
+    else stale++; // already closed here: deliberately not imported
   }
-  // Confirm consumption so the phone drops them on its next check.
+  // Clear the mailbox either way — a stale edit shouldn't sit there being
+  // offered again on every open. The phone learns it's closed via closedIds.
   await fetch(channel("up"), { method: "DELETE" });
+  if (stale > 0) await pushDown().catch(() => {}); // get closedIds over promptly
   phone.pending = phone.pendingNew = phone.pendingUpdate = 0;
   phone.lastCreated = created;
   phone.lastUpdated = updated;
+  phone.lastStale = stale;
   return list.length;
 }
 

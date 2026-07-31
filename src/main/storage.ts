@@ -109,6 +109,29 @@ export function registerStorage(): void {
     return { ok: true, path: dir };
   });
 
+  /**
+   * Start over: delete everything the app put in this folder, and nothing else.
+   *
+   * The marker stays, so the folder is still a valid vault and the app comes
+   * back up empty instead of asking where to live again. Anything the user
+   * happens to keep in there that isn't ours is left alone — a reset should not
+   * be a reason to lose unrelated files.
+   */
+  ipcMain.handle("vault:reset", async () => {
+    if (!vaultPath) return false;
+    const entries = await fs.readdir(vaultPath, { withFileTypes: true });
+    for (const e of entries) {
+      if (e.name === MARKER) continue; // keep the folder recognisable
+      const isOurs =
+        (e.isFile() && (e.name.endsWith(".json") || e.name.endsWith(".xlsx"))) ||
+        (e.isDirectory() && ["outputs", "Brand", "Expenses Log"].includes(e.name));
+      if (!isOurs) continue;
+      await fs.rm(join(vaultPath, e.name), { recursive: true, force: true });
+    }
+    writeQueues.clear(); // nothing in flight should resurrect a deleted file
+    return true;
+  });
+
   ipcMain.handle("vault:reveal", async () => {
     if (vaultPath) await shell.openPath(vaultPath);
   });

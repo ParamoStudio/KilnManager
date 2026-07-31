@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { FiringResult } from "@core";
-  import { roundUp50 } from "@core";
+  import { chargedTotal } from "../lib/settings.svelte";
   import { MYSELF, selectClientZones } from "../lib/firing.svelte";
   import { t } from "../lib/i18n.svelte";
   import { colorForIndex } from "../lib/colors";
@@ -38,7 +38,7 @@
           <span class="cn">{c.contactName}</span>
           <span class="sh faint">{pct(c.sharePct)}</span>
           {#if c.charged}
-            <span class="pr">{eur(roundUp50(c.price))}<span class="real">({eur(c.price)})</span></span>
+            <span class="pr">{eur(chargedTotal(c.price))}<span class="real">({eur(c.price)})</span></span>
           {:else}
             <span class="pr own">{t.capacityStrip.own}<span class="real">(−{eur(lostFor(c.sharePct))})</span></span>
           {/if}

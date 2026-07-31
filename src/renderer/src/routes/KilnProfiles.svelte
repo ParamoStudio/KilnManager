@@ -66,6 +66,8 @@
     persist();
   }
 
+  const isElectric = $derived(editing?.energy === "electric");
+
   function addService(): void {
     if (!editing) return;
     editing.services.push({ id: newServiceId(), name: "New service", basePrice: 0, fuelUse: 0 });
@@ -194,6 +196,23 @@
                 <button class:active={editing.gasType === "butane"} onclick={() => { editing.gasType = "butane"; persist(); }}>{t.kilnProfiles.gasButane}</button>
               </div>
             {/if}
+            {#if editing.energy === "electric"}
+              <!-- Two constants of the kiln itself. The per-firing variables
+                   (hours, peak temperature) live on each service. -->
+              <div class="seg sub">
+                <button class:active={(editing.electricSystem ?? "relay") === "relay"} onclick={() => { editing.electricSystem = "relay"; persist(); }}>{t.kilnProfiles.systemRelay}</button>
+                <button class:active={editing.electricSystem === "thyristor"} onclick={() => { editing.electricSystem = "thyristor"; persist(); }}>{t.kilnProfiles.systemThyristor}</button>
+              </div>
+              <span class="opt sub-hint">{t.kilnProfiles.systemHint}</span>
+              <label class="kwrow">
+                <span class="fl">{t.kilnProfiles.powerKw}</span>
+                <span class="kwin">
+                  <input type="number" min="0" step="0.1" bind:value={editing.powerKw} onchange={persist} />
+                  <span class="cur">kW</span>
+                </span>
+              </label>
+              <span class="opt sub-hint">{t.kilnProfiles.powerKwHint}</span>
+            {/if}
           </div>
 
           <div class="field">
@@ -260,16 +279,31 @@
 
           <div class="field">
             <span class="fl">{t.kilnProfiles.services} <span class="opt">{t.kilnProfiles.servicesHint}</span></span>
-            <div class="fuelnote faint">{@html t.kilnProfiles.fuelNote(fuel.label, eur(fuel.price), fuel.unit)}</div>
-            <div class="srow shead">
-              <span>{t.kilnProfiles.tableService}</span><span class="r">{t.kilnProfiles.tablePrice}</span><span class="r">{t.kilnProfiles.tableFuel(fuel.unit)}</span><span class="r">{t.kilnProfiles.tableFuelCost}</span><span></span>
+            {#if isElectric}
+              <div class="fuelnote faint">{t.kilnProfiles.electricExplain}</div>
+            {:else}
+              <div class="fuelnote faint">{@html t.kilnProfiles.fuelNote(fuel.label, eur(fuel.price), fuel.unit)}</div>
+            {/if}
+            <div class="srow shead" class:elec={isElectric}>
+              <span>{t.kilnProfiles.tableService}</span><span class="r">{t.kilnProfiles.tablePrice}</span>
+              {#if isElectric}
+                <span class="r">{t.kilnProfiles.svcHours}</span><span class="r">{t.kilnProfiles.svcTemp}</span>
+              {:else}
+                <span class="r">{t.kilnProfiles.tableFuel(fuel.unit)}</span>
+              {/if}
+              <span class="r">{t.kilnProfiles.tableFuelCost}</span><span></span>
             </div>
             {#each editing.services as s (s.id)}
-              <div class="srow">
+              <div class="srow" class:elec={isElectric}>
                 <input class="grow" bind:value={s.name} onchange={persist} />
                 <div class="money"><input type="number" min="0" step="0.5" bind:value={s.basePrice} onchange={persist} /><span class="cur">€</span></div>
-                <input class="num" type="number" min="0" step="0.1" bind:value={s.fuelUse} onchange={persist} />
-                <span class="fcost">{eur(fuelCostFor(editing, s.fuelUse ?? 0))}</span>
+                {#if isElectric}
+                  <input class="num" type="number" min="0" step="0.5" bind:value={s.hours} onchange={persist} />
+                  <input class="num" type="number" min="0" step="10" bind:value={s.maxTempC} onchange={persist} />
+                {:else}
+                  <input class="num" type="number" min="0" step="0.1" bind:value={s.fuelUse} onchange={persist} />
+                {/if}
+                <span class="fcost">{eur(fuelCostFor(editing, s))}</span>
                 <button class="x" onclick={() => removeService(s.id)} disabled={editing.services.length <= 1} aria-label={t.kilnProfiles.removeService}>×</button>
               </div>
             {/each}
@@ -643,6 +677,40 @@
     border: 1px solid var(--line-soft);
     border-radius: 8px;
     padding: 7px 10px;
+  }
+  /* Electric services carry two variables (hours, peak °C) instead of one
+     fuel figure, so the row gains a column. */
+  .srow.elec {
+    grid-template-columns: 1fr 84px 56px 72px 54px 20px;
+  }
+  .sub-hint {
+    display: block;
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  .kwrow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .kwin {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0 8px;
+  }
+  .kwin input {
+    width: 64px;
+    background: none;
+    border: none;
+    text-align: right;
+    color: var(--text);
+    padding: 8px 0;
   }
   .srow {
     display: grid;

@@ -19,6 +19,7 @@ import { encodePairing, decodePairing, type Pairing } from "./paircode";
 import {
   synced,
   drafts,
+  dropClosedDrafts,
   setDraftChangeHook,
   setDraftStatus,
   type MobileKiln,
@@ -30,6 +31,8 @@ interface DownPayload {
   contacts?: MobileContact[];
   kilns?: MobileKiln[];
   complexity?: Record<ComplexityKey, number>;
+  /** Firings the computer has closed and invoiced — see `dropClosedDrafts`. */
+  closedIds?: string[];
 }
 
 export const sync = $state<{
@@ -41,6 +44,8 @@ export const sync = $state<{
    * batch yet. Not an error — the drafts simply stay pending and go through on
    * a later attempt — but the phone says so rather than looking stuck. */
   mailboxFull: boolean;
+  /** How many local firings were dropped because they're closed on the computer. */
+  lastClosed: number;
   /** Set once, the first time this browser pairs, so the app can offer the
    * pairing code before the user walks away with it. See `pairingCode()`. */
   offerCode: boolean;
@@ -50,6 +55,7 @@ export const sync = $state<{
   lastSyncedAt: null,
   lastError: "",
   mailboxFull: false,
+  lastClosed: 0,
   offerCode: false,
 });
 
@@ -144,6 +150,12 @@ export async function syncDown(): Promise<void> {
   if (data.complexity) {
     synced.complexity = { ...synced.complexity, ...data.complexity };
     await storage.write("complexity", synced.complexity);
+  }
+  // The computer has finished with these, so the phone lets them go. Without
+  // this the phone keeps a finished firing around, and editing it uploaded a
+  // change that arrived as a brand new firing on a closed one.
+  if (Array.isArray(data.closedIds) && data.closedIds.length) {
+    sync.lastClosed = dropClosedDrafts(data.closedIds);
   }
 }
 

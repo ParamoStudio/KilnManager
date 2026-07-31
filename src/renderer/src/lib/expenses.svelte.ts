@@ -7,10 +7,10 @@
  * with the firing breakdowns. Partner-payment status is layered in from the
  * payments store (default: pending).
  */
-import { computeFiring, roundUp50 } from "@core";
+import { computeFiring } from "@core";
 import { firings, coreFiringFrom, type FiringRecord } from "./firing.svelte";
 import { kilnStore } from "./kilns.svelte";
-import { settings } from "./settings.svelte";
+import { settings, chargedTotal } from "./settings.svelte";
 import { isPaid, paidAt } from "./payments.svelte";
 
 const round = (n: number): number => Math.round(n * 100) / 100;
@@ -102,7 +102,7 @@ function rowFor(rec: FiringRecord): FiringRow {
   const core = coreFiringFrom(rec.planner);
   const result = computeFiring(core);
   // Collected revenue mirrors the ticket/breakdown: each charged client rounded up.
-  const revenue = round(result.clients.reduce((s, c) => s + (c.charged ? roundUp50(c.price) : 0), 0));
+  const revenue = round(result.clients.reduce((s, c) => s + (c.charged ? chargedTotal(c.price) : 0), 0));
   const kilnCosts = result.accounting.kilnCosts;
   const grossProfit = round(revenue - kilnCosts);
   const fuelCost = core.costItems[0]?.amount ?? 0; // first cost item is the variable fuel line

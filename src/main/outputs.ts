@@ -263,6 +263,42 @@ export function registerOutputs(): void {
     if (typeof url === "string" && /^https?:\/\//.test(url)) await shell.openExternal(url);
   });
 
+  /**
+   * Delete specific exported files, and tidy up the folder if that empties it.
+   *
+   * Deliberately file-by-file rather than by folder: outputs are grouped as
+   * `<kiln>/<date>/`, so two firings in the same kiln on the same day share a
+   * directory. Removing the directory would take the other firing's invoices
+   * with it.
+   */
+  ipcMain.handle("outputs:deleteFiles", async (_e, relPaths: string[][]) => {
+    const vault = getVaultPath();
+    if (!vault) return 0;
+    let removed = 0;
+    const dirs = new Set<string>();
+    for (const parts of relPaths) {
+      if (!Array.isArray(parts) || parts.length === 0) continue;
+      const abs = join(vault, "outputs", ...parts.map(safe));
+      try {
+        await fs.rm(abs, { force: true });
+        removed++;
+        dirs.add(dirname(abs));
+      } catch {
+        /* already gone — that's the desired end state anyway */
+      }
+    }
+    for (const dir of dirs) {
+      try {
+        const left = await fs.readdir(dir);
+        // Ignore the junk macOS leaves behind when deciding "empty".
+        if (left.every((n) => n === ".DS_Store")) await fs.rm(dir, { recursive: true, force: true });
+      } catch {
+        /* not empty, or gone */
+      }
+    }
+    return removed;
+  });
+
   ipcMain.handle("outputs:openFolder", async () => {
     const vault = getVaultPath();
     if (vault) await shell.openPath(join(vault, "outputs"));

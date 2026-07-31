@@ -197,6 +197,15 @@ export const en = {
 
   // ---- KilnProfiles.svelte ------------------------------------------------------
   kilnProfiles: {
+    electricSystem: "Element switching",
+    systemRelay: "Relay",
+    systemThyristor: "Thyristor",
+    systemHint: "A thyristor modulates the current; a relay switches fully on and off, so it spends slightly more.",
+    powerKw: "Kiln power",
+    powerKwHint: "From the kiln's plate, in kW. Together with each service's hours and peak temperature this gives the real electricity cost.",
+    svcHours: "Hours",
+    svcTemp: "Peak °C",
+    electricExplain: "Electricity is costed from the kiln's power, how long the firing runs and how hot it gets \u2014 nobody knows their kWh per firing, but everyone knows these.",
     title: "Kiln Profiles",
     subtitle: "Your kilns. Prices and costs are per kiln — you don't charge every kiln the same.",
     newKiln: "New kiln",
@@ -286,6 +295,13 @@ export const en = {
 
   // ---- AppSettings.svelte ------------------------------------------------------
   appSettings: {
+    invoicing: "Invoicing",
+    roundPrices: "Round prices up to 50 cents",
+    roundPricesHint: "Keeps client totals tidy. The exact figure is still used in your own accounts.",
+    resetVault: "Reset everything…",
+    resetVaultHint: "Deletes every kiln, firing, invoice and setting in this folder. There is no undo.",
+    resetVaultConfirm: "Delete everything? Click again",
+    resetVaultFailed: "Couldn't reset — nothing was deleted.",
     title: "App Settings",
     subtitle: "Studio-wide settings. Kiln-specific prices and costs live in Kiln Profiles.",
     complexityFactors: "Complexity factors",
@@ -345,6 +361,8 @@ export const en = {
 
   // ---- CustomizeTicket.svelte ------------------------------------------------
   customizeTicket: {
+    showFullName: "Print the client's full name",
+    showFullNameHint: "Off by default: only the first word is printed, so a private reminder you keep in a contact's name never reaches their invoice.",
     logoSaveFailed: "Couldn't store that logo — nothing was changed.",
     logoRemoveFailed: "Couldn't remove that logo — it's still there.",
     ariaLabel: "Customize client ticket",
@@ -405,6 +423,10 @@ export const en = {
 
   // ---- OutputsPanel.svelte ------------------------------------------------------
   outputsPanel: {
+    editFiring: "Edit this firing",
+    editFiringHint: "Reopens it so you can change it, and clears its invoices and figures until you close it again.",
+    deleteFiring: "Delete this firing",
+    deleteConfirmAgain: "Delete permanently? Click again",
     ofClientProfit: (p: string) => `${p} of their profit`,
     ariaLabel: "Firing outputs",
     close: "Close",

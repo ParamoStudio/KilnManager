@@ -5,10 +5,11 @@
    * the day there are 500 firings, not 20.
    */
   import { fly, fade } from "svelte/transition";
+  import { chargedTotal } from "../lib/settings.svelte";
   import { app, closedFirings, coreFiringFrom, type FiringRecord } from "../lib/firing.svelte";
   import { kilnStore } from "../lib/kilns.svelte";
   import { groupByMonth, searchFirings } from "../lib/firinglog";
-  import { computeFiring, roundUp50 } from "@core";
+  import { computeFiring } from "@core";
   import { t, localeTag } from "../lib/i18n.svelte";
   import { eur, fmtFull } from "../lib/format";
   import KilnThumb from "./KilnThumb.svelte";
@@ -68,7 +69,7 @@
       const r = computeFiring(coreFiringFrom(rec.planner));
       return {
         clients: r.clients.length,
-        rounded: r.clients.reduce((a, c) => a + (c.charged ? roundUp50(c.price) : 0), 0),
+        rounded: r.clients.reduce((a, c) => a + (c.charged ? chargedTotal(c.price) : 0), 0),
       };
     } catch {
       // A malformed/legacy record must never blank the panel.

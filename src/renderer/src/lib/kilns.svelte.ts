@@ -6,9 +6,38 @@ import type { CostItem, KilnModifier, KilnProfile, KilnShape } from "@core";
 import { demoKilns } from "./kilns";
 import { markKilnsDirty } from "./syncflags.svelte";
 import { storage } from "./storage";
+import { t } from "./i18n.svelte";
 
 /** Fixed cost lines every kiln always shows (in this order, deduped by name). */
 export const BUILTIN_FIXED = ["Maintenance reserve", "Consumables"] as const;
+
+/**
+ * The built-in cost lines every kiln gets, in every language we've ever shipped.
+ *
+ * They're stored as plain text a user can rename, so they can't just be
+ * translated on the way out. Instead, a name that still matches one of these is
+ * treated as untouched and shown in the active language; the moment someone
+ * edits it, it stops matching and is left alone forever.
+ */
+const BUILTIN_ALIASES: Record<(typeof BUILTIN_FIXED)[number], string[]> = {
+  "Maintenance reserve": ["Maintenance reserve", "Reserva de mantenimiento"],
+  Consumables: ["Consumables", "Consumibles"],
+};
+
+/** Rename untouched built-in cost items to the active language. */
+export function localizeBuiltinCosts(): void {
+  const labels: Record<(typeof BUILTIN_FIXED)[number], string> = {
+    "Maintenance reserve": t.defaults.maintenanceReserve,
+    Consumables: t.defaults.consumables,
+  };
+  for (const kiln of kilnStore.list) {
+    for (const item of kiln.defaultCostItems) {
+      for (const key of BUILTIN_FIXED) {
+        if (BUILTIN_ALIASES[key].includes(item.name)) item.name = labels[key];
+      }
+    }
+  }
+}
 
 export const kilnStore = $state<{ list: KilnProfile[] }>({
   list: structuredClone(demoKilns),
@@ -70,7 +99,18 @@ function normalizeKiln(k: KilnProfile): KilnProfile {
   return {
     ...k,
     energy: k.energy ?? "other",
-    services: k.services.map((s) => ({ ...s, fuelUse: s.fuelUse ?? 0 })),
+    // Electric kilns used to carry a guessed kWh per service. That figure is
+    // kept (harmless) but the cost now comes from kW × hours × temperature, so
+    // seed the new fields with sane values rather than pricing at zero: a
+    // typical studio kiln and a mid-temperature glaze firing.
+    electricSystem: k.electricSystem ?? "relay",
+    powerKw: k.powerKw ?? (k.energy === "electric" ? 3.6 : undefined),
+    services: k.services.map((s) => ({
+      ...s,
+      fuelUse: s.fuelUse ?? 0,
+      hours: s.hours ?? (k.energy === "electric" ? 9 : undefined),
+      maxTempC: s.maxTempC ?? (k.energy === "electric" ? 1000 : undefined),
+    })),
     defaultCostItems: items,
     // Modifiers gained a `scope` — treat legacy ones as full-kiln.
     modifiers: (k.modifiers ?? []).map((m) => ({ ...m, scope: m.scope ?? "full-kiln" })),

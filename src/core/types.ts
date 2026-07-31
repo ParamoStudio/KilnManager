@@ -13,6 +13,9 @@ export type KilnEnergy = "electric" | "gas" | "wood" | "other";
 /** The concrete fuel whose global price applies. */
 export type FuelKind = "electricity" | "propane" | "butane" | "wood" | "other";
 
+/** Element switching on an electric kiln. */
+export type ElectricSystem = "relay" | "thyristor";
+
 /** A named firing service with the base price the studio charges for it. */
 export interface FiringService {
   id: string;
@@ -24,6 +27,14 @@ export interface FiringService {
    * this × the fuel's current global price. Longer/hotter services use more.
    */
   fuelUse?: number;
+  /**
+   * Electric kilns price by time and temperature instead of a guessed kWh
+   * figure: how long the firing runs and how hot it gets are the two things a
+   * ceramicist actually knows. See `electricFiringCost`.
+   */
+  hours?: number;
+  /** Peak temperature this service reaches, in °C. */
+  maxTempC?: number;
 }
 
 /** A configurable cost line for a firing (feeds the internal margin only). */
@@ -48,6 +59,14 @@ export interface KilnProfile {
   energy?: KilnEnergy;
   /** Which bottled gas, when energy === "gas". */
   gasType?: "propane" | "butane";
+  /**
+   * How an electric kiln switches its elements, which decides how much of the
+   * firing the elements are actually drawing power for. A thyristor modulates,
+   * a relay cycles fully on/off, so the relay wastes slightly more.
+   */
+  electricSystem?: ElectricSystem;
+  /** Element power of an electric kiln, in kW. A fixed property of the kiln. */
+  powerKw?: number;
   shape: KilnShape;
 
   /** cylinder geometry */

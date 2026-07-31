@@ -1,6 +1,6 @@
 import type { Firing, Allocation, KilnProfile, FiringService, KilnModifier, AppliedModifier } from "@core";
-import { consumedHeightCm } from "@core";
-import { kilnStore, loadKilns } from "./kilns.svelte";
+import { consumedHeightCm, computeFiring } from "@core";
+import { kilnStore, loadKilns, localizeBuiltinCosts } from "./kilns.svelte";
 import { type ComplexityKey } from "./complexity";
 import {
   cx,
@@ -9,6 +9,7 @@ import {
   settings,
   fuelCostFor,
   fuelDefFor,
+  chargedTotal,
   resolvePartner,
   defaultTierRef,
 } from "./settings.svelte";
@@ -16,7 +17,7 @@ import { loadBrand, migrateLogosFromSettings } from "./brand.svelte";
 import { loadPayments } from "./payments.svelte";
 import { loadLocale } from "./i18n.svelte";
 import { markContactsDirty } from "./syncflags.svelte";
-import { storage } from "./storage";
+import { storage, outputs } from "./storage";
 import { LAB, LAB_MAX_CURRENT, LAB_MAX_LOG } from "./lab";
 
 // ---- Planner state (renderer-only, richer than the core Firing) -----------
@@ -304,7 +305,7 @@ export function coreFiringFrom(p: PlannerState): Firing {
   // Variable fuel cost = this service's consumption × the fuel's current price.
   const fuelItem = {
     name: fuelDefFor(kiln).label,
-    amount: fuelCostFor(kiln, service.fuelUse ?? 0),
+    amount: fuelCostFor(kiln, service),
     kind: "variable" as const,
   };
   return {
@@ -542,11 +543,17 @@ export function importPhoneFiring(item: {
   title?: string;
   firing: PlannerState;
   notes?: Record<string, string>;
-}): void {
+}): "created" | "updated" | "closed" {
   const p = item.firing ?? ({} as PlannerState);
   const kiln = kilnStore.list.find((k) => k.id === p.kilnId) ?? kilnStore.list[0];
-  // Same firing, edited on the phone → update the one we already have (unless
-  // it's already been closed/invoiced here, which we never overwrite).
+  // Already closed and invoiced here? Then this edit is stale: the phone kept a
+  // copy it doesn't know is finished. Importing it created a duplicate of a
+  // firing that was already in the books — the bug this guards. Refuse, and
+  // report it so the phone can be told to let go (see closedPhoneIds).
+  if (item.id && firings.list.some((f) => f.phoneId === item.id && f.status === "closed")) {
+    return "closed";
+  }
+  // Same firing, still open → update the one we already have.
   const existing = item.id
     ? firings.list.find((f) => f.phoneId === item.id && f.status === "current")
     : undefined;
@@ -567,7 +574,7 @@ export function importPhoneFiring(item: {
     };
     if (firings.activeId === existing.id) loadIntoPlanner(existing.planner);
     saveApp();
-    return;
+    return "updated";
   }
   const rec: FiringRecord = {
     id: `f${Date.now().toString(36)}${seq++}`,
@@ -596,6 +603,23 @@ export function importPhoneFiring(item: {
   };
   firings.list.push(rec);
   saveApp();
+  return "created";
+}
+
+/**
+ * Phone ids of firings that are finished here, so the phone can drop its copies.
+ *
+ * The phone has no other way to know: it marks a draft "synced" when the upload
+ * succeeds and then forgets it on a timer, never learning whether the computer
+ * closed it. Without this it keeps offering to edit a firing that's already
+ * invoiced. Bounded because it rides along in every payload.
+ */
+export function closedPhoneIds(limit = 60): string[] {
+  return firings.list
+    .filter((f) => f.status === "closed" && f.phoneId)
+    .sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0))
+    .slice(0, limit)
+    .map((f) => f.phoneId!);
 }
 
 export function openFiring(id: string): void {
@@ -628,6 +652,76 @@ export function deleteFiring(id: string): void {
   firings.list = firings.list.filter((f) => f.id !== id);
   if (firings.activeId === id) firings.activeId = null;
   saveApp();
+}
+
+/**
+ * The exported invoice files belonging to a firing, as vault-relative paths.
+ *
+ * Derived from the firing rather than by listing the folder, because outputs are
+ * grouped `<kiln>/<date>/` and two firings in the same kiln on the same day
+ * share that directory — we must name our own files, not sweep the folder.
+ */
+function outputPathsFor(rec: FiringRecord): string[][] {
+  const kiln = kilnStore.list.find((k) => k.id === rec.planner.kilnId);
+  if (!kiln) return [];
+  const stamp = new Date(rec.closedAt ?? rec.createdAt).toISOString().slice(0, 10);
+  const result = computeFiring(coreFiringFrom(rec.planner));
+  return result.clients
+    .filter((c) => c.charged)
+    .map((c) => [kiln.name, stamp, `${c.contactName}_${Math.round(chargedTotal(c.price))}eur_${stamp}.pdf`]);
+}
+
+/**
+ * Undo a closing, completely: the record goes, its invoices are deleted from
+ * disk, and the expenses workbook is rebuilt without it.
+ *
+ * Closing a firing is easy to do by accident, and until now the only way out
+ * was to edit the vault by hand. The rebuild is what makes it honest — leaving
+ * a deleted firing in the spreadsheet would mean the books disagree with the app.
+ */
+export async function purgeFiring(id: string): Promise<void> {
+  const rec = firings.list.find((f) => f.id === id);
+  if (!rec) return;
+  const paths = outputPathsFor(rec);
+  deleteFiring(id);
+  if (paths.length) await outputs.deleteFiles(paths);
+  await refreshCostsWorkbook();
+}
+
+/**
+ * Reopen a closed firing so it can be corrected, and clear what closing it
+ * produced.
+ *
+ * Deliberately the same record rather than a copy: getting one shelf's client
+ * wrong shouldn't cost you the firing's identity. Keeping the id means no
+ * duplicate can exist, the log doesn't gain a second entry, and — the part that
+ * matters most — the link to the phone survives, so a firing that came from the
+ * phone can still be edited there without arriving back as a stranger.
+ */
+export async function reopenFiring(id: string): Promise<void> {
+  const rec = firings.list.find((f) => f.id === id);
+  if (!rec) return;
+  const paths = outputPathsFor(rec);
+  rec.status = "current";
+  delete rec.closedAt;
+  firings.activeId = rec.id;
+  loadIntoPlanner(rec.planner);
+  ui.selection = [];
+  app.outputsFor = null;
+  app.screen = "firing";
+  saveApp();
+  if (paths.length) await outputs.deleteFiles(paths);
+  await refreshCostsWorkbook();
+}
+
+/** Rebuild KilnCosts.xlsx from what's actually in the log now. */
+async function refreshCostsWorkbook(): Promise<void> {
+  try {
+    const { monthlyData } = await import("./expenses.svelte");
+    await outputs.saveCosts(JSON.parse(JSON.stringify(monthlyData())));
+  } catch {
+    /* web build, or no vault — there is no workbook to keep in step */
+  }
 }
 
 export function setActiveTitle(title: string): void {
@@ -663,6 +757,7 @@ export function saveApp(): void {
 export async function loadApp(): Promise<void> {
   await loadLocale(); // first: so seed localization + labels use the active language
   await loadKilns();
+  localizeBuiltinCosts(); // built-in cost lines follow the app's language
   await loadSettings();
   await loadBrand();
   // Logos used to live inside settings.json; move any stragglers into the

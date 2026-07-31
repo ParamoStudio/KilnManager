@@ -214,6 +214,24 @@ export function deleteDraft(id: string): void {
 }
 /** Clear every already-synced firing at once (they're safe to drop — the
  * desktop already has them). */
+/**
+ * Forget firings the computer has closed and invoiced.
+ *
+ * The phone is a notepad: once a firing is in the books it has no business
+ * still being editable here, and keeping it was what let an edit come back as a
+ * duplicate. If one of them is the draft currently open, it's closed first so
+ * the screen doesn't vanish from under whoever is holding the phone.
+ */
+export function dropClosedDrafts(closedIds: string[]): number {
+  const ids = new Set(closedIds);
+  const doomed = drafts.list.filter((d) => ids.has(d.id));
+  if (doomed.length === 0) return 0;
+  if (draft.active && ids.has(draft.id)) closeDraft();
+  drafts.list = drafts.list.filter((d) => !ids.has(d.id));
+  persistDrafts();
+  return doomed.length;
+}
+
 export function deleteSyncedDrafts(): void {
   drafts.list = drafts.list.filter((d) => d.status !== "synced");
   persistDrafts();

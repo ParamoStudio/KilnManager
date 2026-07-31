@@ -113,6 +113,15 @@
       <span class="hint">{t.customizeTicket.workshopNameHint}</span>
     </label>
 
+    <label class="ctoggle">
+      <input type="checkbox" bind:checked={settings.showFullClientName} onchange={() => void saveSettingsChecked()} />
+      <span class="ctgl" aria-hidden="true"></span>
+      <span class="ctl">
+        {t.customizeTicket.showFullName}
+        <span class="hint">{t.customizeTicket.showFullNameHint}</span>
+      </span>
+    </label>
+
     {#if !LAB}
     <div class="field">
       <span class="fl">{t.customizeTicket.logoTop}</span>
@@ -180,6 +189,55 @@
 </div>
 
 <style>
+  .ctoggle {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .ctoggle input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .ctgl {
+    flex: none;
+    width: 17px;
+    height: 17px;
+    margin-top: 2px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--panel-2);
+    position: relative;
+  }
+  .ctoggle input:checked + .ctgl {
+    border-color: var(--amber);
+    background: color-mix(in srgb, var(--amber) 18%, var(--panel-2));
+  }
+  .ctoggle input:checked + .ctgl::after {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 6px;
+    height: 10px;
+    border-right: 2px solid var(--amber);
+    border-bottom: 2px solid var(--amber);
+    transform: rotate(40deg);
+  }
+  .ctoggle input:focus-visible + .ctgl {
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+  }
+  .ctl {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 13px;
+    color: var(--text);
+  }
+
   .scrim {
     position: fixed;
     inset: 0;

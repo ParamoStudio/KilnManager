@@ -12,6 +12,7 @@ const kilnAPI = {
   vaultPick: (mode: "create" | "locate"): Promise<{ ok: boolean; reason?: string; path?: string }> =>
     ipcRenderer.invoke("vault:pick", mode),
   vaultReveal: (): Promise<void> => ipcRenderer.invoke("vault:reveal"),
+  vaultReset: (): Promise<boolean> => ipcRenderer.invoke("vault:reset"),
   // Outputs (client tickets)
   savePdf: (html: string, relParts: string[]): Promise<string | null> =>
     ipcRenderer.invoke("outputs:savePdf", html, relParts),
@@ -21,6 +22,7 @@ const kilnAPI = {
   outputsOpenFile: (absPath: string): Promise<string> => ipcRenderer.invoke("outputs:openFile", absPath),
   outputsShare: (absPath: string): Promise<void> => ipcRenderer.invoke("outputs:share", absPath),
   outputsOpenFolder: (): Promise<void> => ipcRenderer.invoke("outputs:openFolder"),
+  outputsDeleteFiles: (relPaths: string[][]): Promise<number> => ipcRenderer.invoke("outputs:deleteFiles", relPaths),
   appVersion: (): Promise<string> => ipcRenderer.invoke("app:version"),
   // Ticket logos, kept as files in <vault>/Brand
   brandRead: (): Promise<{ top: string; bottom: string }> => ipcRenderer.invoke("brand:read"),

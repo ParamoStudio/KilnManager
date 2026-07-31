@@ -49,6 +49,24 @@
   onMount(async () => {
     if (isDesktop) vaultPath = (await vault.status()).path;
   });
+  // Starting over used to mean deleting the folder in Finder, which is a lot to
+  // ask of someone who just wants to clear their practice data. Two presses on
+  // the button, no dialog, disarms itself.
+  let confirmingReset = $state(false);
+  let resetError = $state("");
+  let resetTimer: ReturnType<typeof setTimeout> | undefined;
+  async function doReset(): Promise<void> {
+    if (!confirmingReset) {
+      confirmingReset = true;
+      resetTimer = setTimeout(() => (confirmingReset = false), 4000);
+      return;
+    }
+    clearTimeout(resetTimer);
+    confirmingReset = false;
+    if (await vault.reset()) location.reload();
+    else resetError = t.appSettings.resetVaultFailed;
+  }
+
   async function changeVault(mode: "create" | "locate"): Promise<void> {
     const r = await vault.pick(mode);
     if (r.ok) location.reload(); // re-read data from the new folder
@@ -134,6 +152,16 @@
     <section class="side">
       <button class="customize" onclick={() => (customizing = true)}>{t.appSettings.customizeClientTicket}</button>
 
+      <span class="side-title mt">{t.appSettings.invoicing}</span>
+      <label class="toggle">
+        <input type="checkbox" bind:checked={settings.roundPrices} onchange={persist} />
+        <span class="tgl" aria-hidden="true"></span>
+        <span class="tlabel">
+          {t.appSettings.roundPrices}
+          <span class="faint thint">{t.appSettings.roundPricesHint}</span>
+        </span>
+      </label>
+
       <span class="side-title mt">{t.appSettings.partners}</span>
       <p class="faint explain">{t.appSettings.partnersExplain}</p>
       <div class="partners">
@@ -189,6 +217,12 @@
             <button class="vbtn" onclick={() => vault.reveal()}>{t.appSettings.revealInFinder}</button>
             <button class="vbtn" onclick={() => changeVault("locate")}>{t.appSettings.locateExisting}</button>
             <button class="vbtn accent" onclick={() => changeVault("create")}>{t.appSettings.moveOrNew}</button>
+          </div>
+          <div class="resetrow">
+            <button class="vbtn danger" class:armed={confirmingReset} onclick={doReset}>
+              {confirmingReset ? t.appSettings.resetVaultConfirm : t.appSettings.resetVault}
+            </button>
+            <span class="faint thint">{resetError || t.appSettings.resetVaultHint}</span>
           </div>
         </div>
       {/if}
@@ -520,6 +554,79 @@
   }
   .vbtn.accent:hover {
     border-color: var(--amber);
+  }
+  /* One switch style for the whole app: a real checkbox for keyboard and
+     screen readers, with the box itself drawn by the span next to it. */
+  .toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .toggle input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .tgl {
+    flex: none;
+    width: 17px;
+    height: 17px;
+    margin-top: 2px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--panel-2);
+    position: relative;
+  }
+  .toggle input:checked + .tgl {
+    border-color: var(--amber);
+    background: color-mix(in srgb, var(--amber) 18%, var(--panel-2));
+  }
+  .toggle input:checked + .tgl::after {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 6px;
+    height: 10px;
+    border-right: 2px solid var(--amber);
+    border-bottom: 2px solid var(--amber);
+    transform: rotate(40deg);
+  }
+  .toggle input:focus-visible + .tgl {
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+  }
+  .tlabel {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .thint {
+    font-size: 11.5px;
+    line-height: 1.5;
+  }
+  .resetrow {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .vbtn.danger {
+    align-self: flex-start;
+  }
+  .vbtn.danger:hover,
+  .vbtn.danger.armed {
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+  .vbtn.danger.armed {
+    background: color-mix(in srgb, var(--amber) 10%, transparent);
   }
   .reset {
     align-self: flex-start;

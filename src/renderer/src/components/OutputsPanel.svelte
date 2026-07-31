@@ -1,15 +1,16 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import type { KilnModifier } from "@core";
-  import { computeFiring, roundUp50 } from "@core";
-  import { app, firings, coreFiringFrom } from "../lib/firing.svelte";
+  import { computeFiring } from "@core";
+  import { app, firings, coreFiringFrom, reopenFiring, purgeFiring } from "../lib/firing.svelte";
   import { kilnStore } from "../lib/kilns.svelte";
-  import { settings, fuelDefFor, fuelCostFor, effectiveTicketMessage } from "../lib/settings.svelte";
+  import { settings, fuelDefFor, fuelCostFor,
+    fuelUseFor, effectiveTicketMessage, chargedTotal, invoiceClientName } from "../lib/settings.svelte";
   import { colorForIndex } from "../lib/colors";
   import { eur, pct, fmtFull } from "../lib/format";
   import { buildTicketHtml, type TicketData, type TicketLine } from "../lib/ticket";
   import { monthlyData } from "../lib/expenses.svelte";
-  import { t } from "../lib/i18n.svelte";
+  import { t, localeTag } from "../lib/i18n.svelte";
   import { brand } from "../lib/brand.svelte";
   import { LAB } from "../lib/lab";
   import { outputs, isDesktop } from "../lib/storage";
@@ -45,12 +46,12 @@
   };
 
   const fuel = $derived(kiln ? fuelDefFor(kiln) : null);
-  const fuelUse = $derived(service?.fuelUse ?? 0);
-  const fuelCost = $derived(kiln ? fuelCostFor(kiln, fuelUse) : 0);
+  const fuelUse = $derived(kiln && service ? fuelUseFor(kiln, service) : 0);
+  const fuelCost = $derived(kiln && service ? fuelCostFor(kiln, service) : 0);
   const fixedCosts = $derived(kiln?.defaultCostItems ?? []);
 
   const roundedTotal = $derived(
-    result ? result.clients.reduce((a, c) => a + (c.charged ? roundUp50(c.price) : 0), 0) : 0,
+    result ? result.clients.reduce((a, c) => a + (c.charged ? chargedTotal(c.price) : 0), 0) : 0,
   );
 
   const views = $derived<{ id: View; label: string }[]>([
@@ -70,28 +71,37 @@
     const base = result.totalKLU > 0 ? (result.serviceRevenue * c.klu) / result.totalKLU : 0;
     const mods = clientMods(name);
     const fixedSum = mods.reduce((a, m) => a + (m.family === "discount" ? -1 : 1) * (m.mode === "fixed" ? m.value : 0), 0);
-    const lines: TicketLine[] = [{ label: service.name, value: eur(base) }];
-    for (const m of mods) {
-      const sign = m.family === "discount" ? -1 : 1;
-      const val = m.mode === "fixed" ? sign * m.value : sign * (base + fixedSum) * (m.value / 100);
-      const label = `${m.name} (${m.mode === "percent" ? `${m.value}%` : eur(m.value)})`;
-      lines.push({ label, value: `${val < 0 ? "−" : "+"}${eur(Math.abs(val))}` });
+    // The header already names the service and the firing's total, so a bare
+    // "Bizcocho 28,61" above "TOTAL 29,00" is the same thing twice — and the
+    // unrounded figure is internal. With no modifiers there is one price on the
+    // invoice, full stop. Modifier lines DO earn their place: they explain a
+    // discount or surcharge, so then the base is shown for the maths to follow.
+    const lines: TicketLine[] = [];
+    if (mods.length > 0) {
+      lines.push({ label: service.name, value: eur(base) });
+      for (const m of mods) {
+        const sign = m.family === "discount" ? -1 : 1;
+        const val = m.mode === "fixed" ? sign * m.value : sign * (base + fixedSum) * (m.value / 100);
+        const label = `${m.name} (${m.mode === "percent" ? `${m.value}%` : eur(m.value)})`;
+        lines.push({ label, value: `${val < 0 ? "−" : "+"}${eur(Math.abs(val))}` });
+      }
     }
-    lines.push({ label: t.ticket.total, value: eur(roundUp50(c.price)), strong: true });
+    lines.push({ label: t.ticket.total, value: eur(chargedTotal(c.price)), strong: true });
     return {
       studioName: settings.studioName,
       logoTop: brand.top || undefined,
       logoBottom: brand.bottom || undefined,
       note: settings.ticketNote || undefined,
-      client: name,
-      date: new Date(rec.closedAt ?? rec.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }),
+      client: invoiceClientName(name),
+      // The invoice follows the app's language, like everything else.
+      date: new Date(rec.closedAt ?? rec.createdAt).toLocaleDateString(localeTag(), { day: "numeric", month: "long", year: "numeric" }),
       firingType: service.name,
       firingTotal: eur(result.serviceRevenue),
       sharePct: c.sharePct,
       shape: kiln.shape,
       extras: [],
       lines,
-      total: eur(roundUp50(c.price)),
+      total: eur(chargedTotal(c.price)),
       thanks: t.ticket.defaultThanks(settings.studioName),
     };
   }
@@ -101,15 +111,43 @@
     const c = result?.clients.find((x) => x.contactName === name);
     return effectiveTicketMessage()
       .replace(/\{client\}/g, name)
-      .replace(/\{total\}/g, c ? eur(roundUp50(c.price)) : "");
+      .replace(/\{total\}/g, c ? eur(chargedTotal(c.price)) : "");
   };
 
   const dateFolder = $derived(rec ? new Date(rec.closedAt ?? rec.createdAt).toISOString().slice(0, 10) : "");
   const fileFor = (name: string): string => {
     const c = result?.clients.find((x) => x.contactName === name);
-    const amount = c ? Math.round(roundUp50(c.price)) : 0;
+    const amount = c ? Math.round(chargedTotal(c.price)) : 0;
     return `${name}_${amount}eur_${dateFolder}.pdf`;
   };
+
+  // ---- Correcting a closed firing ----
+  // Both of these take the invoices off disk and rebuild the workbook, so a
+  // firing you closed by mistake leaves no trace in your accounts.
+  async function doEdit(): Promise<void> {
+    if (!rec) return;
+    const id = rec.id;
+    onclose();
+    await reopenFiring(id);
+  }
+
+  let confirmingDelete = $state(false);
+  let deleteTimer: ReturnType<typeof setTimeout> | undefined;
+  async function doDelete(): Promise<void> {
+    if (!rec) return;
+    // Two presses on the button itself — no dialog to dismiss, and it disarms
+    // on its own so a stray first click can't lie in wait.
+    if (!confirmingDelete) {
+      confirmingDelete = true;
+      deleteTimer = setTimeout(() => (confirmingDelete = false), 4000);
+      return;
+    }
+    clearTimeout(deleteTimer);
+    confirmingDelete = false;
+    const id = rec.id;
+    onclose();
+    await purgeFiring(id);
+  }
 
   // ---- Lab: the whole firing leaves as one zip ----
   let zipping = $state(false);
@@ -149,7 +187,7 @@
       [t.lab.sheetClient, t.lab.sheetShare, t.lab.sheetCharged],
     ];
     for (const c of result.clients) {
-      rows.push([c.contactName, Number((c.sharePct * 100).toFixed(1)), c.charged ? roundUp50(c.price) : 0]);
+      rows.push([c.contactName, Number((c.sharePct * 100).toFixed(1)), c.charged ? chargedTotal(c.price) : 0]);
     }
     rows.push([]);
     rows.push([t.lab.sheetCollected, null, result.accounting.revenue]);
@@ -228,6 +266,17 @@
         {/each}
       </nav>
       <button class="sendbtn" class:active={view === "ticket"} onclick={() => (view = "ticket")}>{t.outputsPanel.sendTickets}</button>
+
+      <!-- Only for a firing that's already closed, i.e. opened from the log.
+           A firing still in progress is edited directly and deleted from Home. -->
+      {#if rec.status === "closed"}
+        <div class="rowners">
+          <button class="rowner" onclick={doEdit} title={t.outputsPanel.editFiringHint}>{t.outputsPanel.editFiring}</button>
+          <button class="rowner danger" class:armed={confirmingDelete} onclick={doDelete}>
+            {confirmingDelete ? t.outputsPanel.deleteConfirmAgain : t.outputsPanel.deleteFiring}
+          </button>
+        </div>
+      {/if}
     </aside>
 
     <section class="body">
@@ -280,7 +329,7 @@
               <span class="r">{c.klu.toFixed(1)}</span>
               <span class="r">{pct(c.sharePct)}</span>
               <span class="r">
-                {#if c.charged}{eur(roundUp50(c.price))} <span class="real">({eur(c.price)})</span>{:else}<span class="real">{t.outputsPanel.own}</span>{/if}
+                {#if c.charged}{eur(chargedTotal(c.price))} <span class="real">({eur(c.price)})</span>{:else}<span class="real">{t.outputsPanel.own}</span>{/if}
               </span>
             </div>
             {#if mods.length}
@@ -363,6 +412,37 @@
 </div>
 
 <style>
+  .rowners {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .rowner {
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: var(--text-dim);
+    font-size: 12.5px;
+    text-align: left;
+  }
+  .rowner:hover {
+    border-color: var(--text-faint);
+    color: var(--text);
+  }
+  .rowner.danger:hover {
+    border-color: color-mix(in srgb, var(--amber) 55%, var(--line));
+    color: var(--amber);
+  }
+  .rowner.danger.armed {
+    border-color: var(--amber);
+    color: var(--amber);
+    background: color-mix(in srgb, var(--amber) 10%, transparent);
+  }
+
   .scrim {
     position: fixed;
     inset: 0;

@@ -31,6 +31,7 @@ declare global {
       vaultStatus(): Promise<VaultStatus>;
       vaultPick(mode: "create" | "locate"): Promise<VaultPickResult>;
       vaultReveal(): Promise<void>;
+      vaultReset(): Promise<boolean>;
       savePdf(html: string, relParts: string[]): Promise<string | null>;
       saveCosts(data: unknown): Promise<string | null>;
       openExpenses(): Promise<void>;
@@ -38,6 +39,7 @@ declare global {
       outputsOpenFile(absPath: string): Promise<string>;
       outputsShare(absPath: string): Promise<void>;
       outputsOpenFolder(): Promise<void>;
+      outputsDeleteFiles(relPaths: string[][]): Promise<number>;
       appVersion(): Promise<string>;
       brandRead(): Promise<{ top: string; bottom: string }>;
       brandWrite(kind: "top" | "bottom", dataUri: string): Promise<boolean>;
@@ -95,6 +97,14 @@ export const vault = {
   async reveal(): Promise<void> {
     await window.kilnAPI?.vaultReveal();
   },
+  /** Wipe everything the app keeps in the folder. Web build: clears its keys. */
+  async reset(): Promise<boolean> {
+    if (window.kilnAPI) return window.kilnAPI.vaultReset();
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith(PREFIX)) localStorage.removeItem(k);
+    }
+    return true;
+  },
 };
 
 /** Client ticket exports (desktop only; no-ops on the web build). */
@@ -110,6 +120,10 @@ export const outputs = {
   },
   async reveal(absPath: string): Promise<void> {
     await window.kilnAPI?.outputsReveal(absPath);
+  },
+  /** Remove specific exported files (each given as vault-relative path parts). */
+  async deleteFiles(relPaths: string[][]): Promise<number> {
+    return window.kilnAPI ? window.kilnAPI.outputsDeleteFiles(relPaths) : 0;
   },
   /** Opens a file in its default app. Returns "" on success, else an error. */
   async openFile(absPath: string): Promise<string> {

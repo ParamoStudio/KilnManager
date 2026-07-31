@@ -18,6 +18,8 @@ export const es: Dictionary = {
   },
 
   drafts: {
+    closedOnComputer: (n: number) =>
+      `${n} ${n === 1 ? "horneada cerrada" : "horneadas cerradas"} en tu ordenador \u2014 quitada${n === 1 ? "" : "s"} de aqu\u00ed.`,
     title: "Mis borradores",
     subtitle: "Tus horneadas en progreso.",
     empty: "Aún no hay borradores.",

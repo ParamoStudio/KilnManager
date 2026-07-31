@@ -179,6 +179,15 @@ export const es: Dictionary = {
   },
 
   kilnProfiles: {
+    electricSystem: "Conmutaci\u00f3n de resistencias",
+    systemRelay: "Rel\u00e9",
+    systemThyristor: "Tiristor",
+    systemHint: "El tiristor modula la corriente; el rel\u00e9 solo enciende y apaga del todo, as\u00ed que gasta algo m\u00e1s.",
+    powerKw: "Potencia del horno",
+    powerKwHint: "De la placa del horno, en kW. Junto con las horas y la temperatura de cada servicio da el coste el\u00e9ctrico real.",
+    svcHours: "Horas",
+    svcTemp: "\u00b0C m\u00e1x.",
+    electricExplain: "La electricidad se calcula con la potencia del horno, cu\u00e1nto dura la horneada y hasta d\u00f3nde sube \u2014 nadie sabe sus kWh por horneada, pero todo el mundo sabe esto.",
     title: "Perfiles de horno",
     subtitle: "Tus hornos. Los precios y costes son por horno — no cobras igual en todos.",
     newKiln: "Nuevo horno",
@@ -265,6 +274,13 @@ export const es: Dictionary = {
   },
 
   appSettings: {
+    invoicing: "Facturaci\u00f3n",
+    roundPrices: "Redondear precios a 50 c\u00e9ntimos",
+    roundPricesHint: "Deja los totales de cliente limpios. En tus cuentas se sigue usando la cifra exacta.",
+    resetVault: "Borrar todo\u2026",
+    resetVaultHint: "Elimina todos los hornos, horneadas, facturas y ajustes de esta carpeta. No se puede deshacer.",
+    resetVaultConfirm: "\u00bfBorrar todo? Pulsa otra vez",
+    resetVaultFailed: "No se pudo borrar \u2014 no se elimin\u00f3 nada.",
     title: "Ajustes",
     subtitle: "Ajustes de todo el taller. Los precios y costes por horno están en Perfiles de horno.",
     complexityFactors: "Factores de complejidad",
@@ -321,6 +337,8 @@ export const es: Dictionary = {
   },
 
   customizeTicket: {
+    showFullName: "Imprimir el nombre completo del cliente",
+    showFullNameHint: "Desactivado de serie: solo se imprime la primera palabra, as\u00ed que un recordatorio privado que guardes en el nombre nunca llega a su factura.",
     logoSaveFailed: "No se pudo guardar ese logo — no se cambió nada.",
     logoRemoveFailed: "No se pudo quitar ese logo — sigue ahí.",
     ariaLabel: "Personalizar ticket de cliente",
@@ -376,6 +394,10 @@ export const es: Dictionary = {
   },
 
   outputsPanel: {
+    editFiring: "Editar esta horneada",
+    editFiringHint: "La reabre para que puedas cambiarla, y retira sus facturas y n\u00fameros hasta que la cierres de nuevo.",
+    deleteFiring: "Eliminar esta horneada",
+    deleteConfirmAgain: "\u00bfEliminar para siempre? Pulsa otra vez",
     ofClientProfit: (p: string) => `${p} de su beneficio`,
     ariaLabel: "Salidas de la horneada",
     close: "Cerrar",

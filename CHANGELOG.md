@@ -15,6 +15,85 @@ nothing until someone redeploys it.
 
 ---
 
+## v1.1.0 — 31 July 2026
+
+### A closed firing can be corrected or deleted
+
+Closing a firing is easy to do by accident, and until now the only way back was
+to edit the vault by hand. Open one from the firing log and it offers two
+things:
+
+- **Edit** reopens it exactly as it was — shelves, clients, modifiers, partners,
+  the lot — so getting one shelf's client wrong doesn't mean rebuilding the
+  firing. It's the *same* firing reopened, not a copy, so no duplicate can
+  appear and the log doesn't gain a second entry.
+- **Delete** removes it for good. Two presses on the button itself, no dialog,
+  and it disarms if you walk away.
+
+Both clear what closing produced: the client invoices are deleted from disk and
+the expenses workbook is rebuilt without that firing. Anything else would leave
+your books disagreeing with the app.
+
+Invoices are removed file by file rather than by folder — two firings in the
+same kiln on the same day share a folder, and sweeping it would take the other
+firing's invoices with it.
+
+### Electricity is costed properly
+
+Asking for a kWh figure per service was asking for a guess. An electric kiln now
+carries the two things that don't change — its **power in kW** and whether its
+elements switch by **relay or thyristor** — and each service carries the two that
+do: **how many hours** it runs and **how hot** it gets.
+
+From that: `kW × hours × efficiency factor × €/kWh`, where the factor is how
+much of the cycle the elements are actually drawing power for. It rises with
+temperature (0.40 / 0.55 / 0.75 below 900 °C, to 1150 °C, and above) and a
+thyristor is slightly leaner than a relay, because a relay can only be fully on
+or off.
+
+Existing electric kilns keep working: they're seeded with a typical studio kiln
+and a mid-temperature firing, so fill in your real figures once.
+
+### Reset everything, from inside the app
+
+**App Settings → Reset everything** empties the data folder: kilns, firings,
+invoices, the workbook, settings. Two presses, no dialog, no undo. It leaves the
+folder valid so the app comes back up empty rather than asking where to live —
+and it leaves any file of yours that isn't the app's alone.
+
+### The client invoice
+
+- **Only the first word of a client's name is printed.** Studios keep private
+  reminders in a contact's name ("Marta — the tall vases") and that has no
+  business on the client's own receipt. A toggle in *Customize Invoice* prints
+  the full name if you want it.
+- **The date follows the app's language.** It was always English.
+- **One price, not two.** The header already names the service and the firing's
+  total, so a line repeating it above the total was the same thing twice — and
+  the unrounded figure is internal. Modifier lines still appear when there are
+  any, since those explain a discount rather than repeat a number.
+- **Rounding is now optional.** *App Settings → Invoicing* can turn off the
+  round-up to 50 cents; it stays on by default.
+- The share of the firing reads as one sentence, with the percentage in a small
+  pill instead of a large number.
+
+### Fixed: an edited firing came back as a duplicate
+
+Edit a firing on the phone after it had been closed on the computer and it
+arrived as a brand new firing, alongside the one already in your books. The
+import was skipping the match on purpose (so as not to overwrite something
+invoiced) but the duplicate it created was worse than what it prevented.
+
+Now the computer recognises the id, refuses the stale edit, and tells the phone
+the firing is finished so it drops its copy — the phone had no way of knowing
+before, since it only ever forgot things on a timer. It says so rather than
+having the firing vanish without explanation.
+
+### Also
+
+- The built-in "Maintenance reserve" and "Consumables" cost lines follow the
+  app's language, like everything else. Renaming one keeps your name for good.
+
 ## v1.0.3 — 22 July 2026
 
 ### Fixed: the ticket logos kept disappearing

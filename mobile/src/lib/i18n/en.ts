@@ -21,6 +21,8 @@ export const en = {
   },
 
   drafts: {
+    closedOnComputer: (n: number) =>
+      `${n} ${n === 1 ? "firing was" : "firings were"} closed on your computer \u2014 removed from here.`,
     title: "My drafts",
     subtitle: "Your firings in progress.",
     empty: "No drafts yet.",
