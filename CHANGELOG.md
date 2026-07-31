@@ -94,6 +94,8 @@ having the firing vanish without explanation.
 - The built-in "Maintenance reserve" and "Consumables" cost lines follow the
   app's language, like everything else. Renaming one keeps your name for good.
 
+---
+
 ## v1.0.3 — 22 July 2026
 
 ### Fixed: the ticket logos kept disappearing
