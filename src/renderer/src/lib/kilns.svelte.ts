@@ -93,8 +93,24 @@ function blankKiln(shape: KilnShape = "cylinder"): KilnProfile {
  *  items). Never removes the user's own custom cost items. */
 function normalizeKiln(k: KilnProfile): KilnProfile {
   const items: CostItem[] = k.defaultCostItems ? [...k.defaultCostItems] : [];
-  for (const name of BUILTIN_FIXED) {
-    if (!items.some((c) => c.name === name)) items.push({ name, amount: 0, kind: "fixed" });
+  // Match a built-in in ANY language it has ever been shown in. Comparing only
+  // against the English literal meant that once these were localized, every
+  // launch added the English pair back — and the localize pass then renamed
+  // them to the Spanish names too, leaving two cost lines with identical names.
+  // That took the outputs panel down with a duplicate-key error, so no invoices
+  // and no workbook were written. Repair as well as prevent: drop the extras if
+  // a vault already has them.
+  for (const key of BUILTIN_FIXED) {
+    const matches = items.filter((c) => BUILTIN_ALIASES[key].includes(c.name));
+    if (matches.length === 0) {
+      items.push({ name: key, amount: 0, kind: "fixed" });
+    } else if (matches.length > 1) {
+      // Keep the one the user actually put a number on, else the first.
+      const keep = matches.find((c) => c.amount > 0) ?? matches[0]!;
+      for (const dup of matches) {
+        if (dup !== keep) items.splice(items.indexOf(dup), 1);
+      }
+    }
   }
   return {
     ...k,

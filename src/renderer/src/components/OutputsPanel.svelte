@@ -297,7 +297,7 @@
           <div class="block">
             <span class="bh">{t.outputsPanel.yourCosts}</span>
             <div class="row"><span class="muted">{t.outputsPanel.fuelLine(fuel?.label ?? "", fuelUse, fuel?.unit ?? "", eur(fuel?.price ?? 0))}</span><span>{eur(fuelCost)}</span></div>
-            {#each fixedCosts as c (c.name)}
+            {#each fixedCosts as c, ci (ci)}
               <div class="row"><span class="muted">{c.name}</span><span>{eur(c.amount)}</span></div>
             {/each}
             <div class="row sum"><span>{t.outputsPanel.kilnCosts}</span><span>{eur(result.accounting.kilnCosts)}</span></div>
@@ -359,7 +359,7 @@
         <div class="block wide">
           <div class="row"><span class="muted">{t.outputsPanel.collectedIn}</span><span>{eur(roundedTotal)}</span></div>
           <div class="row"><span class="muted">{t.outputsPanel.fuelOut(fuel?.label ?? "")}</span><span class="neg">−{eur(fuelCost)}</span></div>
-          {#each fixedCosts as c (c.name)}
+          {#each fixedCosts as c, ci (ci)}
             <div class="row"><span class="muted">{c.name}</span><span class="neg">−{eur(c.amount)}</span></div>
           {/each}
           {#each result.accounting.partnerCuts as p, i (`${p.name}-${p.client ?? ""}-${i}`)}

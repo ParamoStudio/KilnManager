@@ -15,6 +15,41 @@ nothing until someone redeploys it.
 
 ---
 
+## v1.1.2 — 11 August 2026
+
+### Fixed: closing a firing produced no invoices and no workbook
+
+A regression I introduced in 1.1.0. Closing a firing appeared to work — it left
+the current list, it landed in the log, it showed up in Expenses — but the
+outputs panel came up empty and **nothing was written to disk**: no client
+invoices, and the month's `.xlsx` never appeared.
+
+The cause was the translation of the built-in cost lines, of all things. The
+backfill that guarantees every kiln has "Maintenance reserve" and "Consumables"
+compared against the **English** names only. Once those lines were renamed to
+the active language, every launch added the English pair back, the translation
+pass renamed those to Spanish too, and the kiln ended up with two cost lines
+called exactly the same thing. The outputs panel lists them in a keyed loop, a
+duplicate key is a hard error in Svelte, so the panel threw while rendering —
+and the export that runs when it opens never got to run.
+
+Two launches were needed to trigger it, which is why it appeared out of nowhere
+a while after installing.
+
+Fixed at the cause: the backfill recognises a built-in line in any language it
+has ever been shown in, and repairs a kiln that already has duplicates (keeping
+the one you put a number on). And fixed for good measure where it hurt: those
+lists no longer key on a name, because a cost line's name is free text and two
+of them being the same should never be able to take a panel down.
+
+Verified against the real vault this was reported from: the panel renders, and a
+close writes all three invoices plus the workbook.
+
+**Nothing was lost.** The duplication only ever existed in memory — no kiln file
+was corrupted, and the firings themselves saved correctly throughout. Close the
+affected firings' invoices are simply missing; reopen and re-close a firing (or
+just open it from the log) to produce them.
+
 ## v1.1.1 — 31 July 2026
 
 ### Rounding is gentler: 20 cents, not 50
