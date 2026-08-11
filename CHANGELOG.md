@@ -46,9 +46,11 @@ Verified against the real vault this was reported from: the panel renders, and a
 close writes all three invoices plus the workbook.
 
 **Nothing was lost.** The duplication only ever existed in memory — no kiln file
-was corrupted, and the firings themselves saved correctly throughout. Close the
-affected firings' invoices are simply missing; reopen and re-close a firing (or
-just open it from the log) to produce them.
+was corrupted, and the firings themselves saved correctly throughout. Only the
+invoices are missing: open an affected firing from the log and its invoices and
+figures are written then and there.
+
+---
 
 ## v1.1.1 — 31 July 2026
 
