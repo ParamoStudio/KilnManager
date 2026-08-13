@@ -12,6 +12,7 @@ import { firings, coreFiringFrom, type FiringRecord } from "./firing.svelte";
 import { kilnStore } from "./kilns.svelte";
 import { settings, chargedTotal } from "./settings.svelte";
 import { isPaid, paidAt } from "./payments.svelte";
+import { localeTag } from "./i18n.svelte";
 
 const round = (n: number): number => Math.round(n * 100) / 100;
 
@@ -72,8 +73,10 @@ const monthKey = (ts: number): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 const monthLabel = (ts: number): string => {
-  const s = new Date(ts).toLocaleDateString("es-ES", { month: "long", year: "numeric" });
-  return s.charAt(0).toUpperCase() + s.slice(1); // "Julio 2026"
+  // Follows the app's language, like every other date. It was pinned to Spanish,
+  // which would have shipped a Spanish month name inside an English report.
+  const s = new Date(ts).toLocaleDateString(localeTag(), { month: "long", year: "numeric" });
+  return s.charAt(0).toUpperCase() + s.slice(1); // "August 2026" / "Agosto de 2026"
 };
 
 /** Resolve this firing's partner refs into cuts, keeping partner + tier identity. */

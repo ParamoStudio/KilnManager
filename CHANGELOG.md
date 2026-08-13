@@ -15,6 +15,50 @@ nothing until someone redeploys it.
 
 ---
 
+## v1.2.0 — 11 August 2026
+
+### A message you can send to whoever collects the money
+
+When you can't be at the studio, a partner charges the students for you — and
+until now they were collecting blind. Two copy-to-clipboard reports, in plain
+text, ready to paste into WhatsApp.
+
+**Per firing**, in the Partners view: the kiln, the firing type, its full-kiln
+price, the date, the total to collect, and what each named client owes — rounded,
+and never including your own shelves, which are nobody's to collect. It ends with
+what you'll owe the partner from that firing.
+
+```
+Horneada · Tecnopiro 75 Gas
+Bizcocho — 65,00 € el horno completo
+13 de julio de 2026
+
+A cobrar: 31,80 €
+- Esther Alumna: 10,60 €
+- Ro: 10,60 €
+- Marta Alumna: 10,60 €
+
+Os deberé 6,92 € de esta horneada.
+```
+
+The message is shown on screen before you copy it, so you can read exactly what
+you're about to send.
+
+**Per month**, next to *Reveal in Finder*: the month's gross, what's owed to each
+partner, and the net you're reporting.
+
+**Only for a month that's over.** A running total is a promise you haven't
+finished making, and a partner reading it as final would be misled — so the
+button stays disabled on the current month and says why.
+
+Both are plain text with no formatting characters, since WhatsApp would
+reinterpret some of them and anywhere else they'd just show as punctuation.
+
+### Also
+
+- The month name follows the app's language. It was pinned to Spanish, which
+  would have put a Spanish month inside an English report.
+
 ## v1.1.4 — 11 August 2026
 
 ### Partners take a share of what clients pay, not of the firing's profit

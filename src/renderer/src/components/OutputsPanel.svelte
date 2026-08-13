@@ -14,6 +14,7 @@
   import { brand } from "../lib/brand.svelte";
   import { LAB } from "../lib/lab";
   import { outputs, isDesktop } from "../lib/storage";
+  import { firingReport, copyText } from "../lib/reports";
 
   let { id, onclose }: { id: string; onclose: () => void } = $props();
 
@@ -143,6 +144,46 @@
     const id = rec.id;
     onclose();
     await purgeFiring(id);
+  }
+
+  // ---- A message for whoever collects the money ----
+  // Partners often charge the students when the owner isn't at the studio, so
+  // they need to know what to collect, from whom, and what they're owed for it.
+  let shareNote = $state("");
+  function firingMessage(): string {
+    if (!rec || !kiln || !result || !service) return "";
+    const cuts = result.accounting.partnerCuts.filter((p) => p.amount > 0);
+    return firingReport(
+      {
+        kilnName: kiln.name,
+        serviceName: service.name,
+        firingPrice: eur(result.serviceRevenue),
+        date: new Date(rec.closedAt ?? rec.createdAt).toLocaleDateString(localeTag(), {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }),
+        toCollect: eur(roundedTotal),
+        // Charged clients only, at the amount they actually pay. The studio's
+        // own shelves are nobody's to collect.
+        clients: chargedClients.map((c) => ({ name: c.contactName, amount: eur(chargedTotal(c.price)) })),
+        partners: cuts.map((p) => ({ name: p.client ? `${p.name} · ${p.client}` : p.name, amount: eur(p.amount) })),
+        partnersTotal: eur(cuts.reduce((a, p) => a + p.amount, 0)),
+      },
+      {
+        firing: t.outputsPanel.repFiring,
+        fullKiln: t.outputsPanel.repFullKiln,
+        toCollect: t.outputsPanel.repToCollect,
+        nothingToCollect: t.outputsPanel.repNothingToCollect,
+        owePartner: t.outputsPanel.repOwePartner,
+        owePartners: t.outputsPanel.repOwePartners,
+      },
+    );
+  }
+  async function shareFiring(): Promise<void> {
+    const ok = await copyText(firingMessage());
+    shareNote = ok ? t.outputsPanel.shareCopied : t.outputsPanel.shareFailed;
+    setTimeout(() => (shareNote = ""), 3000);
   }
 
   // ---- Lab: the whole firing leaves as one zip ----
@@ -350,6 +391,11 @@
               </div>
             {/each}
             <div class="prow total"><span>{t.outputsPanel.toPartners}</span><span></span><span class="r">{eur(result.accounting.partnerCuts.reduce((a, p) => a + p.amount, 0))}</span></div>
+          </div>
+          <div class="shareblock">
+            <button class="sharebtn" onclick={shareFiring}>{t.outputsPanel.shareWithPartners}</button>
+            {#if shareNote}<span class="faint snote">{shareNote}</span>{/if}
+            <pre class="prev">{firingMessage()}</pre>
           </div>
           {#if result.accounting.partnerBase <= 0}
             <!-- Only when there is genuinely nothing to share. Keyed off the
@@ -618,6 +664,43 @@
     flex-direction: column;
   }
   .crow,
+  .shareblock {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .sharebtn {
+    align-self: flex-start;
+    background: none;
+    border: 1px solid color-mix(in srgb, var(--amber) 50%, var(--line));
+    border-radius: 999px;
+    padding: 9px 16px;
+    color: var(--amber);
+    font-size: 13px;
+  }
+  .sharebtn:hover {
+    border-color: var(--amber);
+  }
+  .snote {
+    font-size: 12px;
+  }
+  /* Shown so the studio can read exactly what it's about to send. */
+  .prev {
+    margin: 0;
+    padding: 12px 14px;
+    background: var(--panel-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: var(--text-dim);
+    white-space: pre-wrap;
+    max-width: 60ch;
+  }
   .pnote {
     font-size: 12.5px;
     line-height: 1.6;

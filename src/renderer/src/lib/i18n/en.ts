@@ -399,6 +399,13 @@ export const en = {
   // from before the English-baseline decision). English strings below are the
   // correct baseline this route should be rewritten to use.
   expenses: {
+    shareMonth: "Copy month report",
+    shareMonthOpen: "This month isn't over yet",
+    repSummary: (m: string) => `Summary for ${m}`,
+    repGross: "Gross this month:",
+    repToPartners: "To partners:",
+    repNet: "Net reported:",
+    repNoPartners: "No partners owed this month.",
     title: "Expenses",
     subtitle:
       "Costs for each kiln, month by month — read from your closed firings. Every month is saved as its own <code>.xlsx</code> in the <code>Expenses Log</code> folder, updated on every firing.",
@@ -423,6 +430,15 @@ export const en = {
 
   // ---- OutputsPanel.svelte ------------------------------------------------------
   outputsPanel: {
+    shareWithPartners: "Copy message for partners",
+    shareCopied: "Copied \u2014 paste it into WhatsApp",
+    shareFailed: "Couldn't copy \u2014 select the text by hand.",
+    repFiring: "Firing",
+    repFullKiln: "for the full kiln",
+    repToCollect: "To collect:",
+    repNothingToCollect: "Nothing to collect \u2014 this firing was all my own work.",
+    repOwePartner: (a: string) => `I'll owe you ${a} from this firing.`,
+    repOwePartners: (a: string) => `I'll owe ${a} from this firing:`,
     noProfitNoCut: "Nothing was charged on this firing \u2014 it was all your own work, which occupies the kiln without paying for it. A partner takes a share of what clients pay, so there is nothing to share.",
     editFiring: "Edit this firing",
     editFiringHint: "Reopens it so you can change it, and clears its invoices and figures until you close it again.",

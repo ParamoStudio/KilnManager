@@ -371,6 +371,13 @@ export const es: Dictionary = {
   },
 
   expenses: {
+    shareMonth: "Copiar reporte del mes",
+    shareMonthOpen: "Este mes a\u00fan no ha terminado",
+    repSummary: (m: string) => `Resumen de ${m}`,
+    repGross: "Bruto del mes:",
+    repToPartners: "A socios:",
+    repNet: "Neto reportado:",
+    repNoPartners: "Sin socios este mes.",
     title: "Gastos",
     subtitle:
       "Los costes de cada horno, mes a mes — leídos de tus horneadas cerradas. Cada mes se guarda como su propio <code>.xlsx</code> en la carpeta <code>Expenses Log</code>, actualizándose en cada horneada.",
@@ -394,6 +401,15 @@ export const es: Dictionary = {
   },
 
   outputsPanel: {
+    shareWithPartners: "Copiar mensaje para socios",
+    shareCopied: "Copiado \u2014 p\u00e9galo en WhatsApp",
+    shareFailed: "No se pudo copiar \u2014 selecciona el texto a mano.",
+    repFiring: "Horneada",
+    repFullKiln: "el horno completo",
+    repToCollect: "A cobrar:",
+    repNothingToCollect: "Nada que cobrar \u2014 esta horneada era toda obra m\u00eda.",
+    repOwePartner: (a: string) => `Os deber\u00e9 ${a} de esta horneada.`,
+    repOwePartners: (a: string) => `Os deber\u00e9 ${a} de esta horneada:`,
     noProfitNoCut: "En esta horneada no se cobr\u00f3 nada \u2014 era toda obra tuya, que ocupa el horno sin pagar. Un socio se lleva parte de lo que pagan los clientes, as\u00ed que no hay nada que repartir.",
     editFiring: "Editar esta horneada",
     editFiringHint: "La reabre para que puedas cambiarla, y retira sus facturas y n\u00fameros hasta que la cierres de nuevo.",

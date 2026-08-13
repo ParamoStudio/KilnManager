@@ -4,6 +4,7 @@
   import { eur, fmtDay } from "../lib/format";
   import { t, localeTag } from "../lib/i18n.svelte";
   import { outputs, isDesktop } from "../lib/storage";
+  import { monthReport, copyText } from "../lib/reports";
 
   const months = $derived(monthlyData());
   let selKey = $state<string | null>(null);
@@ -31,6 +32,42 @@
     syncWorkbooks();
   }
 
+  // ---- Month settlement note, for the partners who collect ----
+  // Only for a month that's over. A running total would be a promise the studio
+  // hasn't finished making, and a partner reading it as final would be misled.
+  const currentKey = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  })();
+  const monthIsOver = $derived(!!month && month.key < currentKey);
+
+  let shareNote = $state("");
+  function monthMessage(): string {
+    if (!month) return "";
+    const owed = month.partners.filter((p) => p.total > 0);
+    return monthReport(
+      {
+        month: month.label,
+        gross: eur(month.grossProfit),
+        net: eur(month.net),
+        partners: owed.map((p) => ({ name: p.name, amount: eur(p.total) })),
+        partnersTotal: eur(owed.reduce((a, p) => a + p.total, 0)),
+      },
+      {
+        summary: t.expenses.repSummary,
+        gross: t.expenses.repGross,
+        toPartners: t.expenses.repToPartners,
+        net: t.expenses.repNet,
+        noPartners: t.expenses.repNoPartners,
+      },
+    );
+  }
+  async function shareMonth(): Promise<void> {
+    const ok = await copyText(monthMessage());
+    shareNote = ok ? t.outputsPanel.shareCopied : t.outputsPanel.shareFailed;
+    setTimeout(() => (shareNote = ""), 3000);
+  }
+
   async function reveal(): Promise<void> {
     if (!isDesktop) return;
     syncWorkbooks();
@@ -44,7 +81,18 @@
       <span class="screen-title">{t.expenses.title}</span>
       <p class="faint sub">{@html t.expenses.subtitle}</p>
     </div>
-    <button class="xbtn" onclick={reveal} disabled={!isDesktop || months.length === 0}>{t.expenses.revealInFinder}</button>
+    <div class="headbtns">
+      {#if shareNote}<span class="faint snote">{shareNote}</span>{/if}
+      <button
+        class="xbtn"
+        onclick={shareMonth}
+        disabled={!monthIsOver}
+        title={monthIsOver ? "" : t.expenses.shareMonthOpen}
+      >
+        {t.expenses.shareMonth}
+      </button>
+      <button class="xbtn" onclick={reveal} disabled={!isDesktop || months.length === 0}>{t.expenses.revealInFinder}</button>
+    </div>
   </div>
 
   {#if months.length === 0}
@@ -189,6 +237,17 @@
     background: var(--panel-2);
     border-radius: 5px;
     padding: 1px 5px;
+  }
+  .headbtns {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .snote {
+    font-size: 12px;
+  }
+  .xbtn:disabled {
+    opacity: 0.4;
   }
   .xbtn {
     background: var(--panel-2);
