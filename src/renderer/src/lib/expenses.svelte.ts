@@ -7,7 +7,7 @@
  * with the firing breakdowns. Partner-payment status is layered in from the
  * payments store (default: pending).
  */
-import { computeFiring } from "@core";
+import { computeFiring, partnerCut } from "@core";
 import { firings, coreFiringFrom, type FiringRecord } from "./firing.svelte";
 import { kilnStore } from "./kilns.svelte";
 import { settings, chargedTotal } from "./settings.svelte";
@@ -86,13 +86,13 @@ function partnerCutsFor(rec: FiringRecord, grossProfit: number): PartnerCut[] {
       const p = settings.partners.find((x) => x.id === a.partnerId);
       const t = p?.tiers.find((x) => x.id === a.tierId);
       if (p && t) {
-        out.push({ partnerId: p.id, tierId: t.id, partner: p.name, tier: t.name, amount: round(grossProfit * t.pct) });
+        out.push({ partnerId: p.id, tierId: t.id, partner: p.name, tier: t.name, amount: partnerCut(grossProfit, t.pct) });
         continue;
       }
     }
     if (typeof a.pct === "number" && typeof a.name === "string") {
       // Legacy shape without ids: key by name.
-      out.push({ partnerId: a.name, tierId: "", partner: a.name, tier: "", amount: round(grossProfit * a.pct) });
+      out.push({ partnerId: a.name, tierId: "", partner: a.name, tier: "", amount: partnerCut(grossProfit, a.pct) });
     }
   }
   return out;

@@ -15,6 +15,35 @@ nothing until someone redeploys it.
 
 ---
 
+## v1.1.3 — 11 August 2026
+
+### Fixed: a partner took a share of a firing that lost money
+
+Load a kiln mostly with your own work and the firing runs at a loss by design —
+your own pieces occupy it without paying for it. On a firing like that, with one
+client paying 6,50 € against 21,75 € of kiln costs, the app gave a 30% partner a
+cut of **−4,57 €**.
+
+Negative. So the app was claiming the partner *shares the loss* and owes the
+studio money, which quietly made the loss look 4,57 € smaller than it was. Nobody
+shook hands on that: a partner agreement is a share of the profit, not a
+co-signature on the losses.
+
+A partner's cut can no longer go below zero. If a firing makes nothing, the
+partner takes nothing, and the loss is reported at full size. The Partners view
+says why it's zero rather than leaving a bare 0,00 € looking like a bug, and a
+partner earning nothing no longer appears in your outgoings as "−0,00 €".
+
+This rule already existed for **per-client** partner cuts — added in 1.1.0 — and I
+failed to apply it to whole-firing cuts at the same time. Both now go through one
+function, so it can't hold in one place and not the other again.
+
+The monthly Expenses viewer and the workbook used their own copy of the same
+calculation, so they had the same fault and are fixed with it: a loss-making
+month no longer shows a partner owing you money.
+
+---
+
 ## v1.1.2 — 11 August 2026
 
 ### Fixed: closing a firing produced no invoices and no workbook

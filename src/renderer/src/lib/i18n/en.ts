@@ -423,6 +423,7 @@ export const en = {
 
   // ---- OutputsPanel.svelte ------------------------------------------------------
   outputsPanel: {
+    noProfitNoCut: "This firing made no profit \u2014 most of the kiln was your own work, which occupies it without paying for it. A partner takes a share of profit, never of a loss, so nothing is owed.",
     editFiring: "Edit this firing",
     editFiringHint: "Reopens it so you can change it, and clears its invoices and figures until you close it again.",
     deleteFiring: "Delete this firing",

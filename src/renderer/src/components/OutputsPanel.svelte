@@ -351,6 +351,10 @@
             {/each}
             <div class="prow total"><span>{t.outputsPanel.toPartners}</span><span></span><span class="r">{eur(result.accounting.partnerCuts.reduce((a, p) => a + p.amount, 0))}</span></div>
           </div>
+          {#if result.accounting.grossProfit <= 0}
+            <!-- Otherwise a row of 0,00 € reads like a broken calculation. -->
+            <p class="faint pnote">{t.outputsPanel.noProfitNoCut}</p>
+          {/if}
         {:else}
           <p class="faint empty">{t.outputsPanel.noPartnersOnFiring}</p>
         {/if}
@@ -362,7 +366,10 @@
           {#each fixedCosts as c, ci (ci)}
             <div class="row"><span class="muted">{c.name}</span><span class="neg">−{eur(c.amount)}</span></div>
           {/each}
-          {#each result.accounting.partnerCuts as p, i (`${p.name}-${p.client ?? ""}-${i}`)}
+          <!-- A partner who earns nothing on this firing isn't money going out,
+               so it doesn't belong in a list of outgoings as "−0,00 €". The
+               Partners view says why they got nothing. -->
+          {#each result.accounting.partnerCuts.filter((p) => p.amount > 0) as p, i (`${p.name}-${p.client ?? ""}-${i}`)}
             <div class="row">
               <span class="muted">{t.outputsPanel.partnerOut(p.client ? `${p.name} · ${p.client}` : p.name)}</span>
               <span class="neg">−{eur(p.amount)}</span>
@@ -608,6 +615,12 @@
     flex-direction: column;
   }
   .crow,
+  .pnote {
+    font-size: 12.5px;
+    line-height: 1.6;
+    margin: 12px 0 0;
+    max-width: 52ch;
+  }
   .prow {
     display: grid;
     align-items: center;

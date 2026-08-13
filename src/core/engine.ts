@@ -118,6 +118,26 @@ export function computeFiring(firing: Firing): FiringResult {
   };
 }
 
+/**
+ * What a partner takes from a given profit.
+ *
+ * **Never below zero.** A partner agreement is a share of the profit, not a
+ * co-signature on the losses: if a firing makes nothing, the partner takes
+ * nothing. A negative cut would mean the partner owing the studio money, which
+ * is not what anyone shook hands on — and it quietly flattered the books, since
+ * subtracting a negative made a loss look smaller than it was.
+ *
+ * This matters most on a firing the studio loaded mostly for itself: own work
+ * occupies the kiln without paying for it, so the firing runs at a loss by
+ * design. Nobody should be earning — or owing — off that.
+ *
+ * One function for both kinds of cut (whole-firing and per-client) so the rule
+ * can't hold in one place and not the other, which is exactly what happened.
+ */
+export function partnerCut(profit: number, pct: number): number {
+  return roundCents(Math.max(0, profit) * pct);
+}
+
 export function computeAccounting(
   revenue: number,
   firing: Firing,
@@ -130,7 +150,7 @@ export function computeAccounting(
   const partnerCuts: AccountingResult["partnerCuts"] = firing.partners.map((p) => ({
     name: p.name,
     pct: p.pct,
-    amount: roundCents(grossProfit * p.pct),
+    amount: partnerCut(grossProfit, p.pct),
   }));
 
   // A per-client partner takes their cut of the profit *that client* produced,
@@ -140,14 +160,10 @@ export function computeAccounting(
   // whoever paid most, which isn't what "fair share of the kiln" means here.
   for (const c of clients) {
     for (const p of firing.clientPartners?.[c.contactName] ?? []) {
-      // Never below zero. A client can run at a loss (the studio's own work
-      // occupies the kiln without paying for it), and a negative cut would
-      // mean the partner paying the studio — nobody agreed to that.
-      const clientProfit = Math.max(0, c.price - kilnCosts * c.sharePct);
       partnerCuts.push({
         name: p.name,
         pct: p.pct,
-        amount: roundCents(clientProfit * p.pct),
+        amount: partnerCut(c.price - kilnCosts * c.sharePct, p.pct),
         client: c.contactName,
       });
     }

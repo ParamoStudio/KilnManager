@@ -394,6 +394,7 @@ export const es: Dictionary = {
   },
 
   outputsPanel: {
+    noProfitNoCut: "Esta horneada no dio beneficio \u2014 la mayor parte del horno era obra tuya, que ocupa sin pagar. Un socio se lleva parte del beneficio, nunca de la p\u00e9rdida, as\u00ed que no se debe nada.",
     editFiring: "Editar esta horneada",
     editFiringHint: "La reabre para que puedas cambiarla, y retira sus facturas y n\u00fameros hasta que la cierres de nuevo.",
     deleteFiring: "Eliminar esta horneada",
