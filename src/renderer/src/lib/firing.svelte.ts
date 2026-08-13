@@ -451,6 +451,16 @@ export interface FiringRecord {
   closedAt?: number;
   planner: PlannerState;
   clientNotes: Record<string, string>;
+  /**
+   * Who has actually paid, keyed by client name → the ISO date they paid.
+   * Absent means outstanding. Lives on the firing rather than in a separate
+   * store because that's what it is — this firing's debts — so it goes when the
+   * firing goes, and survives reopening it.
+   *
+   * Deliberately inert: it changes no total, no workbook and no export. It
+   * exists so the studio can see at a glance who still owes for what.
+   */
+  clientsPaid?: Record<string, string>;
   /** Where the firing came from — set when imported from the phone loader. */
   source?: "phone";
   /** The phone's stable id for this firing, so re-imports of an edited version
@@ -725,6 +735,37 @@ async function refreshCostsWorkbook(): Promise<void> {
   } catch {
     /* web build, or no vault — there is no workbook to keep in step */
   }
+}
+
+// ---- Who has paid (per firing, purely for the studio's own tracking) ----
+
+/** The clients who owe money on a firing: everyone but the studio itself. */
+export function payingClients(rec: FiringRecord): string[] {
+  const out: string[] = [];
+  for (const l of rec.planner.levels) {
+    for (const seg of l.segments) {
+      if (seg && seg.contactName !== MYSELF && !out.includes(seg.contactName)) out.push(seg.contactName);
+    }
+  }
+  return out;
+}
+
+/** ISO date this client paid, or null while it's outstanding. */
+export function clientPaidAt(rec: FiringRecord, name: string): string | null {
+  return rec.clientsPaid?.[name] ?? null;
+}
+
+export function setClientPaid(rec: FiringRecord, name: string, value: boolean): void {
+  if (!rec.clientsPaid) rec.clientsPaid = {};
+  if (value) rec.clientsPaid[name] = new Date().toISOString().slice(0, 10);
+  else delete rec.clientsPaid[name];
+  saveApp();
+}
+
+/** How many clients still owe. Zero on a firing that was all the studio's own
+ * work — there was never anything to collect. */
+export function unpaidCount(rec: FiringRecord): number {
+  return payingClients(rec).filter((n) => !clientPaidAt(rec, n)).length;
 }
 
 export function setActiveTitle(title: string): void {

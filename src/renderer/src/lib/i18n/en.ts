@@ -167,6 +167,7 @@ export const en = {
 
   // ---- Home.svelte ------------------------------------------------------------
   home: {
+    someoneOwes: (n: number) => `${n} ${n === 1 ? "client" : "clients"} still to pay`,
     currentFirings: "Current firings",
     noFiringsInProgress: "No firings in progress. Start one →",
     pending: "pending",
@@ -430,6 +431,14 @@ export const en = {
 
   // ---- OutputsPanel.svelte ------------------------------------------------------
   outputsPanel: {
+    navCollect: "Payments",
+    collectTitle: "Who has paid",
+    collectHint: "Just for you \u2014 ticking someone off changes no total, no workbook and no export. A firing with anyone still outstanding is marked in the firing log.",
+    collectNobody: "Nothing to collect on this firing \u2014 it was all your own work.",
+    paidOn: (d: string) => `paid ${d}`,
+    outstanding: "outstanding",
+    stillOwed: "Still owed",
+    allPaid: "All paid",
     shareWithPartners: "Copy message for partners",
     shareCopied: "Copied \u2014 paste it into WhatsApp",
     shareFailed: "Couldn't copy \u2014 select the text by hand.",

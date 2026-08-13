@@ -10,6 +10,7 @@
     canStartFiring,
     openFiring,
     deleteFiring,
+    unpaidCount,
     type FiringRecord,
   } from "../lib/firing.svelte";
   import { kilnStore } from "../lib/kilns.svelte";
@@ -189,6 +190,11 @@
           {@const s = summary(rec)}
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <div class="log-row" role="button" tabindex="0" onclick={() => (app.outputsFor = rec.id)}>
+            {#if unpaidCount(rec) > 0}
+              <!-- Money still outstanding on this firing. Nothing at all when
+                   everyone has paid — a badge that's always there says nothing. -->
+              <span class="owed" title={t.home.someoneOwes(unpaidCount(rec))}>{unpaidCount(rec)}</span>
+            {/if}
             <KilnThumb shape={k.shape} size={30} />
             <div class="info">
               <div class="kiln">{rec.title || k.name}</div>
@@ -587,6 +593,7 @@
     font-variant-numeric: tabular-nums;
   }
   .log-row {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 11px;
@@ -595,6 +602,22 @@
     border-radius: 10px;
     padding: 10px 12px;
     cursor: pointer;
+  }
+  .owed {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 17px;
+    height: 17px;
+    border-radius: 999px;
+    background: var(--amber);
+    color: #1a1200;
+    font-size: 10.5px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+    padding: 0 5px;
+    box-shadow: 0 0 0 2px var(--bg);
   }
   .log-row:hover {
     border-color: var(--text-faint);

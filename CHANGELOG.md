@@ -15,6 +15,28 @@ nothing until someone redeploys it.
 
 ---
 
+## v1.2.1 — 11 August 2026
+
+### Keep track of who has actually paid
+
+A **Payments** button under *Send Tickets* opens a list of everyone who owes on
+that firing, each with a tick. Tick someone off when they pay and it records the
+date; the running "still owed" total drops as you go.
+
+A firing with anyone outstanding gets a small amber count on its card in the
+firing log. When everyone has paid it disappears — a badge that's always there
+tells you nothing.
+
+Your own shelves never appear in the list and never trigger the badge: there was
+nothing to collect from yourself. A firing loaded entirely with your own work
+shows no badge at all.
+
+**It changes nothing else.** No total, no workbook, no invoice, no export moves
+by a cent — verified: the net on a firing reads the same before and after marking
+everyone paid. It's a note to yourself about money you're waiting on, kept with
+the firing it belongs to, so deleting the firing takes it along and correcting one
+keeps it.
+
 ## v1.2.0 — 11 August 2026
 
 ### A message you can send to whoever collects the money

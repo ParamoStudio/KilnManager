@@ -150,6 +150,7 @@ export const es: Dictionary = {
   },
 
   home: {
+    someoneOwes: (n: number) => `${n} ${n === 1 ? "cliente" : "clientes"} sin pagar`,
     currentFirings: "Horneadas en curso",
     noFiringsInProgress: "No hay horneadas en curso. Empieza una →",
     pending: "pendiente",
@@ -401,6 +402,14 @@ export const es: Dictionary = {
   },
 
   outputsPanel: {
+    navCollect: "Cobros",
+    collectTitle: "Qui\u00e9n ha pagado",
+    collectHint: "Solo para ti \u2014 marcar a alguien no cambia ning\u00fan total, ni el Excel, ni las facturas. Una horneada con alguien pendiente queda se\u00f1alada en el registro de horneadas.",
+    collectNobody: "Nada que cobrar en esta horneada \u2014 era toda obra tuya.",
+    paidOn: (d: string) => `pag\u00f3 el ${d}`,
+    outstanding: "pendiente",
+    stillOwed: "Pendiente de cobro",
+    allPaid: "Todo cobrado",
     shareWithPartners: "Copiar mensaje para socios",
     shareCopied: "Copiado \u2014 p\u00e9galo en WhatsApp",
     shareFailed: "No se pudo copiar \u2014 selecciona el texto a mano.",

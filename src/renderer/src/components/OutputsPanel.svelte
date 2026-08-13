@@ -2,7 +2,16 @@
   import { onMount } from "svelte";
   import type { KilnModifier } from "@core";
   import { computeFiring } from "@core";
-  import { app, firings, coreFiringFrom, reopenFiring, purgeFiring } from "../lib/firing.svelte";
+  import {
+    app,
+    firings,
+    coreFiringFrom,
+    reopenFiring,
+    purgeFiring,
+    clientPaidAt,
+    setClientPaid,
+    unpaidCount,
+  } from "../lib/firing.svelte";
   import { kilnStore } from "../lib/kilns.svelte";
   import { settings, fuelDefFor, fuelCostFor,
     fuelUseFor, effectiveTicketMessage, chargedTotal, invoiceClientName } from "../lib/settings.svelte";
@@ -18,7 +27,7 @@
 
   let { id, onclose }: { id: string; onclose: () => void } = $props();
 
-  type View = "firing" | "clients" | "partners" | "personal" | "ticket";
+  type View = "firing" | "clients" | "partners" | "personal" | "ticket" | "collect";
   let view = $state<View>("firing");
   let selClient = $state<string | null>(null);
   let copied = $state(false);
@@ -145,6 +154,15 @@
     onclose();
     await purgeFiring(id);
   }
+
+  // ---- Who has paid ----
+  // Inert on purpose: this changes no total, no workbook, no export. It exists
+  // so the studio can see at a glance who still owes for a given firing.
+  const outstandingTotal = $derived(
+    rec ? chargedClients.reduce((a, c) => a + (clientPaidAt(rec, c.contactName) ? 0 : chargedTotal(c.price)), 0) : 0,
+  );
+  const fmtPaidDate = (iso: string): string =>
+    iso ? new Date(iso + "T12:00:00").toLocaleDateString(localeTag(), { day: "numeric", month: "short" }) : "";
 
   // ---- A message for whoever collects the money ----
   // Partners often charge the students when the owner isn't at the studio, so
@@ -303,6 +321,10 @@
         {/each}
       </nav>
       <button class="sendbtn" class:active={view === "ticket"} onclick={() => (view = "ticket")}>{t.outputsPanel.sendTickets}</button>
+      <button class="collectbtn" class:active={view === "collect"} onclick={() => (view = "collect")}>
+        {t.outputsPanel.navCollect}
+        {#if rec && unpaidCount(rec) > 0}<span class="cbadge">{unpaidCount(rec)}</span>{/if}
+      </button>
 
       <!-- Only for a firing that's already closed, i.e. opened from the log.
            A firing still in progress is edited directly and deleted from Home. -->
@@ -379,6 +401,35 @@
           {/each}
           <div class="crow total"><span>{t.outputsPanel.totalCollected}</span><span class="r"></span><span class="r"></span><span class="r">{eur(roundedTotal)}</span></div>
         </div>
+      {:else if view === "collect"}
+        <h2>{t.outputsPanel.collectTitle}</h2>
+        {#if chargedClients.length === 0}
+          <p class="faint empty">{t.outputsPanel.collectNobody}</p>
+        {:else}
+          <p class="faint chint">{t.outputsPanel.collectHint}</p>
+          <div class="ctable">
+            {#each chargedClients as c (c.contactName)}
+              {@const paidOn = rec ? clientPaidAt(rec, c.contactName) : null}
+              <label class="crow" class:paid={!!paidOn}>
+                <input
+                  type="checkbox"
+                  checked={!!paidOn}
+                  onchange={(e) => rec && setClientPaid(rec, c.contactName, e.currentTarget.checked)}
+                />
+                <span class="ctgl" aria-hidden="true"></span>
+                <span class="cname">{c.contactName}</span>
+                <span class="cwhen faint">{paidOn ? t.outputsPanel.paidOn(fmtPaidDate(paidOn)) : t.outputsPanel.outstanding}</span>
+                <span class="camount">{eur(chargedTotal(c.price))}</span>
+              </label>
+            {/each}
+            <div class="crow total">
+              <span></span><span></span>
+              <span class="cname">{rec && unpaidCount(rec) === 0 ? t.outputsPanel.allPaid : t.outputsPanel.stillOwed}</span>
+              <span></span>
+              <span class="camount">{eur(outstandingTotal)}</span>
+            </div>
+          </div>
+        {/if}
       {:else if view === "partners"}
         <h2>{t.outputsPanel.partnersTitle}</h2>
         {#if result.accounting.partnerCuts.length}
@@ -664,6 +715,111 @@
     flex-direction: column;
   }
   .crow,
+  /* Sits under Send Tickets, same shape, amber — money still owed is the one
+     thing in here the studio needs nudging about. */
+  .collectbtn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+    background: none;
+    border: 1px solid color-mix(in srgb, var(--amber) 50%, var(--line));
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: var(--amber);
+    font-size: 13px;
+  }
+  .collectbtn:hover,
+  .collectbtn.active {
+    border-color: var(--amber);
+    background: color-mix(in srgb, var(--amber) 10%, transparent);
+  }
+  .cbadge {
+    min-width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: var(--amber);
+    color: #1a1200;
+    font-size: 11px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
+    padding: 0 5px;
+  }
+  .chint {
+    font-size: 12.5px;
+    margin: 0 0 14px;
+    max-width: 56ch;
+  }
+  .ctable {
+    display: flex;
+    flex-direction: column;
+  }
+  .crow {
+    display: grid;
+    grid-template-columns: 17px 1fr auto 90px;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 2px;
+    border-bottom: 1px solid var(--line-soft);
+    cursor: pointer;
+  }
+  .crow.total {
+    grid-template-columns: 0 0 1fr 90px;
+    border-bottom: none;
+    padding-top: 14px;
+    font-weight: 600;
+    cursor: default;
+  }
+  .crow input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .ctgl {
+    width: 17px;
+    height: 17px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--panel-2);
+    position: relative;
+  }
+  .crow input:checked + .ctgl {
+    border-color: var(--green, #7fdca4);
+    background: color-mix(in srgb, var(--green, #7fdca4) 18%, var(--panel-2));
+  }
+  .crow input:checked + .ctgl::after {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 6px;
+    height: 10px;
+    border-right: 2px solid var(--green, #7fdca4);
+    border-bottom: 2px solid var(--green, #7fdca4);
+    transform: rotate(40deg);
+  }
+  .crow input:focus-visible + .ctgl {
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+  }
+  .cname {
+    font-size: 13.5px;
+  }
+  .crow.paid .cname {
+    color: var(--text-dim);
+  }
+  .cwhen {
+    font-size: 12px;
+  }
+  .camount {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-size: 13.5px;
+  }
   .shareblock {
     display: flex;
     flex-direction: column;
