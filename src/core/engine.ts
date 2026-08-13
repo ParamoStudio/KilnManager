@@ -7,7 +7,7 @@ import type {
   AccountingResult,
 } from "./types.js";
 import { footprintAreaCm2, usableVolumeLiters, consumedHeightCm } from "./geometry.js";
-import { splitAmount, roundCents } from "./rounding.js";
+import { splitAmount, roundCents, roundUpTo } from "./rounding.js";
 
 /** Raw occupied volume of one allocation, in litres. */
 export function allocationLiters(
@@ -103,8 +103,15 @@ export function computeFiring(firing: Firing): FiringResult {
     c.price = roundCents((shares[i]! + cFixed) * (1 + cPct / 100));
   });
 
-  // 4. Accounting is based on what is actually collected (after client mods).
-  const collectedRevenue = roundCents(clients.reduce((a, c) => a + c.price, 0));
+  // 4. The books record what actually came in — each client's total as it is
+  //    invoiced, rounded. `c.price` stays the exact fair share (the app shows it
+  //    alongside), but the ledger must add up to real money: the monthly views
+  //    already used the invoiced figure, and a partner's cut is taken from it,
+  //    so the accounting using the exact one made the rows disagree by the
+  //    rounding difference.
+  const collectedRevenue = roundCents(
+    clients.reduce((a, c) => a + (c.charged ? roundUpTo(c.price, firing.invoiceStep ?? 0) : 0), 0),
+  );
   const accounting = computeAccounting(collectedRevenue, firing, clients);
 
   return {
@@ -119,51 +126,71 @@ export function computeFiring(firing: Firing): FiringResult {
 }
 
 /**
- * What a partner takes from a given profit.
+ * What a partner takes from a given base.
  *
- * **Never below zero.** A partner agreement is a share of the profit, not a
- * co-signature on the losses: if a firing makes nothing, the partner takes
- * nothing. A negative cut would mean the partner owing the studio money, which
- * is not what anyone shook hands on — and it quietly flattered the books, since
- * subtracting a negative made a loss look smaller than it was.
- *
- * This matters most on a firing the studio loaded mostly for itself: own work
- * occupies the kiln without paying for it, so the firing runs at a loss by
- * design. Nobody should be earning — or owing — off that.
+ * **Never below zero** — a partner agreement is a share of what comes in, not a
+ * co-signature on the losses. A negative cut would mean the partner owing the
+ * studio money, and it quietly flattered the books besides, since subtracting a
+ * negative made a loss look smaller than it was.
  *
  * One function for both kinds of cut (whole-firing and per-client) so the rule
- * can't hold in one place and not the other, which is exactly what happened.
+ * can't hold in one place and not the other, which is exactly what happened once.
  */
-export function partnerCut(profit: number, pct: number): number {
-  return roundCents(Math.max(0, profit) * pct);
+export function partnerCut(base: number, pct: number): number {
+  return roundCents(Math.max(0, base) * pct);
 }
 
 export function computeAccounting(
   revenue: number,
   firing: Firing,
-  /** Needed only for per-client partner cuts; firing-wide cuts don't use it. */
-  clients: ClientResult[] = [],
+  /**
+   * Required: a partner's cut is a share of what paying clients paid, so it
+   * cannot be worked out without knowing who paid and how much of the kiln they
+   * filled. Defaulting this to [] would have silently produced zero cuts.
+   */
+  clients: ClientResult[],
 ): AccountingResult {
   const kilnCosts = roundCents(firing.costItems.reduce((a, c) => a + c.amount, 0));
   const grossProfit = roundCents(revenue - kilnCosts);
 
+  /** What a client actually pays — partners take a cut of real money. */
+  const invoiced = (price: number): number => roundUpTo(price, firing.invoiceStep ?? 0);
+
+  /**
+   * A partner takes their percentage of **what paying clients paid, less the
+   * share of the kiln's costs that their part of the load accounts for**.
+   *
+   * The studio's own work is deliberately absent from both halves. It brings in
+   * nothing, so it can't add to a partner's cut — but it must not subtract
+   * either, and that was the bug: basing the cut on the firing's whole profit
+   * meant the cost of the studio's own shelves ate into what the partner was
+   * owed, and on a firing loaded mostly for the studio it wiped it out entirely.
+   * Those shelves are the studio's own affair (stock it will sell later), not
+   * something a partner should be charged for.
+   *
+   * Costs still follow the load by KLU, the same basis everything else here is
+   * split on — so a client who filled a quarter of the kiln carries a quarter of
+   * its costs, and no more.
+   */
+  const chargedLoad = clients.reduce((a, c) => a + (c.charged ? c.sharePct : 0), 0);
+  const chargedIn = roundCents(clients.reduce((a, c) => a + (c.charged ? invoiced(c.price) : 0), 0));
+  const partnerBase = roundCents(chargedIn - kilnCosts * chargedLoad);
+
   const partnerCuts: AccountingResult["partnerCuts"] = firing.partners.map((p) => ({
     name: p.name,
     pct: p.pct,
-    amount: partnerCut(grossProfit, p.pct),
+    amount: partnerCut(partnerBase, p.pct),
   }));
 
-  // A per-client partner takes their cut of the profit *that client* produced,
-  // not of the firing's. The client's share of the kiln's costs follows their
-  // share of the load (KLU), the same basis everything else in this app is
-  // split on — charging them by revenue instead would quietly move cost onto
-  // whoever paid most, which isn't what "fair share of the kiln" means here.
+  // Same rule, one client at a time: what that client paid, less their own
+  // share of the kiln's costs.
   for (const c of clients) {
     for (const p of firing.clientPartners?.[c.contactName] ?? []) {
+      const base = c.charged ? invoiced(c.price) - kilnCosts * c.sharePct : 0;
       partnerCuts.push({
         name: p.name,
         pct: p.pct,
-        amount: partnerCut(c.price - kilnCosts * c.sharePct, p.pct),
+        amount: partnerCut(base, p.pct),
         client: c.contactName,
       });
     }
@@ -176,6 +203,7 @@ export function computeAccounting(
     kilnCosts,
     grossProfit,
     partnerCuts,
+    partnerBase,
     netToYou: roundCents(grossProfit - partnerTotal),
   };
 }

@@ -394,12 +394,12 @@ export const es: Dictionary = {
   },
 
   outputsPanel: {
-    noProfitNoCut: "Esta horneada no dio beneficio \u2014 la mayor parte del horno era obra tuya, que ocupa sin pagar. Un socio se lleva parte del beneficio, nunca de la p\u00e9rdida, as\u00ed que no se debe nada.",
+    noProfitNoCut: "En esta horneada no se cobr\u00f3 nada \u2014 era toda obra tuya, que ocupa el horno sin pagar. Un socio se lleva parte de lo que pagan los clientes, as\u00ed que no hay nada que repartir.",
     editFiring: "Editar esta horneada",
     editFiringHint: "La reabre para que puedas cambiarla, y retira sus facturas y n\u00fameros hasta que la cierres de nuevo.",
     deleteFiring: "Eliminar esta horneada",
     deleteConfirmAgain: "\u00bfEliminar para siempre? Pulsa otra vez",
-    ofClientProfit: (p: string) => `${p} de su beneficio`,
+    ofClientProfit: (p: string) => `${p} de lo que pag\u00f3`,
     ariaLabel: "Salidas de la horneada",
     close: "Cerrar",
     navFiring: "Horneada",
@@ -432,7 +432,7 @@ export const es: Dictionary = {
     own: "propio",
     totalCollected: "Total cobrado",
     partnersTitle: "Socios",
-    ofGross: (pct: string) => `${pct} del bruto`,
+    ofGross: (pct: string) => `${pct} de lo cobrado`,
     toPartners: "A socios",
     noPartnersOnFiring: "Sin socios en esta horneada.",
     expensesTitle: "Gastos · entra y sale",

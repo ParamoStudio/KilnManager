@@ -423,12 +423,12 @@ export const en = {
 
   // ---- OutputsPanel.svelte ------------------------------------------------------
   outputsPanel: {
-    noProfitNoCut: "This firing made no profit \u2014 most of the kiln was your own work, which occupies it without paying for it. A partner takes a share of profit, never of a loss, so nothing is owed.",
+    noProfitNoCut: "Nothing was charged on this firing \u2014 it was all your own work, which occupies the kiln without paying for it. A partner takes a share of what clients pay, so there is nothing to share.",
     editFiring: "Edit this firing",
     editFiringHint: "Reopens it so you can change it, and clears its invoices and figures until you close it again.",
     deleteFiring: "Delete this firing",
     deleteConfirmAgain: "Delete permanently? Click again",
-    ofClientProfit: (p: string) => `${p} of their profit`,
+    ofClientProfit: (p: string) => `${p} of what they paid`,
     ariaLabel: "Firing outputs",
     close: "Close",
     navFiring: "Firing",
@@ -461,7 +461,7 @@ export const en = {
     own: "own",
     totalCollected: "Total collected",
     partnersTitle: "Partners",
-    ofGross: (pct: string) => `${pct} of gross`,
+    ofGross: (pct: string) => `${pct} of what clients paid`,
     toPartners: "To partners",
     noPartnersOnFiring: "No partners on this firing.",
     expensesTitle: "Expenses · in & out",

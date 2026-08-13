@@ -1,5 +1,5 @@
 import type { Firing, Allocation, KilnProfile, FiringService, KilnModifier, AppliedModifier } from "@core";
-import { consumedHeightCm, computeFiring } from "@core";
+import { consumedHeightCm, computeFiring, INVOICE_STEP } from "@core";
 import { kilnStore, loadKilns, localizeBuiltinCosts } from "./kilns.svelte";
 import { type ComplexityKey } from "./complexity";
 import {
@@ -315,6 +315,9 @@ export function coreFiringFrom(p: PlannerState): Firing {
     modifiers: resolveModifiers(kiln, p),
     clientModifiers: resolveClientModifiers(kiln, p),
     costItems: [fuelItem, ...kiln.defaultCostItems],
+    // Partners take a cut of money that actually came in, so the engine has to
+    // know how a client's total is rounded before it's invoiced.
+    invoiceStep: settings.roundPrices ? INVOICE_STEP : 0,
     partners: (p.partners ?? [])
       .map((pp) => {
         const a = pp as unknown as { name?: string; pct?: number; partnerId?: string; tierId?: string };

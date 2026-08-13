@@ -17,7 +17,13 @@ export function roundCents(n: number): number {
 export const INVOICE_STEP = 0.2;
 
 export function roundUpInvoice(n: number): number {
-  return roundCents(Math.ceil(n / INVOICE_STEP - 1e-9) * INVOICE_STEP);
+  return roundUpTo(n, INVOICE_STEP);
+}
+
+/** Round UP to the next multiple of `step`. A step of 0 means "don't". */
+export function roundUpTo(n: number, step: number): number {
+  if (!(step > 0)) return roundCents(n);
+  return roundCents(Math.ceil(n / step - 1e-9) * step);
 }
 
 /**

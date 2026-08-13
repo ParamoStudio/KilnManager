@@ -145,8 +145,15 @@ export interface Firing {
   /** Per-client adjustments (keyed by client name), applied to that client's share. */
   clientModifiers?: Record<string, AppliedModifier[]>;
   costItems: CostItem[];
-  /** Partners taking a cut of the whole firing's profit. */
+  /** Partners taking a cut of what paying clients paid — see `computeAccounting`. */
   partners: Partner[];
+  /**
+   * Rounding applied to each client's total before it's invoiced (0.20 = up to
+   * the next 20 cents; 0 or absent = none). Partners take their cut of money
+   * that actually came in, so the cut has to be based on the invoiced figure,
+   * not the exact fair-split one.
+   */
+  invoiceStep?: number;
   /**
    * Partners taking a cut of ONE client's profit (keyed by client name).
    *
@@ -175,8 +182,15 @@ export interface AccountingResult {
   revenue: number; // base price ± modifiers (what clients pay in total)
   kilnCosts: number; // Σ cost items
   grossProfit: number; // revenue − kilnCosts
-  /** `client` is set for a cut taken from one client's profit only. */
+  /** `client` is set for a cut taken from one client only. */
   partnerCuts: { name: string; pct: number; amount: number; client?: string }[];
+  /**
+   * What whole-firing partners take their percentage of: everything paying
+   * clients paid, minus the share of the kiln's costs their part of the load
+   * accounts for. Exposed so the monthly views compute the same figure instead
+   * of keeping a second copy of the rule.
+   */
+  partnerBase: number;
   netToYou: number; // grossProfit − Σ partner cuts
 }
 

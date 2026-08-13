@@ -351,8 +351,11 @@
             {/each}
             <div class="prow total"><span>{t.outputsPanel.toPartners}</span><span></span><span class="r">{eur(result.accounting.partnerCuts.reduce((a, p) => a + p.amount, 0))}</span></div>
           </div>
-          {#if result.accounting.grossProfit <= 0}
-            <!-- Otherwise a row of 0,00 € reads like a broken calculation. -->
+          {#if result.accounting.partnerBase <= 0}
+            <!-- Only when there is genuinely nothing to share. Keyed off the
+                 partner base, not the firing's profit: a firing can run at a
+                 loss on the studio's own shelves and still owe a partner their
+                 share of what clients paid. -->
             <p class="faint pnote">{t.outputsPanel.noProfitNoCut}</p>
           {/if}
         {:else}

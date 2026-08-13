@@ -14,73 +14,116 @@ const kiln: KilnProfile = {
   defaultCostItems: [],
 };
 
+const client = (name: string, sharePct: number, price: number, charged = true): ClientResult => ({
+  contactName: name,
+  liters: sharePct * 100,
+  klu: sharePct * 100,
+  sharePct,
+  price,
+  charged,
+});
+
 /**
- * The reported case: a firing loaded 90% with the studio's own work. Only one
- * client pays (6.50) while the kiln costs 21.75, so the firing runs at a loss
- * by design — own work occupies the kiln without paying for it.
+ * A partner takes a share of **what paying clients paid**, less the share of the
+ * kiln's costs their part of the load accounts for. The studio's own work is
+ * absent from both halves: it brings nothing in, so it can't add to a cut — and
+ * crucially it must not subtract either.
  *
- * The app used to give the 30% partner a cut of −4.57, i.e. it claimed the
- * partner owed the studio money and made the loss look 4.57 smaller than it was.
+ * That last part was the bug. Basing the cut on the firing's whole profit meant
+ * the cost of the studio's own shelves ate into what the partner was owed, and
+ * on a firing loaded mostly for the studio it wiped it out completely. Those
+ * shelves are the studio's own affair — stock it sells later — not something a
+ * partner should be charged for.
  */
-const ownWorkFiring: Firing = {
+const reported: Firing = {
   kiln,
   serviceBasePrice: 65,
   modifiers: [],
   levels: [],
   costItems: [
-    { name: "Propane", amount: 13.75, kind: "variable" },
+    { name: "Propane", amount: 10.08, kind: "variable" },
     { name: "Maintenance reserve", amount: 6, kind: "fixed" },
     { name: "Consumables", amount: 2, kind: "fixed" },
   ],
   partners: [{ name: "Ranxo Taller · Their client", pct: 0.3 }],
+  invoiceStep: 0.2,
 };
 
-const clients: ClientResult[] = [
-  { contactName: "Ro", liters: 1, klu: 1, sharePct: 0.1, price: 6.5, charged: true },
-  { contactName: "Myself", liters: 9, klu: 9, sharePct: 0.9, price: 0, charged: false },
+// 15% Esther + 10% Ro paying, 75% the studio's own work.
+const reportedClients = [
+  client("Esther Alumna", 0.15, 9.67),
+  client("Ro", 0.1, 6.66),
+  client("Myself", 0.75, 0, false),
 ];
 
-describe("a partner never takes a share of a loss", () => {
-  it("gives nothing away on a firing the studio loaded for itself", () => {
-    const acc = computeAccounting(6.5, ownWorkFiring, clients);
-    expect(acc.grossProfit).toBe(-15.25); // the loss is still reported honestly
-    expect(acc.partnerCuts[0]!.amount).toBe(0); // …but nobody earns off it
+describe("what a partner takes a cut of", () => {
+  it("matches the reported firing: 3,62 € on 16,60 € invoiced", () => {
+    const acc = computeAccounting(16.33, reported, reportedClients);
+    // Invoiced (rounded up to 20c): 9,80 + 6,80 = 16,60.
+    // Their 25% of the load carries 25% of the 18,08 € costs = 4,52 €.
+    expect(acc.partnerBase).toBeCloseTo(12.08, 2);
+    expect(acc.partnerCuts[0]!.amount).toBe(3.62);
   });
 
-  it("does not flatter the books by subtracting a negative cut", () => {
-    const acc = computeAccounting(6.5, ownWorkFiring, clients);
-    // Net must equal the real loss, not a loss softened by a phantom debt.
-    expect(acc.netToYou).toBe(-15.25);
+  it("no longer lets the studio's own shelves wipe the cut out", () => {
+    // The old rule based this on the firing's gross profit (16,33 − 18,08 =
+    // −1,75), which paid the partner nothing at all.
+    const acc = computeAccounting(16.33, reported, reportedClients);
+    expect(acc.grossProfit).toBeLessThan(0); // the firing still reports its loss
+    expect(acc.partnerCuts[0]!.amount).toBeGreaterThan(0); // …but the partner is paid
   });
 
-  it("still pays a partner normally when the firing did make money", () => {
-    const profitable = { ...ownWorkFiring, costItems: [{ name: "Propane", amount: 20, kind: "variable" as const }] };
-    const acc = computeAccounting(100, profitable, []);
-    expect(acc.grossProfit).toBe(80);
-    expect(acc.partnerCuts[0]!.amount).toBe(24); // 30% of 80
-    expect(acc.netToYou).toBe(56);
+  it("takes a cut of real money — what the client pays, not the exact split", () => {
+    const withRounding = computeAccounting(16.33, reported, reportedClients);
+    const noRounding = computeAccounting(16.33, { ...reported, invoiceStep: 0 }, reportedClients);
+    expect(withRounding.partnerBase).toBeGreaterThan(noRounding.partnerBase);
+  });
+
+  it("changes nothing on a firing with no self-assigned work", () => {
+    // Whole kiln charged → the base IS the gross profit, as before.
+    const full = [client("Solo", 1, 100)];
+    const acc = computeAccounting(100, { ...reported, invoiceStep: 0 }, full);
+    expect(acc.partnerBase).toBe(acc.grossProfit);
+  });
+
+  it("pays nothing on a firing that is entirely the studio's own work", () => {
+    const own = [client("Myself", 1, 0, false)];
+    const acc = computeAccounting(0, reported, own);
+    expect(acc.partnerBase).toBe(0);
+    expect(acc.partnerCuts[0]!.amount).toBe(0);
+  });
+
+  it("never goes negative, even if a client pays less than their costs", () => {
+    // A heavy discount can leave a client's share below the cost they carry.
+    const thin = [client("Cheap", 1, 2), client("Myself", 0, 0, false)];
+    const acc = computeAccounting(2, reported, thin);
+    expect(acc.partnerBase).toBeLessThan(0);
+    expect(acc.partnerCuts[0]!.amount).toBe(0);
   });
 
   it("applies the same rule to a per-client partner", () => {
     const acc = computeAccounting(
-      6.5,
-      { ...ownWorkFiring, partners: [], clientPartners: { Myself: [{ name: "Guest", pct: 0.3 }] } },
-      clients,
+      16.33,
+      { ...reported, partners: [], clientPartners: { "Esther Alumna": [{ name: "Guest", pct: 0.3 }] } },
+      reportedClients,
+    );
+    // Esther paid 9,80 and carries 15% of 18,08 = 2,71 → 30% of 7,09.
+    expect(acc.partnerCuts[0]!.amount).toBe(2.13);
+    expect(acc.partnerCuts[0]!.client).toBe("Esther Alumna");
+  });
+
+  it("gives a per-client partner nothing for the studio's own shelves", () => {
+    const acc = computeAccounting(
+      16.33,
+      { ...reported, partners: [], clientPartners: { Myself: [{ name: "Guest", pct: 0.3 }] } },
+      reportedClients,
     );
     expect(acc.partnerCuts[0]!.amount).toBe(0);
   });
 
   it("the rule itself: no negative cut, ever", () => {
     expect(partnerCut(-100, 0.3)).toBe(0);
-    expect(partnerCut(-0.01, 0.3)).toBe(0);
     expect(partnerCut(0, 0.3)).toBe(0);
     expect(partnerCut(80, 0.3)).toBe(24);
-  });
-
-  it("breaking even gives nothing away either", () => {
-    const acc = computeAccounting(21.75, ownWorkFiring, clients);
-    expect(acc.grossProfit).toBe(0);
-    expect(acc.partnerCuts[0]!.amount).toBe(0);
-    expect(acc.netToYou).toBe(0);
   });
 });

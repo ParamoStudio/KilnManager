@@ -15,6 +15,46 @@ nothing until someone redeploys it.
 
 ---
 
+## v1.1.4 — 11 August 2026
+
+### Partners take a share of what clients pay, not of the firing's profit
+
+1.1.3 stopped partners sharing your losses, but it left the base wrong. A cut was
+still worked out from the firing's **profit** — which means the cost of firing
+your *own* shelves was eating into what a partner was owed, and on a firing
+loaded mostly for yourself it wiped their share out completely.
+
+Your own work has no business in that calculation. It brings nothing in, so it
+can't add to a partner's cut — and it must not subtract either. Those shelves are
+your affair: stock you'll sell later, not a cost a partner should carry.
+
+A partner's cut is now a share of **what paying clients paid, less the share of
+the kiln's costs their part of the load accounts for**. Costs still follow the
+load by KLU, so a client who filled a quarter of the kiln carries a quarter of
+its costs and no more.
+
+On the reported firing — 16,60 € charged, 18,08 € of costs, of which 4,52 €
+belong to the quarter of the kiln that was paying — the partner goes from 0,00 €
+to **3,62 €**.
+
+**On a firing with nothing self-assigned, nothing changes**: the whole kiln is
+charged, so the base is the gross profit exactly as before. The agreed worked
+example in the test suite still produces the same figures.
+
+Per-client partner cuts follow the same rule, from one function, so the two can't
+drift apart. The Partners view now says "30% of what clients paid" instead of
+"of gross", because that is what it is.
+
+### Fixed: the ledger didn't add up
+
+The expenses breakdown showed what a client actually pays (rounded up) as income
+but computed the net from the exact fair-split figure, so the rows on screen were
+a few cents from the total underneath them. The monthly views had always used the
+invoiced figure; only the firing's own accounting hadn't.
+
+Everything now records what actually came in — which is also what a partner's cut
+is taken from, so those can't disagree either. The lines add up.
+
 ## v1.1.3 — 11 August 2026
 
 ### Fixed: a partner took a share of a firing that lost money

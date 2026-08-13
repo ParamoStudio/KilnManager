@@ -77,7 +77,13 @@ const monthLabel = (ts: number): string => {
 };
 
 /** Resolve this firing's partner refs into cuts, keeping partner + tier identity. */
-function partnerCutsFor(rec: FiringRecord, grossProfit: number): PartnerCut[] {
+/**
+ * The partner lines for a firing. The *amounts* come from the engine's own base
+ * (what paying clients paid, less their share of the kiln's costs) — this only
+ * resolves the ids and names the payments tracker needs. Recomputing the rule
+ * here is what let the monthly figures disagree with the firing's own.
+ */
+function partnerCutsFor(rec: FiringRecord, partnerBase: number): PartnerCut[] {
   const refs = rec.planner.partners ?? [];
   const out: PartnerCut[] = [];
   for (const ref of refs) {
@@ -86,13 +92,13 @@ function partnerCutsFor(rec: FiringRecord, grossProfit: number): PartnerCut[] {
       const p = settings.partners.find((x) => x.id === a.partnerId);
       const t = p?.tiers.find((x) => x.id === a.tierId);
       if (p && t) {
-        out.push({ partnerId: p.id, tierId: t.id, partner: p.name, tier: t.name, amount: partnerCut(grossProfit, t.pct) });
+        out.push({ partnerId: p.id, tierId: t.id, partner: p.name, tier: t.name, amount: partnerCut(partnerBase, t.pct) });
         continue;
       }
     }
     if (typeof a.pct === "number" && typeof a.name === "string") {
       // Legacy shape without ids: key by name.
-      out.push({ partnerId: a.name, tierId: "", partner: a.name, tier: "", amount: partnerCut(grossProfit, a.pct) });
+      out.push({ partnerId: a.name, tierId: "", partner: a.name, tier: "", amount: partnerCut(partnerBase, a.pct) });
     }
   }
   return out;
@@ -107,7 +113,7 @@ function rowFor(rec: FiringRecord): FiringRow {
   const grossProfit = round(revenue - kilnCosts);
   const fuelCost = core.costItems[0]?.amount ?? 0; // first cost item is the variable fuel line
   const fixedCost = round(kilnCosts - fuelCost);
-  const partnerCuts = partnerCutsFor(rec, grossProfit);
+  const partnerCuts = partnerCutsFor(rec, result.accounting.partnerBase);
   const net = round(grossProfit - partnerCuts.reduce((s, p) => s + p.amount, 0));
   return {
     id: rec.id,

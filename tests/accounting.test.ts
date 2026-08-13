@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computeAccounting } from "../src/core/engine.js";
-import type { Firing, KilnProfile } from "../src/core/types.js";
+import type { ClientResult, Firing, KilnProfile } from "../src/core/types.js";
 
 const kiln: KilnProfile = {
   id: "k1",
@@ -29,7 +29,13 @@ describe("accounting — three faces of the ledger", () => {
     partners: [{ name: "Studio", pct: 0.2 }],
   };
 
-  const acc = computeAccounting(70, firing);
+  // The agreed worked example: one client, paying 70, filling the whole kiln.
+  // With nothing self-assigned the partner's base IS the gross profit, so this
+  // example is unchanged by the per-client basis introduced later.
+  const clients: ClientResult[] = [
+    { contactName: "Client", liters: 10, klu: 10, sharePct: 1, price: 70, charged: true },
+  ];
+  const acc = computeAccounting(70, firing, clients);
 
   it("kiln costs sum to 15", () => {
     expect(acc.kilnCosts).toBe(15);
@@ -48,7 +54,7 @@ describe("accounting — three faces of the ledger", () => {
   });
 
   it("no partners → you keep the whole gross", () => {
-    const solo = computeAccounting(70, { ...firing, partners: [] });
+    const solo = computeAccounting(70, { ...firing, partners: [] }, clients);
     expect(solo.netToYou).toBe(55);
   });
 });
