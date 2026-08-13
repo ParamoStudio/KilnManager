@@ -190,17 +190,19 @@
           {@const s = summary(rec)}
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <div class="log-row" role="button" tabindex="0" onclick={() => (app.outputsFor = rec.id)}>
-            {#if unpaidCount(rec) > 0}
-              <!-- Money still outstanding on this firing. Nothing at all when
-                   everyone has paid — a badge that's always there says nothing. -->
-              <span class="owed" title={t.home.someoneOwes(unpaidCount(rec))}>{unpaidCount(rec)}</span>
-            {/if}
             <KilnThumb shape={k.shape} size={30} />
             <div class="info">
               <div class="kiln">{rec.title || k.name}</div>
               {#if k.location}<div class="faint loc">{k.location}</div>{/if}
               <div class="faint meta">{fmt(rec.closedAt ?? rec.createdAt)} · {s.clients} · {eur(s.rounded)} <span class="real">({eur(s.real)})</span></div>
             </div>
+            {#if unpaidCount(rec) > 0}
+              <!-- Clients still to pay. Nothing at all once everyone has: a badge
+                   that's always there says nothing. In the flow rather than
+                   overlaid, because the list scrolls (which clips anything
+                   hanging outside the card) and a long title would run under it. -->
+              <span class="owed" title={t.home.someoneOwes(unpaidCount(rec))}>{unpaidCount(rec)}</span>
+            {/if}
           </div>
         {/each}
       {/each}
@@ -604,20 +606,18 @@
     cursor: pointer;
   }
   .owed {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    min-width: 17px;
-    height: 17px;
+    flex: none;
+    align-self: flex-start;
+    min-width: 18px;
+    height: 18px;
     border-radius: 999px;
     background: var(--amber);
     color: #1a1200;
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 700;
     display: grid;
     place-items: center;
     padding: 0 5px;
-    box-shadow: 0 0 0 2px var(--bg);
   }
   .log-row:hover {
     border-color: var(--text-faint);

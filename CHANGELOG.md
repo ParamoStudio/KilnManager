@@ -15,6 +15,21 @@ nothing until someone redeploys it.
 
 ---
 
+## v1.2.2 — 11 August 2026
+
+Two fixes to yesterday's payments tracking, both mine.
+
+**The badge in the firing log was clipped.** The log scrolls, and a scrolling
+list cuts off anything hanging outside its cards — so a badge sitting on the
+card's corner lost its top. It's inside the card now, in the layout rather than
+floating over it, which also means a long firing title can't run underneath it.
+
+**The Payments list had stray accent boxes.** My row styles collided with classes
+the Clients view already used, so its column widths overrode mine and its borders
+turned every row into an odd amber box. Renamed, and the rows are now plain with a
+single separator: the amber is reserved for the amount still owed, which is the
+one thing there worth drawing the eye.
+
 ## v1.2.1 — 11 August 2026
 
 ### Keep track of who has actually paid

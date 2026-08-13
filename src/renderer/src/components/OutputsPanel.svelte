@@ -407,26 +407,24 @@
           <p class="faint empty">{t.outputsPanel.collectNobody}</p>
         {:else}
           <p class="faint chint">{t.outputsPanel.collectHint}</p>
-          <div class="ctable">
+          <div class="paytable">
             {#each chargedClients as c (c.contactName)}
               {@const paidOn = rec ? clientPaidAt(rec, c.contactName) : null}
-              <label class="crow" class:paid={!!paidOn}>
+              <label class="payrow" class:paid={!!paidOn}>
                 <input
                   type="checkbox"
                   checked={!!paidOn}
                   onchange={(e) => rec && setClientPaid(rec, c.contactName, e.currentTarget.checked)}
                 />
-                <span class="ctgl" aria-hidden="true"></span>
-                <span class="cname">{c.contactName}</span>
-                <span class="cwhen faint">{paidOn ? t.outputsPanel.paidOn(fmtPaidDate(paidOn)) : t.outputsPanel.outstanding}</span>
-                <span class="camount">{eur(chargedTotal(c.price))}</span>
+                <span class="ptgl" aria-hidden="true"></span>
+                <span class="pname">{c.contactName}</span>
+                <span class="pwhen faint">{paidOn ? t.outputsPanel.paidOn(fmtPaidDate(paidOn)) : t.outputsPanel.outstanding}</span>
+                <span class="pamount">{eur(chargedTotal(c.price))}</span>
               </label>
             {/each}
-            <div class="crow total">
-              <span></span><span></span>
-              <span class="cname">{rec && unpaidCount(rec) === 0 ? t.outputsPanel.allPaid : t.outputsPanel.stillOwed}</span>
-              <span></span>
-              <span class="camount">{eur(outstandingTotal)}</span>
+            <div class="payrow paytotal">
+              <span class="pname">{rec && unpaidCount(rec) === 0 ? t.outputsPanel.allPaid : t.outputsPanel.stillOwed}</span>
+              <span class="pamount">{eur(outstandingTotal)}</span>
             </div>
           </div>
         {/if}
@@ -753,33 +751,37 @@
     margin: 0 0 14px;
     max-width: 56ch;
   }
-  .ctable {
+  .paytable {
     display: flex;
     flex-direction: column;
   }
-  .crow {
+  /* Plain rows: a separator, no boxes. The amber belongs to the one thing that
+     needs attention (the amount still owed), not to every border on screen. */
+  .payrow {
     display: grid;
-    grid-template-columns: 17px 1fr auto 90px;
+    grid-template-columns: 17px 1fr auto 92px;
     align-items: center;
     gap: 12px;
-    padding: 11px 2px;
+    padding: 12px 2px;
     border-bottom: 1px solid var(--line-soft);
     cursor: pointer;
   }
-  .crow.total {
-    grid-template-columns: 0 0 1fr 90px;
+  .payrow.paytotal {
+    grid-template-columns: 1fr 92px;
     border-bottom: none;
+    border-top: 1px solid var(--line);
+    margin-top: 2px;
     padding-top: 14px;
     font-weight: 600;
     cursor: default;
   }
-  .crow input {
+  .payrow input {
     position: absolute;
     opacity: 0;
     width: 0;
     height: 0;
   }
-  .ctgl {
+  .ptgl {
     width: 17px;
     height: 17px;
     border: 1px solid var(--line);
@@ -787,38 +789,45 @@
     background: var(--panel-2);
     position: relative;
   }
-  .crow input:checked + .ctgl {
-    border-color: var(--green, #7fdca4);
-    background: color-mix(in srgb, var(--green, #7fdca4) 18%, var(--panel-2));
+  .payrow input:checked + .ptgl {
+    border-color: var(--amber);
+    background: color-mix(in srgb, var(--amber) 18%, var(--panel-2));
   }
-  .crow input:checked + .ctgl::after {
+  .payrow input:checked + .ptgl::after {
     content: "";
     position: absolute;
     left: 4px;
     top: 1px;
     width: 6px;
     height: 10px;
-    border-right: 2px solid var(--green, #7fdca4);
-    border-bottom: 2px solid var(--green, #7fdca4);
+    border-right: 2px solid var(--amber);
+    border-bottom: 2px solid var(--amber);
     transform: rotate(40deg);
   }
-  .crow input:focus-visible + .ctgl {
+  .payrow input:focus-visible + .ptgl {
     outline: 2px solid var(--amber);
     outline-offset: 2px;
   }
-  .cname {
+  .pname {
     font-size: 13.5px;
+    color: var(--text);
   }
-  .crow.paid .cname {
-    color: var(--text-dim);
+  /* Paid recedes; what's outstanding stays legible. */
+  .payrow.paid .pname,
+  .payrow.paid .pamount {
+    color: var(--text-faint);
   }
-  .cwhen {
+  .pwhen {
     font-size: 12px;
   }
-  .camount {
+  .pamount {
     text-align: right;
     font-variant-numeric: tabular-nums;
     font-size: 13.5px;
+    color: var(--text);
+  }
+  .paytotal .pamount {
+    color: var(--amber);
   }
   .shareblock {
     display: flex;
