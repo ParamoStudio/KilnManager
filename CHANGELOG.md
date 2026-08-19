@@ -35,11 +35,11 @@ outstanding — who owes most at the top, who has settled dimmed at the bottom.
   something a stray click should do.
 - **A monthly PDF per client**, on the same stationery as the invoice. It lists
   the whole month — firings already paid included, struck through and labelled —
-  and bills only what's left. Drawn up before the month ends, it says so under
-  the greeting, with the date it was taken: a PDF can't refresh itself once it
-  has been sent, so it has to state when it was true. Showing just the unpaid ones would be shorter, but
+  and bills only what's left. Listing just the unpaid ones would be shorter, but
   a client can't check a bill against a month they can't see; billing the paid
-  ones would be asking twice.
+  ones would be asking twice. Drawn up before the month is over, it says so
+  under the greeting with the date it was taken: a PDF can't refresh itself once
+  it has been sent, so it has to state when it was true.
 - **A collections message to copy into WhatsApp**, for whoever collects at the
   studio. Names and amounts, nothing else — no costs, no partner cuts, no net.
   You can copy it mid-month, and when you do the message says so itself:
