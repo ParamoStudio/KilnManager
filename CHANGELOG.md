@@ -15,6 +15,50 @@ nothing until someone redeploys it.
 
 ---
 
+## v1.3.0 — 19 August 2026
+
+### Collections — bill by the month, not by the firing
+
+A firing is rarely paid on the day it's fired. Clients fire a few times over a
+month and settle once at the end, which meant the per-firing payment ticks added
+up to a question the app couldn't answer: *what does this person owe me right
+now?*
+
+A new **Collections** tab, next to Expenses, answers it. Pick a month and you get
+everyone who fired that month, what they were billed, and what is still
+outstanding — who owes most at the top, who has settled dimmed at the bottom.
+
+- **Marking someone paid settles their whole month.** One tick clears every
+  firing of theirs in that month, so the firing log stops flagging debts you've
+  already collected. Undoing it takes two presses: the tick turns to the app's
+  accent and waits, because quietly rewriting what you've been paid is not
+  something a stray click should do.
+- **A monthly PDF per client**, on the same stationery as the invoice. It lists
+  the whole month — firings already paid included, struck through and labelled —
+  and bills only what's left. Drawn up before the month ends, it says so under
+  the greeting, with the date it was taken: a PDF can't refresh itself once it
+  has been sent, so it has to state when it was true. Showing just the unpaid ones would be shorter, but
+  a client can't check a bill against a month they can't see; billing the paid
+  ones would be asking twice.
+- **A collections message to copy into WhatsApp**, for whoever collects at the
+  studio. Names and amounts, nothing else — no costs, no partner cuts, no net.
+  You can copy it mid-month, and when you do the message says so itself:
+  *Provisional as of 19 August 2026 — the month isn't over yet.* The warning
+  travels with the text rather than living in a disabled button, so it still
+  holds after the message has been forwarded somewhere the app can't reach, and
+  the date on it says which afternoon's figures those were.
+- **Month carousel.** The screen opens on last month, the one you actually bill.
+  Older months stay reachable so nothing that went uncollected is ever lost, and
+  the month ahead is visibly not there yet.
+
+Amounts are not rounded a second time. Each firing was already rounded up to your
+invoicing step when the client was told what to pay, so the month is a plain sum
+of what they were quoted.
+
+Under the hood: the invoice builder moved out of the outputs panel into its own
+module, so the firing invoice and the monthly statement can't drift apart, and
+the two documents now share one stylesheet instead of two copies of it.
+
 ## v1.2.2 — 11 August 2026
 
 Two fixes to yesterday's payments tracking, both mine.

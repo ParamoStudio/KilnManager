@@ -17,7 +17,8 @@
     fuelUseFor, effectiveTicketMessage, chargedTotal, invoiceClientName } from "../lib/settings.svelte";
   import { colorForIndex } from "../lib/colors";
   import { eur, pct, fmtFull } from "../lib/format";
-  import { buildTicketHtml, type TicketData, type TicketLine } from "../lib/ticket";
+  import { buildTicketHtml, type TicketData } from "../lib/ticket";
+  import { invoiceData } from "../lib/invoice.svelte";
   import { monthlyData } from "../lib/expenses.svelte";
   import { t, localeTag } from "../lib/i18n.svelte";
   import { brand } from "../lib/brand.svelte";
@@ -74,43 +75,10 @@
   // ---- Client tickets ----
   const chargedClients = $derived(result ? result.clients.filter((c) => c.charged) : []);
 
-  function ticketData(name: string): TicketData | null {
-    if (!rec || !kiln || !result || !service) return null;
-    const c = result.clients.find((x) => x.contactName === name);
-    if (!c) return null;
-    const base = result.totalKLU > 0 ? (result.serviceRevenue * c.klu) / result.totalKLU : 0;
-    const mods = clientMods(name);
-    // Exactly ONE money figure on the invoice: the total.
-    //
-    // The header already names the service and the firing's total, so a line
-    // repeating it was the same thing twice. Modifiers used to print their
-    // computed share (−3,25 €), which put an unrounded cent figure back on the
-    // client's receipt and invited them to add up numbers that can't sum to a
-    // rounded total. They now say what they are — a name and a −20% — and let
-    // the total speak for the money.
-    const lines: TicketLine[] = mods.map((m) => ({
-      label: `${m.name} · ${m.family === "discount" ? "−" : "+"}${m.mode === "percent" ? `${m.value}%` : eur(m.value)}`,
-      value: "",
-    }));
-    lines.push({ label: t.ticket.total, value: eur(chargedTotal(c.price)), strong: true });
-    return {
-      studioName: settings.studioName,
-      logoTop: brand.top || undefined,
-      logoBottom: brand.bottom || undefined,
-      note: settings.ticketNote || undefined,
-      client: invoiceClientName(name),
-      // The invoice follows the app's language, like everything else.
-      date: new Date(rec.closedAt ?? rec.createdAt).toLocaleDateString(localeTag(), { day: "numeric", month: "long", year: "numeric" }),
-      firingType: service.name,
-      firingTotal: eur(result.serviceRevenue),
-      sharePct: c.sharePct,
-      shape: kiln.shape,
-      extras: [],
-      lines,
-      total: eur(chargedTotal(c.price)),
-      thanks: t.ticket.defaultThanks(settings.studioName),
-    };
-  }
+  // The invoice itself is built in lib/invoice — the collections view needs the
+  // same document, and two copies of it would eventually disagree about what a
+  // client was charged.
+  const ticketData = (name: string): TicketData | null => (rec ? invoiceData(rec, name) : null);
 
   const ticketHtml = $derived(selClient ? (buildTicketHtml(ticketData(selClient)!) ?? "") : "");
   const messageFor = (name: string): string => {

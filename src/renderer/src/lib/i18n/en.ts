@@ -78,6 +78,7 @@ export const en = {
   app: {
     tabHome: "Home",
     tabExpenses: "Expenses",
+    tabCollections: "Collections",
     tabKilnProfiles: "Kiln Profiles",
     tabAppSettings: "App Settings",
     backToHome: "← Home",
@@ -620,6 +621,52 @@ export const en = {
   // ---- ticket.ts (the client-facing PDF/receipt) ---------------------------------
   // Kept as its own namespace: this is what CLIENTS see, and per the roadmap its
   // language may end up independently configurable from the app's own chrome.
+  statement: {
+    heading: "MONTHLY STATEMENT",
+    client: "Client",
+    month: "Month",
+    firingCount: "Firings",
+    intro: (client: string, n: number) =>
+      `Hi ${client}! You fired ${n} time${n === 1 ? "" : "s"} with me this month. Here's the breakdown.`,
+    paidPill: "Paid",
+    provisional: (date: string) =>
+      `Provisional summary as of ${date}. The month isn't over, so this may change if you fire again.`,
+    alreadyPaid: "Already paid this month",
+    total: "TOTAL DUE",
+    allPaid: "ALL PAID",
+  },
+
+  collections: {
+    title: "Collections",
+    hint: "What you're owed this month, in one place. Marking a client here marks them on every firing of theirs this month.",
+    monthCurrent: "In progress",
+    monthLocked: "Hasn't happened yet",
+    noMonths: "You haven't closed a firing yet, so there's nothing to collect.",
+    nothingThisMonth: "No firings were closed this month.",
+    allSettled: "Everything collected this month.",
+    outstanding: "Outstanding",
+    billed: "Billed this month",
+    settled: "Settled",
+    firingsCount: (n: number) => `${n} firing${n === 1 ? "" : "s"}`,
+    markPaid: "Mark as paid",
+    unmarkAsk: "Press again to unmark",
+    paidOn: (date: string) => `Paid on ${date}`,
+    openFiring: "View firing",
+    firingPdf: "Invoice for this firing",
+    statementPdf: "Month PDF",
+    exportMessage: "Collections message",
+    exportOpen: "The month is still open — the message will be marked provisional",
+    copied: "Copied",
+    copyFailed: "Couldn't copy",
+    savedTo: (path: string) => `Saved to ${path}`,
+    saveFailed: "Couldn't save the PDF",
+    reportHeading: (month: string) => `Collections for ${month}`,
+    reportIntro: "This is what the clients need to pay:",
+    reportTotal: "Total:",
+    reportNothing: (month: string) => `Nothing outstanding for ${month}.`,
+    reportProvisional: (date: string) => `Provisional as of ${date} — the month isn't over yet.`,
+  },
+
   ticket: {
     heading: "FIRING TICKET",
     client: "Client",

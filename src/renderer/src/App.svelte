@@ -16,6 +16,7 @@
   import FiringPlanner from "./routes/FiringPlanner.svelte";
   import KilnProfiles from "./routes/KilnProfiles.svelte";
   import Expenses from "./routes/Expenses.svelte";
+  import Collections from "./routes/Collections.svelte";
   import AppSettings from "./routes/AppSettings.svelte";
   import AgendaCard from "./components/AgendaCard.svelte";
   import OutputsPanel from "./components/OutputsPanel.svelte";
@@ -120,9 +121,10 @@
   }
 
   const inFiring = $derived(app.screen === "firing");
-  const tabs = $derived<{ id: "home" | "kilnProfiles" | "expenses" | "appSettings"; label: string }[]>([
+  const tabs = $derived<{ id: "home" | "kilnProfiles" | "expenses" | "collections" | "appSettings"; label: string }[]>([
     { id: "home", label: t.app.tabHome },
     { id: "expenses", label: t.app.tabExpenses },
+    { id: "collections", label: t.app.tabCollections },
     { id: "kilnProfiles", label: t.app.tabKilnProfiles },
     { id: "appSettings", label: t.app.tabAppSettings },
   ]);
@@ -238,6 +240,8 @@
         <KilnProfiles />
       {:else if app.screen === "expenses"}
         <Expenses />
+      {:else if app.screen === "collections"}
+        <Collections />
       {:else}
         <AppSettings />
       {/if}

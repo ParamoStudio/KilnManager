@@ -389,7 +389,7 @@ export function clientNames(): string[] {
 
 // ---- App navigation -------------------------------------------------------
 
-export type Screen = "home" | "firing" | "kilnProfiles" | "expenses" | "appSettings";
+export type Screen = "home" | "firing" | "kilnProfiles" | "expenses" | "collections" | "appSettings";
 
 export const app = $state<{
   screen: Screen;
@@ -759,6 +759,26 @@ export function setClientPaid(rec: FiringRecord, name: string, value: boolean): 
   if (!rec.clientsPaid) rec.clientsPaid = {};
   if (value) rec.clientsPaid[name] = new Date().toISOString().slice(0, 10);
   else delete rec.clientsPaid[name];
+  saveApp();
+}
+
+/**
+ * Mark a client paid (or not) across several firings at once.
+ *
+ * The monthly collections view bills a whole month, so settling there has to
+ * settle every firing behind it — otherwise the firing log would go on flagging
+ * debts the studio has already collected, and the two screens would disagree
+ * about the same money. One save for the lot rather than one per firing.
+ */
+export function setClientPaidAcross(ids: string[], name: string, value: boolean): void {
+  const today = new Date().toISOString().slice(0, 10);
+  for (const id of ids) {
+    const rec = firings.list.find((f) => f.id === id);
+    if (!rec) continue;
+    if (!rec.clientsPaid) rec.clientsPaid = {};
+    if (value) rec.clientsPaid[name] = today;
+    else delete rec.clientsPaid[name];
+  }
   saveApp();
 }
 

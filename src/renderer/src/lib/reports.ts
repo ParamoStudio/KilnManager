@@ -118,3 +118,57 @@ export async function copyText(text: string): Promise<boolean> {
     return false;
   }
 }
+
+export interface CollectionsReportLabels {
+  heading: (month: string) => string;
+  intro: string;
+  total: string;
+  nothing: (month: string) => string;
+  /** Printed when the month is still running, stamped with the day it was taken. */
+  provisional: (date: string) => string;
+}
+
+export interface CollectionsReportInput {
+  /** The month, already localized ("Agosto de 2026"). */
+  month: string;
+  /** One line per client who still owes, formatted. */
+  clients: ReportLine[];
+  /** Everything outstanding that month, formatted. */
+  total: string;
+  /**
+   * Set when the month hasn't ended: the day this was taken, already localized.
+   * It doubles as the flag — a provisional figure without a date on it is
+   * exactly the thing this is meant to prevent, so the two can't come apart.
+   */
+  provisional?: string;
+}
+
+/**
+ * What each client owes for a whole month.
+ *
+ * This goes to whoever collects at the studio — often a partner rather than the
+ * owner — so it names people and amounts and nothing else. No costs, no cuts,
+ * no net: none of that is theirs to see, and any of it on screen invites the
+ * wrong figure being charged.
+ */
+export function collectionsReport(d: CollectionsReportInput, L: CollectionsReportLabels): string {
+  // The warning is part of the message, not part of the button. A total copied
+  // mid-month is still a useful thing to send; what would be dishonest is
+  // letting it arrive looking final, and a rule enforced in the UI stops
+  // applying the moment the text is pasted somewhere else. It carries the day
+  // it was taken for the same reason: a forwarded message has no other way of
+  // saying which afternoon's figures these were.
+  const head: string[] = [L.heading(d.month)];
+  if (d.provisional) head.push(L.provisional(d.provisional));
+
+  // Nothing owed already names the month, so it stands alone rather than under
+  // a heading that would say the month twice.
+  if (d.clients.length === 0) {
+    return d.provisional ? [L.nothing(d.month), L.provisional(d.provisional)].join("\n") : L.nothing(d.month);
+  }
+
+  const out: string[] = [...head, "", L.intro];
+  for (const c of d.clients) out.push(`- ${c.name}: ${c.amount}`);
+  out.push("", `${L.total} ${d.total}`);
+  return out.join("\n");
+}
